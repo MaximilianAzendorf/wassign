@@ -10,6 +10,8 @@ namespace wsolve
         private IFitness<TFitness> _fitness;
         private ICrossover _crossover;
 
+        public IParameter<int> GenerationSize { get; set; }
+
         public IFitness<TFitness> Fitness
         {
             get => _fitness;
@@ -26,7 +28,7 @@ namespace wsolve
 
         private List<Generation> generations { get; } = new List<Generation>();
     
-        public GeneticAlgorithm(int populationSize, IEnumerable<Chromosome> initialPopulation)
+        public GeneticAlgorithm(IEnumerable<Chromosome> initialPopulation)
         {
             generations.Add(new Generation(generations.Count, initialPopulation));
         }
