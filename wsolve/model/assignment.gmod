@@ -1,0 +1,68 @@
+/* DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING
+ *
+ * This file is part of wsolve.
+ * 2019 (c) Maximilian Azendorf
+ */
+
+set PARTICIPANTS;
+set WORKSHOPS;
+set DISCARDED_WORKSHOPS within WORKSHOPS;
+set SLOTS;
+
+ # Parameters relating to the workshops:
+ #   *  min_participants[w] is the minimum number of participants of workshop w.
+ #   *  max_participants[w] is the maximum number of participants of workshop w.
+ #   *  conductor[w] is the participant who holds the workshop.
+ #   *  is_in_slot[w,s] is true iff workshop w is in slot s. [from scheduling stage]
+ #
+param min_participants {WORKSHOPS} > 0, integer;
+param max_participants {w in WORKSHOPS} >= min_participants[w], integer;
+param slot_index {SLOTS} integer, >= 0, <= card(SLOTS);
+param conductor {w in WORKSHOPS} symbolic in PARTICIPANTS;
+param slot {WORKSHOPS} symbolic in SLOTS;
+
+param null_slot symbolic in SLOTS;
+param pref_exp >= 1, default 3;
+
+set FINAL_WORKSHOPS := WORKSHOPS diff DISCARDED_WORKSHOPS;
+set SLOTS_WITHOUT_NULL := SLOTS diff {null_slot};
+
+ # Parameters relating to the participants:
+ #   *  preference[p,w] is the preference given by participant p to workshop w.
+ #
+param preference {PARTICIPANTS, WORKSHOPS} >= 0, integer;
+
+param min_pref := min{p in PARTICIPANTS, w in WORKSHOPS} preference[p,w];
+param max_pref := max{p in PARTICIPANTS, w in WORKSHOPS} preference[p,w];
+
+ # Model variables:
+ #   *  Participates[p,w] is true iff participant p partakes in workshop w.
+ #
+var Participates {PARTICIPANTS, FINAL_WORKSHOPS} binary;
+var Participants {WORKSHOPS} integer;
+var UsesPreference {min_pref..max_pref} binary;
+
+minimize cost:
+      (sum{w in FINAL_WORKSHOPS, p in PARTICIPANTS} Participates[p,w] * (preference[p,w]^pref_exp))
+    + sum{i in min_pref..max_pref} card(PARTICIPANTS) * card(WORKSHOPS) * max_pref^pref_exp * UsesPreference[i];
+
+ # Every participant must be in exactly one workshop per slot.
+s.t. has_slot_place {p in PARTICIPANTS, s in SLOTS_WITHOUT_NULL}:
+    sum {w in FINAL_WORKSHOPS} if slot[w] = s then Participates[p,w] = 1;
+    
+s.t. participants_bind {w in FINAL_WORKSHOPS}:
+    sum {p in PARTICIPANTS} Participates[p,w] = Participants[w];
+    
+s.t. uses_preference_bind {p in PARTICIPANTS, w in FINAL_WORKSHOPS}:
+    UsesPreference[preference[p,w]] >= Participates[p,w];
+    
+s.t. uses_preference_trans {i in min_pref..(max_pref-1)}:
+    UsesPreference[i] >= UsesPreference[i+1];
+        
+ # The participant who holds a workshop must be in that workshop (if it takes place).
+s.t. conductor_is_in_own_workshop {w in FINAL_WORKSHOPS}:
+    Participates[conductor[w], w] = 1;
+    
+ # Every workshop has to have an appropriate number of participants.
+s.t. workshop_participant_constraints {w in FINAL_WORKSHOPS}:
+    min_participants[w], <= Participants[w], <= max_participants[w];
