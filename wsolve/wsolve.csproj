@@ -15,23 +15,10 @@
       <None Update="wsolve">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="model\assignment.gmod">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="model\whole.gmod">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
     </ItemGroup>
 
     <ItemGroup>
       <None Remove="model.mod" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <None Include="model\scheduling.gmod">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Remove="model\assignment.mod" />
     </ItemGroup>
 
 </Project>

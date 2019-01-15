@@ -413,22 +413,23 @@ namespace wsolve
             ISelection selection = new TournamentSelection(5, true);
             ICrossover crossover = new TwoPointCrossover();
             IMutation mutation = new SolverMutation();
-            var ga = new GeneticAlgorithm(population, fitness, selection, crossover, mutation);
+            var ga = new GeneticSharp.Domain.GeneticAlgorithm(population, fitness, selection, crossover, mutation);
             ga.Termination = new TimeEvolvingTermination(TimeSpan.FromSeconds(1200));
             ga.MutationProbability = 0.3f;
             ga.CrossoverProbability = 0.7f;
 
             ga.GenerationRan += (sender, args) =>
             {
-                //Console.Clear();
+                Console.CursorTop = Console.CursorLeft = 0;
                 SolverChromosome.ReturnSelf = false;
                 fitness.AllowedPreference = Math.Min(fitness.AllowedPreference, ((SolverChromosome) ga.Population.BestChromosome).MaxPreferenceUsed);
-                //Status.Info($"Generation {ga.GenerationsNumber} finished. Size: {ga.Population.CurrentGeneration.Chromosomes.Count} Best: {fitness.EvaluatePair(ga.BestChromosome)}");
-                //Status.Info($"Pref: {string.Join(" ", Enumerable.Range(0, input.Workshops.Count).Select(((SolverChromosome)ga.Population.BestChromosome).PrefCount).Select(s => pad(s.ToString())))}");
-                //Status.Info($"Slots:\n\t[{string.Join("]\n\t[", Enumerable.Range(0, input.Slots.Count).Select(s => string.Join(" ", Enumerable.Range(0, input.Workshops.Count).Where(w => ((SolverChromosome)ga.Population.BestChromosome).SlotOf(w) == s).Select(x => pad(x.ToString())))))}]");
+                Status.Info($"Generation {ga.GenerationsNumber} finished. Size: {ga.Population.CurrentGeneration.Chromosomes.Count} Best: {fitness.EvaluatePair(ga.BestChromosome)}      ");
+                Status.Info($"Pref: {string.Join(" ", Enumerable.Range(0, input.Workshops.Count).Select(((SolverChromosome)ga.Population.BestChromosome).PrefCount).Select(s => pad(s.ToString())))}");
+                Status.Info($"Slots:\n\t[{string.Join("]\n\t[", Enumerable.Range(0, input.Slots.Count).Select(s => string.Join(" ", Enumerable.Range(0, input.Workshops.Count).Where(w => ((SolverChromosome)ga.Population.BestChromosome).SlotOf(w) == s).Select(x => pad(x.ToString())))))}]");
             };
 
             double z = fitness.Evaluate(initc);
+            Console.Clear();
             ga.Start();
             fitness.Evaluate(ga.Population.BestChromosome);
             
