@@ -8,60 +8,74 @@ namespace wsolve
 {
     public class MutationCollection : ICollection<(float propability, IMutation mutation)>
     {
-        private Dictionary<IMutation, float> mutations { get; } = new Dictionary<IMutation, float>();
+        private readonly Dictionary<IMutation, float> _mutations = new Dictionary<IMutation, float>();
 
-        public int Count => mutations.Count;
+        public int Count => _mutations.Count;
 
         public bool IsReadOnly => false;
 
         public void Add((float propability, IMutation mutation) item)
         {
-            mutations.Add(item.mutation, item.propability);
+            _mutations.Add(item.mutation, item.propability);
         }
 
         public void Add(float propability, IMutation mutation)
         {
-            mutations.Add(mutation, propability);
+            _mutations.Add(mutation, propability);
         }
 
         public void Clear()
         {
-            mutations.Clear();
+            _mutations.Clear();
         }
 
         public bool Contains((float propability, IMutation mutation) item)
         {
-            return mutations.TryGetValue(item.mutation, out float p) && p == item.propability;
+            return _mutations.TryGetValue(item.mutation, out float p) && p == item.propability;
         }
 
         public bool Contains(float propability, IMutation mutation)
         {
-            return mutations.TryGetValue(mutation, out float p) && p == propability;
+            return _mutations.TryGetValue(mutation, out float p) && p == propability;
         }
         
         public void CopyTo((float propability, IMutation mutation)[] array, int arrayIndex)
         {
-            mutations.Select(kvp => (kvp.Value, kvp.Key)).ToList().CopyTo(array, arrayIndex);
+            _mutations.Select(kvp => (kvp.Value, kvp.Key)).ToList().CopyTo(array, arrayIndex);
         }
 
         public bool Remove((float propability, IMutation mutation) item)
         {
-            if(!mutations.TryGetValue(item.mutation, out float p) || p != item.propability)
+            if(!_mutations.TryGetValue(item.mutation, out float p) || p != item.propability)
             {
                 return false;
             }
 
-            return mutations.Remove(item.mutation);
+            return _mutations.Remove(item.mutation);
         }
 
         public bool Remove(IMutation mutation)
         {
-            return mutations.Remove(mutation);
+            return _mutations.Remove(mutation);
+        }
+
+        public (float cost, IMutation mutation)[] GetSelectionSnapshot()
+        {
+            float psum = _mutations.Sum(kvp => kvp.Value);
+
+            List<(float, IMutation)> snapshot = new List<(float, IMutation)>(_mutations.Count);
+
+            foreach ((IMutation key, float value) in _mutations.OrderByDescending(kvp => kvp.Value))
+            {
+                snapshot.Add((value / psum, key));
+            }
+
+            return snapshot.ToArray();
         }
 
         public IEnumerator<(float propability, IMutation mutation)> GetEnumerator()
         {
-            return mutations.Select(kvp => (kvp.Value, kvp.Key)).GetEnumerator();
+            return _mutations.Select(kvp => (kvp.Value, kvp.Key)).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()

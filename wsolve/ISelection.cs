@@ -4,8 +4,8 @@ using System.Text;
 
 namespace wsolve
 {
-    interface ISelection
+    public interface ISelection
     {
-        IEnumerable<Chromosome> Select(int number, IReadOnlyList<Chromosome> chromosomes);
+        IEnumerable<Chromosome> Select(int number, ChromosomeList list);
     }
 }

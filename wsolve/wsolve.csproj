@@ -7,7 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="GeneticSharp" Version="2.2.0" />
       <PackageReference Include="NDesk.Options.Core" Version="1.2.4" />
     </ItemGroup>
 

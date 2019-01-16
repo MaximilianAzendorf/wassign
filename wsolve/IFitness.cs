@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System;
 
 namespace wsolve
 {
-    public interface IFitness<T> 
-        where T : IComparable<T>
+    public interface IFitness
     {
-        T Evaluate(Chromosome chromosome);
+        (float major, float minor) Evaluate(Chromosome chromosome);
     }
 }

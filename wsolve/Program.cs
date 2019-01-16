@@ -5,12 +5,11 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Threading;
 using NDesk.Options;
 
 namespace wsolve
 {
-    using static GLPK;
-
     internal static class Program
     {
         private static void PrintHeader()
@@ -64,9 +63,9 @@ namespace wsolve
                 File.Delete(Options.OutputFile);
                 Console.SetOut(wr = File.CreateText(Options.OutputFile));
             }
-            
-            ISolver solver = new GaSolver();
 
+            ISolver solver = new GaSolver();
+            
             var output = solver.Solve(input);
             
             output.Verify(input);
