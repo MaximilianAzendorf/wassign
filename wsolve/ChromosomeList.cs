@@ -9,7 +9,7 @@ namespace wsolve
     {
         private readonly IFitness _fitness;
 
-        private Dictionary<uint, (float, float)> _fitnessMap = new Dictionary<uint, (float, float)>();
+        private Dictionary<Chromosome, (float, float)> _fitnessMap = new Dictionary<Chromosome, (float, float)>();
 
 #if DEBUG
         public IEnumerable<((float, float), Chromosome)> DebugBestView =>
@@ -31,10 +31,10 @@ namespace wsolve
         {
             lock (_fitnessMap)
             {
-                if (!_fitnessMap.TryGetValue(chromosome.Id, out var f))
+                if (!_fitnessMap.TryGetValue(chromosome, out var f))
                 {
                     f = _fitness.Evaluate(chromosome);
-                    _fitnessMap.Add(chromosome.Id, f);
+                    _fitnessMap.Add(chromosome, f);
                 }
 
                 return f;
@@ -43,7 +43,7 @@ namespace wsolve
 
         internal void InheritFitnessMap(ChromosomeList otherList)
         {
-            _fitnessMap = new Dictionary<uint, (float, float)>(otherList._fitnessMap);
+            _fitnessMap = new Dictionary<Chromosome, (float, float)>(otherList._fitnessMap);
         }
     }
 }

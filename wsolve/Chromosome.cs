@@ -9,15 +9,13 @@ namespace wsolve
 {
     public struct Chromosome : IEnumerable<int>
     {
-        private static uint nextId = 1;
-
-        public uint Id { get; }
-        
         private readonly int[] _array;
         private readonly Input _input;
 
         public int Length => _input.Workshops.Count + _input.Participants.Count * _input.Slots.Count;
 
+        public Input Input => _input;
+        
         public ref int this[int index] => ref _array[index];
 
         public IEnumerator<int> GetEnumerator()
@@ -27,7 +25,6 @@ namespace wsolve
 
         public Chromosome(Input input, int[] data = null)
         {
-            Id = nextId++;
             _input = input;
             _array = data?.ToArray() ?? new int[input.Workshops.Count + input.Participants.Count * input.Slots.Count];
             Debug.Assert(_array.Length == input.Workshops.Count + input.Participants.Count * input.Slots.Count);
@@ -56,10 +53,31 @@ namespace wsolve
             return ref _array[_input.Workshops.Count + participant * _input.Slots.Count + workshopNumber];
         }
 
+        public int CountParticipants(int workshop) => _array.Skip(_input.Workshops.Count).Count(w => w == workshop);
+
+        public int CountPreference(int pref)
+        {
+            int c = 0;
+            for (int p = 0; p < Input.Participants.Count; p++)
+            {
+                for (int s = 0; s < Input.Slots.Count; s++)
+                {
+                    if (Input.Participants[p].preferences[Workshop(p, s)] == pref)
+                    {
+                        c++;
+                    }
+                }
+            }
+
+            return c;
+        }
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
         }
+        
+        public Chromosome Copy() => new Chromosome(this);
 
         public static Chromosome FromOutput(Input input, Output output)
         {
@@ -79,6 +97,44 @@ namespace wsolve
             }
 
             return c;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return base.Equals(obj);
+        }
+
+        public bool Equals(Chromosome other)
+        {
+            if (_array.Length != other._array.Length) return false;
+            if (_input != other._input) return false;
+            for(int i = 0; i < _array.Length; i++)
+                if (_array[i] != other._array[i])
+                    return false;
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int arr = 0;
+                for (int i = 0; i < _array.Length; i++)
+                {
+                    arr = arr * 101 + _array[i].GetHashCode();
+                }
+                return arr * 397 ^ (_input != null ? _input.GetHashCode() : 0);
+            }
+        }
+
+        public static bool operator ==(Chromosome left, Chromosome right)
+        {
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Chromosome left, Chromosome right)
+        {
+            return !left.Equals(right);
         }
     }
 }
