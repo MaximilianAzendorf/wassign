@@ -6,6 +6,6 @@ namespace wsolve
 {
     public interface ISelection
     {
-        IEnumerable<Chromosome> Select(int number, ChromosomeList list);
+        IEnumerable<Chromosome> Select(int number, GaLevel level, IEnumerable<Chromosome> list);
     }
 }

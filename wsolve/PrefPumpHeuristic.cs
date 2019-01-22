@@ -5,9 +5,9 @@ namespace wsolve
 {
     public enum PrefPumpResult
     {
-        FAIL,
-        PARTIAL,
-        SUCCESS
+        Fail,
+        Partial,
+        Success
     }
     
     public static class PrefPumpHeuristic
@@ -17,19 +17,25 @@ namespace wsolve
 #if DEBUG
             if (Debugger.IsAttached) timeout = TimeSpan.MaxValue;
 #endif
-            
             bool tryPumpRec(Chromosome c, int p, int s, int wOrig, int pref, bool[] visited, int depth, DateTime start)
             {
+                int pw = c.Workshop(p, s);
                 if (depth > maxDepth) return false;
-                if (chromosome.Input.Workshops[c.Workshop(p, s)].conductor == p) return false;
+                if (visited[p]) return false;
+                
+                if (chromosome.Input.Workshops[pw].conductor == p) return false;
+                //if (chromosome.Input.Workshops[pw].min - (pw == wOrig ? 1 : 0) >= c.CountParticipants(pw)) return false;
                 
                 for (int w = 0; w < chromosome.Input.Workshops.Count; w++)
                 {
+                    if (w == pw) continue;
                     if (c.Slot(w) != s) continue;
 
                     if (chromosome.Input.Participants[p].preferences[w] >= pref) continue;
                     
-                    if (c.CountParticipants(w) < chromosome.Input.Workshops[w].max + (w == wOrig ? 1 : 0))
+                    if (w == wOrig 
+                        || (c.CountParticipants(w) < chromosome.Input.Workshops[w].max
+                            && c.CountParticipants(wOrig) > chromosome.Input.Workshops[wOrig].min))
                     {
                         c.Workshop(p, s) = w;
                         return true;
@@ -80,7 +86,7 @@ namespace wsolve
                 }
             }
 
-            return successes == 0 ? PrefPumpResult.FAIL : fails == 0 ? PrefPumpResult.SUCCESS : PrefPumpResult.PARTIAL;
+            return successes == 0 ? PrefPumpResult.Fail : fails == 0 ? PrefPumpResult.Success : PrefPumpResult.Partial;
         }
     }
 }

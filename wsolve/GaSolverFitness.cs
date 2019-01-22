@@ -15,7 +15,8 @@ namespace wsolve
             Scaling = (float)Math.Pow(Input.MaxPreference, Options.PreferenceExponent);
         }
 
-        public bool IsFeasible(Chromosome chromosome)
+        public bool IsFeasible(Chromosome chromosome) => IsFeasible(chromosome, false);
+        public bool IsFeasible(Chromosome chromosome, bool fuckme)
         {
             int[] partCounts = new int[Input.Workshops.Count];
             bool[,] isInSlot = new bool[Input.Participants.Count, Input.Slots.Count];
@@ -36,22 +37,39 @@ namespace wsolve
                     }
                 }
 
-                if (!foundConductor) return false;
+                if (!foundConductor)
+                {
+                    if(fuckme) Status.Error("Conductor not found.");
+                    return false;
+                }
             }
                 
             for (int i = 0; i < Input.Participants.Count * Input.Slots.Count; i++)
             {
                 int p = i / Input.Slots.Count;
                 int ws = chromosome.Workshop(p, i % Input.Slots.Count);
-                if (isInSlot[p, slots[ws]]) return false;
+                if (isInSlot[p, slots[ws]])
+                {
+                    if(fuckme) Status.Error("Multiple workshops in single slot.");
+                    return false;
+                }
                 isInSlot[p, slots[ws]] = true;
                 partCounts[ws]++;
             }
 
             for (int i = 0; i < Input.Workshops.Count; i++)
             {
-                if (partCounts[i] < Input.Workshops[i].min) return false;
-                if (partCounts[i] > Input.Workshops[i].max) return false;
+                if (partCounts[i] < Input.Workshops[i].min)
+                {
+                    if(fuckme) Status.Error("Too few humans.");
+                    return false;
+                }
+
+                if (partCounts[i] > Input.Workshops[i].max)
+                {
+                    if(fuckme) Status.Error("Too many humans.");
+                    return false;
+                }
             }
 
             return true;
@@ -92,6 +110,8 @@ namespace wsolve
         
         public (float major, float minor) Evaluate(Chromosome chromosome)
         {
+            if (chromosome == Chromosome.Null) return (float.PositiveInfinity, float.PositiveInfinity);
+        
             float major = EvaluateMajor(chromosome);
             float minor = EvaluateMinor(chromosome);
 

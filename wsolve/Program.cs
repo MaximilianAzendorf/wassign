@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -37,6 +38,7 @@ namespace wsolve
             Thread.CurrentThread.CurrentUICulture = ci;
             
 #if DEBUG
+            Status.Info($"PID: [{Process.GetCurrentProcess().Id}]");
             if (args.Length == 1 && args[0] == "--generate")
             {
                 return InputGenerator.GenMain();

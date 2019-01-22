@@ -5,9 +5,9 @@ namespace wsolve
 {
     public class EliteSelection : ISelection
     {
-        public IEnumerable<Chromosome> Select(int number, ChromosomeList list)
+        public IEnumerable<Chromosome> Select(int number, GaLevel level, IEnumerable<Chromosome> list)
         {
-            return list.OrderBy(list.GetFitness).Take(number);
+            return list.OrderBy(level.System.Fitness.Evaluate).Take(number);
         }
     }
 }

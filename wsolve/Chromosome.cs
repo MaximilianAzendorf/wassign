@@ -9,6 +9,8 @@ namespace wsolve
 {
     public struct Chromosome : IEnumerable<int>
     {
+        public static readonly Chromosome Null = new Chromosome();
+        
         private readonly int[] _array;
         private readonly Input _input;
 
@@ -22,7 +24,7 @@ namespace wsolve
         {
             return _array.AsEnumerable().GetEnumerator();
         }
-
+        
         public Chromosome(Input input, int[] data = null)
         {
             _input = input;
@@ -72,6 +74,23 @@ namespace wsolve
             return c;
         }
 
+        public int MaxUsedPreference
+        {
+            get
+            {
+                int c = int.MinValue;
+                for (int p = 0; p < Input.Participants.Count; p++)
+                {
+                    for (int s = 0; s < Input.Slots.Count; s++)
+                    {
+                        c = Math.Max(Input.Participants[p].preferences[Workshop(p, s)], c);
+                    }
+                }
+
+                return c;
+            }
+        }
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
@@ -106,6 +125,8 @@ namespace wsolve
 
         public bool Equals(Chromosome other)
         {
+            if (_array == null) return other._array == null;
+            if (other._array == null) return false;
             if (_array.Length != other._array.Length) return false;
             if (_input != other._input) return false;
             for(int i = 0; i < _array.Length; i++)

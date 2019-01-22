@@ -6,7 +6,7 @@ namespace wsolve
     public class GaSolverCrossover : ICrossover
     {
         public int ParentCount { get; } = 2;
-        public int ChildrenCount { get; } = 6;
+        public int ChildrenCount { get; } = 2;
         
         public Input Input { get; }
 
@@ -30,33 +30,28 @@ namespace wsolve
                 }
             }
 
+            int[] validExchangeSlots = Enumerable.Range(0, Input.Slots.Count).Where(s => !differentSchedule[s]).ToArray();
             if (differentSchedule.Any(x => x == false))
             {
-                List<Chromosome> ret = new List<Chromosome>();
-                for(int s = 0; s < Input.Slots.Count; s++)
+                int sIdx = RNG.NextInt(0, validExchangeSlots.Length);
+                int s = validExchangeSlots[sIdx];
+                
+                Chromosome c0 = new Chromosome(p0);
+                Chromosome c1 = new Chromosome(p1);
+                for (int p = 0; p < Input.Participants.Count; p++)
                 {
-                    if (differentSchedule[s]) continue;
-                    
-                    Chromosome c0 = new Chromosome(p0);
-                    Chromosome c1 = new Chromosome(p1);
-                    for (int p = 0; p < Input.Participants.Count; p++)
-                    {
-                        int w0 = p0.Workshop(p, s);
-                        int w1 = p1.Workshop(p, s);
+                    int w0 = p0.Workshop(p, s);
+                    int w1 = p1.Workshop(p, s);
 
-                        c0.Workshop(p, s) = w1;
-                        c1.Workshop(p, s) = w0;
-                    }
-
-                    ret.Add(c0);
-                    ret.Add(c1);
+                    c0.Workshop(p, s) = w1;
+                    c1.Workshop(p, s) = w0;
                 }
 
-                return ret;
+                return new[] {c0, c1};
             }
             else
             {
-                return new[] {p0, p0, p0, p1, p1, p1};
+                return new[] {p0, p1};
             }
         }
     }
