@@ -65,7 +65,7 @@ All collections are of type `IEnumerable<T>`.
 
 Apart from this API, the namespaces `System`, `System.Text`, `System.Linq` and `System.Collections.Generic` are available. Also, the class `System.Math` is statically imported (so you can use Functions like `Abs(...)` directly instead of `Math.Abs(...)`).
 
-For implementation details, see [wsolve/resources/ExtraConditionsCodeEnvironment.txt], [wsolve/CustomFilter.cs] and [wsolve/ExtraConditionsCompiler.cs].
+For implementation details, see [ExtraConditionsCodeEnvironment.txt](wsolve/resources/ExtraConditionsCodeEnvironment.txt), [CustomFilter.cs](wsolve/CustomFilter.cs) and [ExtraConditionsCompiler.cs](wsolve/ExtraConditionsCompiler.cs).
 
 #### Examples:
 
