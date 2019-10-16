@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace wsolve
+namespace WSolve
 {
     public class MutationCollection : ICollection<(float propability, IMutation mutation)>
     {

@@ -1,4 +1,4 @@
-namespace wsolve
+namespace WSolve
 {
     internal static class Exit
     {

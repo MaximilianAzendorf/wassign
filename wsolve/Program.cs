@@ -9,8 +9,7 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using NDesk.Options;
-
-namespace wsolve
+namespace WSolve
 {
     internal static class Program
     {
@@ -24,6 +23,9 @@ namespace wsolve
             Console.Error.WriteLine("{0}\n",
                 ((AssemblyCopyrightAttribute) assembly.GetCustomAttributes(
                     typeof(AssemblyCopyrightAttribute)).SingleOrDefault())?.Copyright);
+#if DEBUG
+            Status.Info($"PID: [{Process.GetCurrentProcess().Id}]");
+#endif
         }
 
         private static void PrintVersion()
@@ -38,7 +40,6 @@ namespace wsolve
             Thread.CurrentThread.CurrentUICulture = ci;
             
 #if DEBUG
-            Status.Info($"PID: [{Process.GetCurrentProcess().Id}]");
             if (args.Length == 1 && args[0] == "--generate")
             {
                 return InputGenerator.GenMain();
@@ -75,9 +76,9 @@ namespace wsolve
             
             var output = solver.Solve(input);
             
-            output.Verify(input);
+            output.Verify();
             
-            OutputWriter.WriteSolution(input, output);
+            OutputWriter.WriteSolution(output);
             
             wr?.Close();
 

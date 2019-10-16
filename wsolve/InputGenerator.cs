@@ -5,7 +5,7 @@ using System.Linq;
 
 // ReSharper disable all
 
-namespace wsolve
+namespace WSolve
 {
 #if DEBUG
     public static class InputGenerator

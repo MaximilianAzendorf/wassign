@@ -1,89 +1,141 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NDesk.Options;
 
-namespace wsolve
+namespace WSolve
 {
     public static class Options
     {
-        public static int Verbosity { get; private set; } = 4;
+        public static int Verbosity { get; private set; } = 3;
         public static int? Seed { get; private set; }
         public static string InputFile { get; private set; }
         public static string OutputFile { get; private set; }
-        public static bool IntermediateFiles { get; private set; }
-        public static List<string> ExtraSchedulingConditions { get; } = new List<string>();
-        public static List<string> ExtraAssignmentConditions { get; } = new List<string>();
-        public static bool WorkshopsOnly { get; private set; }
+        public static string CsvOutputFile { get; private set; }
         public static bool ShowHelp { get; private set; }
-        public static bool DirectCode { get; private set; }
-        public static bool AnySolution { get; private set; }
-
-        public static int TimeoutScheduling { get; private set; } = 600 * 1000;
-        public static int TimeoutAssignment { get; private set; } = 600 * 1000;
+        public static int TimeoutSeconds { get; private set; } = 60 * 60;
+        public static double FinalPhaseStart { get; private set; } = 0.8;
         
-        public static string OptionsScheduling { get; private set; }
-        public static string OptionsAssignment { get; private set; }
+        public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.4, 0.4, 1.0);
+        public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.6, 0.6, 1.0);
+        public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 40, 1.8);
+        public static ISelection Selection { get; private set; } = new TournamentSelection(1.75f);
+        public static int BucketSize { get; private set; } = 5000;
 
+        public static string ExtraConditions { get; private set; } = null;
+        
         public static double PreferenceExponent { get; private set; } = 3;
 
-        private static readonly Regex RangeRegex = new Regex(@"([0-9]+)\s*\-\s*([0-9]+)", RegexOptions.Compiled);
+        private static readonly Regex TimeRegex = new Regex(@"(?<amount>[0-9]+)(?<mult>[s|m|h|d|w])", RegexOptions.Compiled);
+        private static readonly Regex ExpIntRegex = new Regex(@"^(?<from>[0-9.]+)(?:-(?<to>[0-9.]+)(?:\^(?<exp>[0-9.]+))?)?$", RegexOptions.Compiled);
+        private static readonly Regex TournamentRegex = new Regex(@"^tournament\((?<size>[1-9][0-9]*)\)$", RegexOptions.Compiled);
+
+        private static readonly IReadOnlyDictionary<string, int> TimeMultipliers = new Dictionary<string, int>
+            {
+                ["s"] = 1,
+                ["m"] = 60,
+                ["h"] = 60 * 60,
+                ["d"] = 60 * 60 * 24,
+                ["w"] = 60 * 60 * 24 * 7
+            };
         
-        private static OptionSet OptionSet { get; } = new OptionSet()
+        private static void ThrowInvalidParameter(string value) => 
+            throw new FormatException($"Could not undestand parameter value \"{value}\".");
+        
+        private static int ParseTime(string timeString)
+        {
+            int time = 0;
+            int matchedLength = 0;
+            foreach (Match m in TimeRegex.Matches(timeString))
+            {
+                time += int.Parse(m.Groups["amount"].Value) * TimeMultipliers[m.Groups["mult"].Value];
+                matchedLength += m.Length;
+            }
+
+            if (matchedLength != timeString.Length) ThrowInvalidParameter(timeString);
+
+            return time;
+        }
+
+        private static ExpInterpolation ParseExpInt(string expIntString)
+        {
+            Match match = ExpIntRegex.Match(expIntString);
+            if (!match.Success) ThrowInvalidParameter(expIntString);
+
+            double from = double.NaN, to = double.NaN, exp = double.NaN;
+            
+            try
+            {
+                from = double.Parse(match.Groups["from"].Value);
+                to = match.Groups["to"].Success ? double.Parse(match.Groups["to"].Value) : from;
+                exp = match.Groups["exp"].Success ? double.Parse(match.Groups["exp"].Value) : to;
+            }
+            catch (FormatException)
+            {
+                ThrowInvalidParameter(expIntString);
+            }
+
+            return new ExpInterpolation(from, to, exp);
+        }
+
+        private static ISelection ParseSelection(string selectionString)
+        {
+            if(selectionString == "elite") return new EliteSelection();
+
+            Match match = TournamentRegex.Match(selectionString);
+            if (!match.Success) ThrowInvalidParameter(selectionString);
+            
+            return new TournamentSelection(int.Parse(match.Groups["size"].Value));
+        }
+        
+        private static OptionSet OptionSet { get; } = new OptionSet
         {
             {"i|input=", "Specifies an input file.",
                 (string i) => InputFile = i },
             
-            {"o|output=", "Specifies an file file.",
+            {"o|output=", "Specifies an output file.",
                 (string i) => OutputFile = i },
+
+            {"c|csv-output=", "Specifies a csv output file.",
+                (string i) => CsvOutputFile = i },
             
             {"s|shuffle=", "Sets the seed for the random number generator and shuffles the input.", 
                 (int x) => Seed = (x == -1 ? (int?)null : x) },
             
-            {"n|intermediate-files", "Do not delete intermediate files (model and data descriptions).", 
-                x => IntermediateFiles = x != null },
-            
-            {"scheduling-only", "Only calculate a workshop scheduling.", 
-                x => WorkshopsOnly = x != null },
-            
-            {"v|verbosity=", "A number between 0 and 4 (default 4) indicating how much status information should be given.", 
+            {"v|verbosity=", "A number between 0 and 3 (default 3) indicating how much status information should be given.", 
                 (int v) => Verbosity = v },
             
-            {"e|pref-exp=", "The preference exponent. Default 3.0.", 
+            {"p|pref-exp=", $"The preference exponent. Default is {PreferenceExponent}.", 
                 (double v) => PreferenceExponent = v },
             
-            {"t|timeout=", "Sets the scheduling and assignment timeout simultaneously.",
-                (int x) => TimeoutScheduling = TimeoutAssignment = x * 1000 + 1 },
+            {"f|final-phase=", $"The beginning of the final phase. Default is {FinalPhaseStart}.", 
+                (double v) => FinalPhaseStart = v },
+            
+            {"t|timeout=", $"Sets the optimization timeout. Default is {TimeoutSeconds}s.",
+                (string x) => TimeoutSeconds = ParseTime(x) },
 
-            {"timeout-s=", $"A time in seconds after which the scheduling optimization will be aborted. Default is {TimeoutScheduling / 1000}.",
-                (int x) => TimeoutScheduling =  x * 1000 + 1  },
+            {"mutation=", $"The mutation chance. Default is {MutationChance}.",
+                x => MutationChance = ParseExpInt(x) },
             
-            {"timeout-a=", $"A time in seconds after which the assignment optimization will be aborted. Default is {TimeoutAssignment / 1000}.",
-                (int x) => TimeoutAssignment =  x * 1000 + 1  },
+            {"crossover=", $"The crossover chance. Default is {CrossoverChance}.",
+                x => CrossoverChance = ParseExpInt(x) },
             
-            {"p|options=", "Sets the scheduling and assignment options simultaneously.",
-                (string x) => OptionsScheduling = OptionsAssignment = x },
+            {"population=", $"The population size. Default is {PopulationSize}.",
+                x => PopulationSize = ParseExpInt(x) },
             
-            {"options-s=", "A comma separated list of options that will be passed to the scheduling optimizer. See the 'glp_iocp' struct of GLPK for possible options and values.",
-                (string x) => OptionsScheduling = x },
-            
-            {"options-a=", "A comma separated list of options that will be passed to the assignment optimizer. See the 'glp_iocp' struct of GLPK for possible options and values.",
-                (string x) => OptionsAssignment = x },
-            
-            {"extra-s=", "Specify am extra condition for a valid scheduling solution, specified as code fragments written in GNU MathProg. You can also specify a file. You can specify a linear inequality of variables of model (see model files), which will be wrapped in condition statements.", 
-                extra => ExtraSchedulingConditions.Add(extra) },
-            
-            {"extra-a=", "Specify an condition for a valid assignment solution, specified as code fragments written in GNU MathProg. See --extra-scheduling for more infromation.", 
-                extra => ExtraAssignmentConditions.Add(extra) },
+            {"selection=", $"The selection algorithm. Possible values are 'elite' or 'tournament([size])'. Default is {Selection}.",
+                x => Selection = ParseSelection(x) },
 
-            {"d|direct-code", "If this flag is set, specified extra conditions will be included as-is in the model. You then have to write complete MathProg conditions.",
-                x => DirectCode = x != null },
+            {"bucket-size=", $"The bucket size. Default is {BucketSize}.",
+                (int b) => BucketSize = b },
+            
+            {"x|conditions=", $"Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression.",
+                x => ExtraConditions = x },
 
-            {"a|any-solution", "If this flag is set, no optimization is performed; the first found solution will be given.",
-                x => AnySolution = x != null },
             
             {"h|help", "Show help.", 
                 x => ShowHelp = x != null },
@@ -92,7 +144,7 @@ namespace wsolve
                 x => {} },
         };
 
-        public static bool ParseFromArgs(string[] args)
+    public static bool ParseFromArgs(string[] args)
         {
             try
             {
@@ -125,7 +177,6 @@ namespace wsolve
             Console.Error.WriteLine("OPTIONS:");
             OptionSet.WriteOptionDescriptions(Console.Error);
             Console.Error.WriteLine("\nINPUT: Consult the Readme file for information about the input format.\n");
-            Console.Error.WriteLine("If you need further help, you can contact max.azendorf@outlook.com.");
         }
 
     }

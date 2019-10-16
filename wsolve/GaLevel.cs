@@ -7,12 +7,12 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace wsolve
+namespace WSolve
 {
     [DebuggerDisplay("GaLevel [{" + nameof(PreferenceLevel) + "}]")]
     public class GaLevel
     {
-        public int StartLimit => 1;//Math.Max(1, System.PopulationSize.Evalutate(this) / 25);
+        public int StartLimit => 1;//Math.Max(1, System.PopulationSize.Evalutate(System) / 25);
         public int GenerationsPassed { get; private set; } = 0;
         public ChromosomeList CurrentGeneration { get; private set; }
         
@@ -23,7 +23,6 @@ namespace wsolve
 
         private int _gensSinceLastImprovement = 0;
 
-        public float StagnationFactor => (float)Math.Pow(Math.Max(0, Math.Min(1, _gensSinceLastImprovement / (50f + GenerationsPassed))), 2f/3f);
         public MultiLevelGaSystem System { get; }
         public int PreferenceLevel { get; }
 
@@ -34,9 +33,7 @@ namespace wsolve
 
         public bool HasFinished { get; private set; } = false;
 
-        private BlockingCollection<Chromosome> _bucket;
-
-        private int reservedBucketSpace(int populationSize) => Math.Min(_bucket.Count, populationSize / 4);
+        public BlockingCollection<Chromosome> Bucket { get; }
 
         private int _insuffBucketGens = 0;
         
@@ -44,26 +41,26 @@ namespace wsolve
         {
             System = system;
             PreferenceLevel = level;
-            _bucket = bucket;
+            Bucket = bucket;
         }
         
         public void Run(CancellationToken ct)
         {
             HasFinished = false;
-            while (_bucket.Count < StartLimit && !ct.IsCancellationRequested)
+            while (Bucket.Count < StartLimit && !ct.IsCancellationRequested)
             {
                 Thread.Sleep(50);
             }
             
             CurrentGeneration = new ChromosomeList(this);
-            while (CurrentGeneration.Count < StartLimit && _bucket.TryTake(out var x) && !ct.IsCancellationRequested)
+            while (CurrentGeneration.Count < StartLimit && Bucket.TryTake(out var x) && !ct.IsCancellationRequested)
             {
                 CurrentGeneration.Add(x);
             }
 
             HasStarted = true;
 
-            while (!System.Termination.Evalutate(this) && !ct.IsCancellationRequested)
+            while (DateTime.Now < System.TimeStarted + System.Timeout && !ct.IsCancellationRequested)
             {
                 var newGen = AdvanceGeneration(CurrentGeneration);
                 var oldBestFitness = BestFitness;
@@ -77,9 +74,24 @@ namespace wsolve
                 {
                     _gensSinceLastImprovement = 0;
                 }
+
+                if (PreferenceLevel != System.FirstRunningLevel)
+                {
+                    Thread.Sleep((System.LevelIndex(PreferenceLevel) - System.LevelIndex(System.FirstRunningLevel)) * 100);
+                }
             }
 
             HasFinished = true;
+        }
+
+        public float CalculateDiversity()
+        {
+            float d = 0;
+            var gen = CurrentGeneration;
+            foreach(var c1 in gen)
+            foreach (var c2 in gen)
+                d += c1.Distance(c2);
+            return d / (gen.Count * gen.Count);
         }
         
         private ChromosomeList AdvanceGeneration(ChromosomeList list)
@@ -88,15 +100,13 @@ namespace wsolve
             PrefPumpSuccessStats = (0, 0, 0);
             
             list = new ChromosomeList(this, list.Select(c => new Chromosome(c)));
-
+            
+            list.Remove(BestChromosome);
             var best = BestChromosome.Copy();
 
-            int populationSize = System.PopulationSize.Evalutate(this) / Math.Max(1, 1 + PreferenceLevel - System.FirstRunningLevel);
-            float crossChance = System.CrossoverChance.Evalutate(this);
-            float mutChance = System.MutationChance.Evalutate(this);
-            float prpumpChance = System.PrefPumpChance.Evalutate(this);
-            int prpumpDepth = System.PrefPumpDepth.Evalutate(this);
-            TimeSpan prpumpTimeout = System.PrefPumpTimeout.Evalutate(this);
+            int populationSize = System.PopulationSize.Evalutate(System) / Math.Max(1, 1 + System.LevelIndex(PreferenceLevel) - System.LevelIndex(System.FirstRunningLevel));
+            float crossChance = System.CrossoverChance.Evalutate(System);
+            float mutChance = System.MutationChance.Evalutate(System);
 
             ChromosomeList nextGenPool = new ChromosomeList(this, list);
             
@@ -116,44 +126,25 @@ namespace wsolve
                 }
             });
 
+            List<Chromosome> mutated = new List<Chromosome>();
             foreach(Chromosome chromosome in nextGenPool)
             {
                 if (RNG.NextFloat() < mutChance)
                 {
-                    Mutate(chromosome);
-                }
-
-                if (RNG.NextFloat() < prpumpChance)
-                {
-                    Input input = chromosome.Input;
-                    int pumpPref = -1;
-                    for (int i = 0; i <= input.MaxPreference; i++)
-                    {
-                        int prefCount = chromosome.CountPreference(i);
-                        if (prefCount == 0) continue;
-                        pumpPref = i;
-                    }
-
-                    if (pumpPref != -1)
-                    {
-                        var r = PrefPumpHeuristic.TryPump(chromosome, pumpPref, prpumpDepth, prpumpTimeout);
-                        if (r == PrefPumpResult.Partial)
-                            PrefPumpSuccessStats = (PrefPumpSuccessStats.Full, PrefPumpSuccessStats.Partial + 1,
-                                PrefPumpSuccessStats.Fail);
-                        if (r == PrefPumpResult.Success)
-                            PrefPumpSuccessStats = (PrefPumpSuccessStats.Full + 1, PrefPumpSuccessStats.Partial,
-                                PrefPumpSuccessStats.Fail);
-                        if (r == PrefPumpResult.Fail)
-                            PrefPumpSuccessStats = (PrefPumpSuccessStats.Full, PrefPumpSuccessStats.Partial,
-                                PrefPumpSuccessStats.Fail + 1);
-                    }
+                    var copy = chromosome.Copy();
+                    Mutate(copy);
+                    mutated.Add(copy);
                 }
             }
+            nextGenPool.AddRange(mutated);
 
             ChromosomeList samePref = new ChromosomeList(this);
 
             foreach (var chromosome in nextGenPool)
             {
+                if (!System.Fitness.IsFeasible(chromosome))
+                    continue;
+                
                 int maxUsedPreference = chromosome.MaxUsedPreference;
                 if (maxUsedPreference == PreferenceLevel)
                 {
@@ -161,19 +152,18 @@ namespace wsolve
                 }
                 else
                 {
-                    if(System.Fitness.IsFeasible(chromosome))
-                        System.AddToBucket(chromosome, maxUsedPreference);
+                    System.AddToBucket(chromosome, maxUsedPreference);
                 }
             }
             
-            var nextGen = new ChromosomeList(this, System.Selection.Select(populationSize - reservedBucketSpace(populationSize), this, samePref.Where(f => System.Fitness.IsFeasible(f))));
+            for(int i = 0; i < Bucket.Count / 4 && Bucket.TryTake(out var x); i++)
+            {
+                samePref.Add(x);
+            }
+            
+            var nextGen = new ChromosomeList(this, System.Selection.Select(populationSize, this, samePref.Where(f => System.Fitness.IsFeasible(f))));
             nextGen.Add(BestChromosome);
             
-            while (nextGen.Count < populationSize && _bucket.TryTake(out Chromosome x))
-            {
-                nextGen.Add(x);
-            }
-
             if (nextGen.Count < populationSize && nextGen.Count > 0)
             {
                 _insuffBucketGens++;

@@ -2,17 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace wsolve
+namespace WSolve
 {
-    public class Input
+    public class InputData
     {
-        public List<(string name, int conductor, int min, int max)> Workshops { get; private set; } = new List<(string name, int conductor, int min, int max)>();
+        public List<(string name, IEnumerable<int> conductors, int min, int max)> Workshops { get; private set; } = new List<(string name, IEnumerable<int> conductors, int min, int max)>();
         public List<(string name, int[] preferences)> Participants  { get; private set; } = new List<(string name, int[] preferences)>();
         public List<string> Slots { get; private set; } = new List<string>();
 
         public int MaxPreference => Participants.Max(p => p.preferences.Max());
 
-        public Input()
+        public InputData()
         {
         }
 

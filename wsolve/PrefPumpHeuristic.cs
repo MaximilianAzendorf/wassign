@@ -1,7 +1,8 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 
-namespace wsolve
+namespace WSolve
 {
     public enum PrefPumpResult
     {
@@ -17,25 +18,28 @@ namespace wsolve
 #if DEBUG
             if (Debugger.IsAttached) timeout = TimeSpan.MaxValue;
 #endif
+            int[] partShuffle = Enumerable.Range(0, chromosome.InputData.Participants.Count).OrderBy(_ => RNG.NextInt())
+                .ToArray();
+            
             bool tryPumpRec(Chromosome c, int p, int s, int wOrig, int pref, bool[] visited, int depth, DateTime start)
             {
                 int pw = c.Workshop(p, s);
                 if (depth > maxDepth) return false;
                 if (visited[p]) return false;
                 
-                if (chromosome.Input.Workshops[pw].conductor == p) return false;
+                if (chromosome.InputData.Workshops[pw].conductors.Contains(p)) return false;
                 //if (chromosome.Input.Workshops[pw].min - (pw == wOrig ? 1 : 0) >= c.CountParticipants(pw)) return false;
                 
-                for (int w = 0; w < chromosome.Input.Workshops.Count; w++)
+                for (int w = 0; w < chromosome.InputData.Workshops.Count; w++)
                 {
                     if (w == pw) continue;
                     if (c.Slot(w) != s) continue;
 
-                    if (chromosome.Input.Participants[p].preferences[w] >= pref) continue;
+                    if (chromosome.InputData.Participants[p].preferences[w] >= pref) continue;
                     
                     if (w == wOrig 
-                        || (c.CountParticipants(w) < chromosome.Input.Workshops[w].max
-                            && c.CountParticipants(wOrig) > chromosome.Input.Workshops[wOrig].min))
+                        || (c.CountParticipants(w) < chromosome.InputData.Workshops[w].max
+                            && c.CountParticipants(wOrig) > chromosome.InputData.Workshops[wOrig].min))
                     {
                         c.Workshop(p, s) = w;
                         return true;
@@ -43,16 +47,17 @@ namespace wsolve
                 }
 
                 visited[p] = true;
-                for (int pswitch = 0; pswitch < chromosome.Input.Participants.Count; pswitch++)
+                for (int pswitchi = 0; pswitchi < chromosome.InputData.Participants.Count; pswitchi++)
                 {
+                    int pswitch = partShuffle[pswitchi];
                     if (DateTime.Now - start > timeout) return false;
                     
                     if (pswitch == p) continue;
                     
                     int wswitch = c.Workshop(pswitch, s);
-                    if (chromosome.Input.Workshops[wswitch].conductor == pswitch) continue;
+                    if (chromosome.InputData.Workshops[wswitch].conductors.Contains(pswitch)) continue;
                     
-                    int switchPref = chromosome.Input.Participants[p].preferences[wswitch];
+                    int switchPref = chromosome.InputData.Participants[p].preferences[wswitch];
                     if (switchPref >= pref) continue;
 
                     if (tryPumpRec(c, pswitch, s, wOrig, pref, visited, depth + 1, start))
@@ -65,16 +70,19 @@ namespace wsolve
                 return false;
             }
 
-            bool[] visitedMap = new bool[chromosome.Input.Participants.Count];
+            bool[] visitedMap = new bool[chromosome.InputData.Participants.Count];
             DateTime startTime = DateTime.Now;
 
             int successes = 0;
             int fails = 0;
-            for (int p = 0; p < chromosome.Input.Participants.Count; p++)
+            int count = chromosome.CountPreference(preference);
+            
+            for (int pi = 0; pi < chromosome.InputData.Participants.Count; pi++)
             {
-                for (int s = 0; s < chromosome.Input.Slots.Count; s++)
+                int p = partShuffle[pi];
+                for (int s = 0; s < chromosome.InputData.Slots.Count; s++)
                 {
-                    if (chromosome.Input.Participants[p].preferences[chromosome.Workshop(p, s)] < preference) continue;
+                    if (chromosome.InputData.Participants[p].preferences[chromosome.Workshop(p, s)] < preference) continue;
                     if (tryPumpRec(chromosome, p, s, chromosome.Workshop(p, s), preference, visitedMap, 0, startTime))
                     {
                         successes++;
@@ -85,7 +93,7 @@ namespace wsolve
                     }
                 }
             }
-
+            
             return successes == 0 ? PrefPumpResult.Fail : fails == 0 ? PrefPumpResult.Success : PrefPumpResult.Partial;
         }
     }

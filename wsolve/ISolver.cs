@@ -1,7 +1,7 @@
-namespace wsolve
+namespace WSolve
 {
     public interface ISolver
     {
-        Output Solve(Input input);
+        Solution Solve(InputData inputData);
     }
 }

@@ -1,6 +1,6 @@
 using System;
 
-namespace wsolve
+namespace WSolve
 {
     public interface IFitness
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace wsolve
+namespace WSolve
 {
     public static class Parameter
     {
@@ -13,25 +13,25 @@ namespace wsolve
                 _value = value;
             }
 
-            public T Evalutate(GaLevel algorithmState) => _value;
+            public T Evalutate(MultiLevelGaSystem algorithmState) => _value;
         }
 
         private class FuncParameter<T> : IParameter<T>
         {
-            private readonly Func<GaLevel, T> _func;
+            private readonly Func<MultiLevelGaSystem, T> _func;
 
-            public FuncParameter(Func<GaLevel, T> func)
+            public FuncParameter(Func<MultiLevelGaSystem, T> func)
             {
                 _func = func;
             }
 
-            public T Evalutate(GaLevel algorithmState) => _func(algorithmState);
+            public T Evalutate(MultiLevelGaSystem algorithmState) => _func(algorithmState);
         }
         
         public static IParameter<T> Create<T>(T value) => new ConstantParameter<T>(value);
         
         public static IParameter<T> Create<T>(Func<T> func) => new FuncParameter<T>(x => func());
         
-        public static IParameter<T> Create<T>(Func<GaLevel, T> func) => new FuncParameter<T>(func);
+        public static IParameter<T> Create<T>(Func<MultiLevelGaSystem, T> func) => new FuncParameter<T>(func);
     }
 }

@@ -1,14 +1,15 @@
 using System;
 
-namespace wsolve
+namespace WSolve
 {
     public static class RNG
     {
-        private static Random rnd = new Random();
+        [ThreadStatic] private static Random _rnd;
+        private static Random Rnd => _rnd ?? (_rnd = new Random());
 
-        public static float NextFloat() => (float)rnd.NextDouble();
-        public static int NextInt() => rnd.Next();
-        public static int NextInt(int min, int max) => rnd.Next(min, max);
+        public static float NextFloat() => (float)Rnd.NextDouble();
+        public static int NextInt() => Rnd.Next();
+        public static int NextInt(int min, int max) => Rnd.Next(min, max);
 
         public static int[] NextInts(int number, int min, int max)
         {
@@ -20,7 +21,5 @@ namespace wsolve
 
             return x;
         }
-
-        public static void Seed(int seed) => rnd = new Random(seed);
     }
 }

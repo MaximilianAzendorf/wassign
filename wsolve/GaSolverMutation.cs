@@ -1,25 +1,25 @@
-namespace wsolve
+namespace WSolve
 {
     public static class GaSolverMutations
     {
         public class ExchangeAssignment : IMutation
         {
-            public Input Input { get; }
+            public InputData InputData { get; }
 
-            public ExchangeAssignment(Input input)
+            public ExchangeAssignment(InputData inputData)
             {
-                Input = input;
+                InputData = inputData;
             }
             
             public void Mutate(Chromosome chromosome)
             {
-                int slot = RNG.NextInt(0, Input.Slots.Count);
-                int[] p = RNG.NextInts(2, 0, Input.Participants.Count);
+                int slot = RNG.NextInt(0, InputData.Slots.Count);
+                int[] p = RNG.NextInts(2, 0, InputData.Participants.Count);
                 int[] s = new int[2];
 
                 for (int i = 0; i < 2; i++)
                 {
-                    for (int si = 0; si < Input.Slots.Count; si++)
+                    for (int si = 0; si < InputData.Slots.Count; si++)
                     {
                         int w = (int)chromosome.Workshop(p[0],si);
                         int ws = (int) chromosome.Slot(w);
@@ -41,17 +41,17 @@ namespace wsolve
 
         public class ExchangeScheduling : IMutation
         {
-            public Input Input { get; }
+            public InputData InputData { get; }
 
-            public ExchangeScheduling(Input input)
+            public ExchangeScheduling(InputData inputData)
             {
-                Input = input;
+                InputData = inputData;
             }
 
             public void Mutate(Chromosome chromosome)
             {
-                int i0 = RNG.NextInt(0, Input.Workshops.Count);
-                int i1 = RNG.NextInt(0, Input.Workshops.Count);
+                int i0 = RNG.NextInt(0, InputData.Workshops.Count);
+                int i1 = RNG.NextInt(0, InputData.Workshops.Count);
 
                 int w0 = chromosome.Slot(i0);
                 int w1 = chromosome.Slot(i1);
@@ -59,9 +59,9 @@ namespace wsolve
                 chromosome.Slot(i0) = w1;
                 chromosome.Slot(i1) = w0;
 
-                for (int p = 0; p < Input.Participants.Count; p++)
+                for (int p = 0; p < InputData.Participants.Count; p++)
                 {
-                    for (int s = 0; s < Input.Slots.Count; s++)
+                    for (int s = 0; s < InputData.Slots.Count; s++)
                     {
                         int w = chromosome.Workshop(p, s);
                         if (w == i0)
@@ -79,17 +79,17 @@ namespace wsolve
 
         public class ChangeAssignment : IMutation
         {
-            public Input Input { get; }
+            public InputData InputData { get; }
 
-            public ChangeAssignment(Input input)
+            public ChangeAssignment(InputData inputData)
             {
-                Input = input;
+                InputData = inputData;
             }
             
             public void Mutate(Chromosome chromosome)
             {
-                int s = RNG.NextInt(0, Input.Slots.Count);
-                var p = RNG.NextInt(0, Input.Participants.Count);
+                int s = RNG.NextInt(0, InputData.Slots.Count);
+                var p = RNG.NextInt(0, InputData.Participants.Count);
 
                 chromosome.Workshop(p, s) = chromosome.GenerateWorkshopGene();
             }

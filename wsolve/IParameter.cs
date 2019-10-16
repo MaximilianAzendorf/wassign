@@ -1,7 +1,7 @@
-namespace wsolve
+namespace WSolve
 {
     public interface IParameter<out T>
     {
-        T Evalutate(GaLevel algorithmState);
+        T Evalutate(MultiLevelGaSystem algorithmState);
     }
 }

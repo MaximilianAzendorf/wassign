@@ -1,4 +1,4 @@
-namespace wsolve
+namespace WSolve
 {
     public static class LCM
     {

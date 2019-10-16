@@ -5,9 +5,20 @@
         <TargetFramework>netcoreapp2.2</TargetFramework>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
+        <PackageVersion>0.0.1</PackageVersion>
+        <Title>Workshop Scheduling and Assignment Solver</Title>
+        <Authors>Maximilian Azendorf</Authors>
+        <Description>Workshop Scheduling and Assignment Solver</Description>
+        <Copyright>(c) 2019 Maximilian Azendorf</Copyright>
+        <PackageProjectUrl>https://github.com/MaximilianAzendorf/wsolve</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/MaximilianAzendorf/wsolve/blob/master/License.md</PackageLicenseUrl>
+        <RepositoryUrl>https://github.com/MaximilianAzendorf/wsolve</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <RootNamespace>WSolve</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.4.0-beta2-final" />
       <PackageReference Include="NDesk.Options.Core" Version="1.2.4" />
     </ItemGroup>
 
@@ -19,6 +30,11 @@
 
     <ItemGroup>
       <None Remove="model.mod" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="resources\ExtraConditionsCodeEnvironment.txt" />
+      <EmbeddedResource Include="resources\ExtraConditionsCodeEnvironment.txt" />
     </ItemGroup>
 
 </Project>

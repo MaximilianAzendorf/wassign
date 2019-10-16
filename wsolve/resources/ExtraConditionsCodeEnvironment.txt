@@ -1,0 +1,22 @@
+using System;
+using System.Text;
+using System.Linq;
+using System.Collections.Generic;
+using WSolve;
+using static System.Math;
+
+namespace WSolve.Generated
+{
+    using Participant = CustomFilter.ParticipantAccessor;
+    using Workshop = CustomFilter.WorkshopAccessor;
+    using Slot = CustomFilter.SlotAccessor;
+    
+    public class ExtraConditions : CustomFilter
+    {
+        public ExtraConditions(Chromosome chromosome) : base(chromosome)
+        {
+            // Condition code is inserted here
+            ###
+        }
+    }
+}

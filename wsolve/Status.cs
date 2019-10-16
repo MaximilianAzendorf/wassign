@@ -1,6 +1,6 @@
 using System;
 
-namespace wsolve
+namespace WSolve
 {
     public static class Status
     {
@@ -28,15 +28,6 @@ namespace wsolve
 #if DEBUG
             Console.Error.WriteLine(Environment.StackTrace);
 #endif
-            Console.ForegroundColor = c;
-        }
-
-        public static void GLPK(string text)
-        {
-            var c = Console.ForegroundColor;
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            if(Options.Verbosity >= 4)
-                Console.Error.WriteLine($"GLPK:    " + text);
             Console.ForegroundColor = c;
         }
     }

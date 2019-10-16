@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace wsolve
+namespace WSolve
 {
     public interface IMutation
     {
