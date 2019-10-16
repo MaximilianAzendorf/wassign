@@ -80,7 +80,7 @@ Workshop W1 must have less participants than Workshop W2:
     AddCondition(Workshop["W1"].Participants.Count() < Workshop["W2"].Participants.Count());
 
 ##### Example 3
-All Workshops in Slot "Morning" must have an even number of participants IF they are not full and Participant "John" must be in Workshop W3:
+All Workshops in Slot "Morning" must have an even number of participants IF they are not full.
 
     foreach(Workshop w in Slot("Morning").Workshops)
     {
