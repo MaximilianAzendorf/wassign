@@ -6,7 +6,6 @@ namespace WSolve
 {
     public static class LocalOptimization
     {
-        
         public static Chromosome Apply(Chromosome chromosome, IFitness fitness, out int alterationCount)
         {
             int round = 0;
@@ -16,7 +15,7 @@ namespace WSolve
             int roundAlteration = 1;
             while (roundAlteration > 0)
             {
-                Status.Info($"Starting Local Optimization Round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
+                Status.Info($"Starting local optimization round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
                 roundAlteration = 0;
                 var input = chromosome.InputData;
                 int[] remainingSpace = Enumerable.Range(0, input.Workshops.Count)

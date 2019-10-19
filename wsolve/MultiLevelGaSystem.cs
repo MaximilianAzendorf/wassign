@@ -47,7 +47,7 @@ namespace WSolve
 
         public int NumberofSubthreads { get; } = Environment.ProcessorCount / 2;
         public int NumberOfPresolverThreads { get; } = Environment.ProcessorCount / 2;
-        public int NumberOfPrefPumpThreads { get; } = 1;
+        public int NumberOfPrefPumpThreads => Options.NoPrefPump ? 0 : 1;
         public InputData InputData { get; }
         public int BucketLimit { get; }
 
@@ -55,7 +55,7 @@ namespace WSolve
 
         public int LevelIndex(int preferenceLevel) => Array.IndexOf(_preferenceLevels, preferenceLevel);
         
-        public bool PresolversWaiting => _buckets.Any(b => b.Count >= BucketLimit * 19 / 20);
+        public bool PresolversWaiting => _buckets[FirstRunningLevel].Count > 0 && Progress > Options.FinalPhaseStart / 2;
 
         public int GenerationsPassed => _levels.Sum(l => l?.GenerationsPassed ?? 0);
 
@@ -89,7 +89,7 @@ namespace WSolve
 
             TimeStarted = DateTime.Now;
             
-            Status.Info($"Starting GA System with {NumberOfPresolverThreads} presolver worker(s), {NumberOfPrefPumpThreads} preference pump worker(s) and {NumberOfGeneticThreads} genetic workers.");
+            Status.Info($"Starting GA System (Workers: {NumberOfPresolverThreads} Presolver, {(NumberOfPrefPumpThreads == 0 ? "no" : NumberOfPrefPumpThreads.ToString())} PRP, {NumberOfGeneticThreads}*{NumberofSubthreads} GA).");
 
             //Status.Info("Preference levels: " + string.Join(", ", _preferenceLevels));
             
@@ -117,13 +117,18 @@ namespace WSolve
             }
         }
         
-        public Solution WaitForSolution(TimeSpan outputFrequency)
+        public Chromosome WaitForSolutionChromosome(TimeSpan outputFrequency)
         {
             while (_levels.All(l => !l.HasFinished))
             {
-                Thread.Sleep(outputFrequency.Milliseconds);
+                Thread.Sleep((int)outputFrequency.TotalMilliseconds);
 
-                if (_levels.All(l => !l.HasStarted)) continue;
+                if (_levels.All(l => !l.HasStarted))
+                {
+                    Thread.Sleep((int)outputFrequency.TotalMilliseconds);
+                    Status.Info("No GA level started yet; waiting for initial solutions from presolver.");
+                    continue;
+                }
                 
                 StringBuilder state = new StringBuilder();
 
@@ -151,15 +156,7 @@ namespace WSolve
 
             var best = _levels.Select(l => l.BestChromosome).OrderBy(Fitness.Evaluate).First();
             
-            best = LocalOptimization.Apply(best, Fitness, out int altCount);
-            
-            Status.Info($"Local Optimizations made {altCount} alteration(s).");
-            Status.Info("Final Fitness: " + Fitness.Evaluate(best));
-            
-            return new Solution(InputData,
-                Enumerable.Range(0, InputData.Workshops.Count).Select(w => (w, best.Slot(w))),
-                Enumerable.Range(0, InputData.Participants.Count).SelectMany(p =>
-                    Enumerable.Range(0, InputData.Slots.Count).Select(s => (p, best.Workshop(p,s)))));
+            return best;
         }
 
         public void AddToBucket(Chromosome chromosome, int prefLevel)
@@ -173,7 +170,7 @@ namespace WSolve
             {
                 while (PresolversWaiting && !token.IsCancellationRequested)
                 {
-                    Thread.Sleep(100);
+                    Thread.Sleep(50);
                 }
 
                 return true;
@@ -201,12 +198,13 @@ namespace WSolve
             
             ga.Run(token);
         }
-
+        
         private volatile int _prefPumpMinFound = int.MaxValue;
         private void PrefPumpWorker(CancellationToken ct)
         {
-            Thread.Sleep(5000);
-            Status.Info("Begin preference pump.");
+            while(_levels.Any(l => l == null))
+                Thread.Sleep(500);
+            Status.Info($"Begin preference pumping (Timeout {Options.PreferencePumpTimeoutSeconds}s, Depth {(Options.PreferencePumpMaxDepth < 0 ? "any" : Options.PreferencePumpMaxDepth.ToString())}).");
 
             while (!ct.IsCancellationRequested)
             {
@@ -224,8 +222,8 @@ namespace WSolve
                     foreach (Chromosome c in chromosomes)
                     {
                         if (ct.IsCancellationRequested) return;
-                        var r = PrefPumpHeuristic.TryPump(c, level.PreferenceLevel, int.MaxValue,
-                            TimeSpan.FromSeconds(10));
+                        var r = PrefPumpHeuristic.TryPump(c, level.PreferenceLevel, Options.PreferencePumpMaxDepth,
+                            TimeSpan.FromSeconds(Options.PreferencePumpTimeoutSeconds));
                         if (r == PrefPumpResult.Partial || r == PrefPumpResult.Success)
                         {
                             if (r == PrefPumpResult.Success && c.MaxUsedPreference < _prefPumpMinFound)

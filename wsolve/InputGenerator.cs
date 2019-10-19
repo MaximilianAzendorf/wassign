@@ -18,10 +18,10 @@ namespace WSolve
             string hn(int i) => $"Human {i}";
             string sl(int i) => $"Slot {i}";
             
-            int HumanCount, WorkshopCount, SlotCount, SkewDiv, WorkshopOff;
-            float WorkshopSizeVar, SkewDivF;
+            int HumanCount, WorkshopCount, SlotCount, WorkshopOff;
+            float WorkshopSizeVar;
             
-            Console.WriteLine("Input: #part #ws #slot wsvar wsoff skew");
+            Console.WriteLine("Input: #part #ws #slot wsvar wsoff");
             float[] input = Console.ReadLine().Split(' ').Select(f => float.Parse(f, CultureInfo.InvariantCulture)).ToArray();
 
             HumanCount = (int) input[0];
@@ -29,9 +29,6 @@ namespace WSolve
             SlotCount = (int) input[2];
             WorkshopSizeVar = input[3];
             WorkshopOff = (int) input[4];
-            SkewDivF = input[5];
-
-            SkewDiv = SkewDivF == 0 ? int.MaxValue : (int)(WorkshopCount / SkewDivF);
 
             int _avgWsSize = HumanCount * SlotCount / WorkshopCount;
             int rem = HumanCount;
@@ -69,39 +66,22 @@ namespace WSolve
             for (int i = 0; i < HumanCount; i++)
             {
                 Console.Error.Write($"(person) {hn(i)}:");
+                int favourite = rnd.Next(WorkshopCount);
                 
-                List<int> pref = new List<int>();
                 for (int j = 0; j < WorkshopCount; j++)
                 {
-                    for (int k = 0; k < 1 + j / SkewDiv; k++)
-                    {
-                        pref.Add(j);
-                    }
-                }
-                
-                pref = pref.OrderBy(n => rnd.Next()).ToList();
-
-                bool[] encountered = new bool[WorkshopCount];
-                int off = 0;
-                for (int j = 0; j < WorkshopCount; j++)
-                {
-                    if (encountered[pref[j + off]])
-                    {
-                        j--;
-                        off++;
-                        continue;
-                    }
-
                     if (conductors[j] == i)
                     {
-                        Console.Error.Write(" 0");
+                        Console.Error.Write(" 100");
+                    }
+                    else if (j == favourite)
+                    {
+                        Console.Error.Write(" 100");
                     }
                     else
                     {
-                        Console.Error.Write($" {pref[j + off]}");
+                        Console.Error.Write($" {Math.Min(100, Math.Max(0, rnd.Next(-35, 122)))}");
                     }
-
-                    encountered[pref[j + off]] = true;
                 }
                 
                 Console.Error.WriteLine();

@@ -24,7 +24,7 @@ namespace WSolve
                 ((AssemblyCopyrightAttribute) assembly.GetCustomAttributes(
                     typeof(AssemblyCopyrightAttribute)).SingleOrDefault())?.Copyright);
 #if DEBUG
-            Status.Info($"PID: [{Process.GetCurrentProcess().Id}]");
+            Status.Info($"PID: {Process.GetCurrentProcess().Id}");
 #endif
         }
 
@@ -72,13 +72,24 @@ namespace WSolve
                 Console.SetOut(wr = File.CreateText(Options.OutputFile));
             }
 
-            ISolver solver = new GaSolver();
-            
-            var output = solver.Solve(input);
-            
-            output.Verify();
-            
-            OutputWriter.WriteSolution(output);
+            try
+            {
+                ISolver solver = new GaSolver();
+
+                var output = solver.Solve(input);
+                output.Verify();
+                OutputWriter.WriteSolution(output);
+            }
+            catch (WSolveException ex)
+            {
+                Status.Error(ex.Message);
+                return Exit.Error;
+            }
+            catch (VerifyException ex)
+            {
+                Status.Error("Solution failed verification: " + ex.Message);
+                return Exit.Error;
+            }
             
             wr?.Close();
 

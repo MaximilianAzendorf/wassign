@@ -24,11 +24,10 @@ namespace WSolve
             bool tryPumpRec(Chromosome c, int p, int s, int wOrig, int pref, bool[] visited, int depth, DateTime start)
             {
                 int pw = c.Workshop(p, s);
-                if (depth > maxDepth) return false;
+                if (maxDepth >= 0 && depth > maxDepth) return false;
                 if (visited[p]) return false;
                 
                 if (chromosome.InputData.Workshops[pw].conductors.Contains(p)) return false;
-                //if (chromosome.Input.Workshops[pw].min - (pw == wOrig ? 1 : 0) >= c.CountParticipants(pw)) return false;
                 
                 for (int w = 0; w < chromosome.InputData.Workshops.Count; w++)
                 {
@@ -75,7 +74,6 @@ namespace WSolve
 
             int successes = 0;
             int fails = 0;
-            int count = chromosome.CountPreference(preference);
             
             for (int pi = 0; pi < chromosome.InputData.Participants.Count; pi++)
             {

@@ -89,7 +89,7 @@ namespace WSolve
         
         public IEnumerable<Solution> SolveIndefinitely(InputData inputData, CancellationToken ctoken)
         {
-            Random rootRnd = new Random(Options.Seed ?? 0);
+            Random rootRnd = new Random(Options.Seed ?? 2);
 
             while (!ctoken.IsCancellationRequested)
             {

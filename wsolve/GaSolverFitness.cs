@@ -18,9 +18,8 @@ namespace WSolve
             ExtraFilter = extraFilter;
         }
 
-        
-        public bool IsFeasible(Chromosome chromosome) => IsFeasible(chromosome, false);
-        public bool IsFeasible(Chromosome chromosome, bool complain)
+
+        public bool IsFeasible(Chromosome chromosome)
         {
             int[] partCounts = new int[InputData.Workshops.Count];
             bool[,] isInSlot = new bool[InputData.Participants.Count, InputData.Slots.Count];
@@ -44,7 +43,6 @@ namespace WSolve
 
                     if (!foundConductor)
                     {
-                        if (complain) Status.Error("Conductor not found.");
                         return false;
                     }
                 }
@@ -56,7 +54,6 @@ namespace WSolve
                 int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
                 if (isInSlot[p, slots[ws]])
                 {
-                    if(complain) Status.Error("Multiple workshops in single slot.");
                     return false;
                 }
                 isInSlot[p, slots[ws]] = true;
@@ -67,13 +64,11 @@ namespace WSolve
             {
                 if (partCounts[i] < InputData.Workshops[i].min)
                 {
-                    if(complain) Status.Error("Too few humans.");
                     return false;
                 }
 
                 if (partCounts[i] > InputData.Workshops[i].max)
                 {
-                    if(complain) Status.Error("Too many humans.");
                     return false;
                 }
             }
@@ -81,7 +76,7 @@ namespace WSolve
             if (!(ExtraFilter?.Invoke(chromosome) ?? true)) return false;
             return true;
         }
-        
+
         public int EvaluateMajor(Chromosome chromosome)
         {
             int m = 0;

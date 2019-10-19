@@ -18,8 +18,16 @@ namespace WSolve
         public static string CsvOutputFile { get; private set; }
         public static bool ShowHelp { get; private set; }
         public static int TimeoutSeconds { get; private set; } = 60 * 60;
+        public static int PreferencePumpTimeoutSeconds { get; private set; } = 10;
+        public static int PreferencePumpMaxDepth { get; private set; } = -1;
         public static double FinalPhaseStart { get; private set; } = 0.8;
+
+        public static bool NoGeneticOptimizations { get; private set; } = false;
+        public static bool NoLocalOptimizations { get; private set; } = false;
+        public static bool NoPrefPump { get; private set; } = false;
         
+        public static bool NoStats { get; private set; } = false;
+            
         public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.4, 0.4, 1.0);
         public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.6, 0.6, 1.0);
         public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 40, 1.8);
@@ -117,6 +125,27 @@ namespace WSolve
             
             {"t|timeout=", $"Sets the optimization timeout. Default is {TimeoutSeconds}s.",
                 (string x) => TimeoutSeconds = ParseTime(x) },
+            
+            {"prp-timeout=", $"Sets the timeout for the preference pump heuristic. Default is {PreferencePumpTimeoutSeconds}s.", 
+                (string x) => PreferencePumpTimeoutSeconds = ParseTime(x) },
+            
+            {"prp-depth=", $"Sets the maximum search depth for the preference pump heuristic. Specify -1 for unbounded depth. Default is {PreferencePumpTimeoutSeconds}.", 
+                (int x) => PreferencePumpMaxDepth = x },
+            
+            { "a|any-solution", "Only compute a greedy solution and perform local optimizations. Same as --no-ga --no-prp --no-lopt.",
+                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = true },
+            
+            { "no-ga", "Do not perform genetic optimizations.",
+                x => NoGeneticOptimizations = true },
+            
+            { "no-lopt", "Do not perform local optimizations.", 
+                x => NoLocalOptimizations = true },
+            
+            { "no-prp", "Do not use preference pump heuristics.",
+                x => NoPrefPump = true },
+            
+            { "no-stats", "Do not print solution statistics.", 
+                x => NoStats = true },
 
             {"mutation=", $"The mutation chance. Default is {MutationChance}.",
                 x => MutationChance = ParseExpInt(x) },
@@ -135,7 +164,6 @@ namespace WSolve
             
             {"x|conditions=", $"Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression.",
                 x => ExtraConditions = x },
-
             
             {"h|help", "Show help.", 
                 x => ShowHelp = x != null },
@@ -144,7 +172,7 @@ namespace WSolve
                 x => {} },
         };
 
-    public static bool ParseFromArgs(string[] args)
+        public static bool ParseFromArgs(string[] args)
         {
             try
             {

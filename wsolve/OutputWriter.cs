@@ -37,6 +37,8 @@ namespace WSolve
                 Console.WriteLine($"'{ws.name}' -> '{slot}'.");
             }
 
+            Console.WriteLine();
+
             if (Options.CsvOutputFile != null)
             {
                 StringBuilder str = new StringBuilder();
@@ -49,27 +51,29 @@ namespace WSolve
                 
                 File.WriteAllText(Options.CsvOutputFile + ".scheduling.csv", str.ToString());
             }
-            
-            Status.Info("Scheduling solution statistics:");
-            for (int i = 0; i < solution.InputData.Slots.Count; i++)
+
+            if (!Options.NoStats)
             {
-                int maxSpan = slotMax[i] - slotMin[i];
-                int realSpan = solution.InputData.Participants.Count - slotMin[i];
-                if (solution.InputData.Slots[i] == "NULL")
+                Status.Info("Scheduling solution statistics:");
+                for (int i = 0; i < solution.InputData.Slots.Count; i++)
                 {
-                    Status.Info($"    Not scheduled: {slotCnt[i]} workshop(s)");
-                }
-                else
-                {
-                    Status.Info($"    Slot '{solution.InputData.Slots[i]}': {slotCnt[i]} workshop(s), is {(float)realSpan / maxSpan*100:0.0}% between min-max.");
-                    foreach (var ws in scheduling.Where(x => x.slot == i).Select(x => x.ws))
+                    int maxSpan = slotMax[i] - slotMin[i];
+                    int realSpan = solution.InputData.Participants.Count - slotMin[i];
+                    if (solution.InputData.Slots[i] == "NULL")
                     {
-                        Status.Info($"        {solution.InputData.Workshops[ws].name}");
+                        Status.Info($"    Not scheduled: {slotCnt[i]} workshop(s)");
+                    }
+                    else
+                    {
+                        Status.Info(
+                            $"    Slot '{solution.InputData.Slots[i]}': {slotCnt[i]} workshop(s), is {(float) realSpan / maxSpan * 100:0.0}% between min-max.");
+                        foreach (var ws in scheduling.Where(x => x.slot == i).Select(x => x.ws))
+                        {
+                            Status.Info($"        {solution.InputData.Workshops[ws].name}");
+                        }
                     }
                 }
             }
-            
-            Console.WriteLine();
         }
 
         private static void WriteAssignmentSolution(Solution solution)
@@ -124,18 +128,22 @@ namespace WSolve
                 File.WriteAllText(Options.CsvOutputFile + ".assignment.csv", str.ToString());
             }
 
-            Status.Info("Assignment solution statistics:");
-            Status.Info("    Preference distribution: ");
-            for (int i = solution.InputData.Participants.Min(p => p.preferences.Min()); i < partCnt.Length; i++)
+            if (!Options.NoStats)
             {
-                if(partCnt[i] > 0)
-                    Status.Info($"        Preference {100-i}: {partCnt[i]} participant(s).");
-            }
+                Status.Info("Assignment solution statistics:");
+                Status.Info("    Preference distribution: ");
+                for (int i = solution.InputData.Participants.Min(p => p.preferences.Min()); i < partCnt.Length; i++)
+                {
+                    if (partCnt[i] > 0)
+                        Status.Info($"        Preference {100 - i}: {partCnt[i]} participant(s).");
+                }
 
-            for (int i = 0; i < wsParts.Length; i++)
-            {
-                Status.Info($"    Workshop '{solution.InputData.Workshops[i].name}': {wsParts[i] - solution.InputData.Workshops[i].conductors.Count()} participant(s) (of {solution.InputData.Workshops[i].max - solution.InputData.Workshops[i].conductors.Count()}).");
-            };
+                for (int i = 0; i < wsParts.Length; i++)
+                {
+                    Status.Info(
+                        $"    Workshop '{solution.InputData.Workshops[i].name}': {wsParts[i] - solution.InputData.Workshops[i].conductors.Count()} participant(s) (of {solution.InputData.Workshops[i].max - solution.InputData.Workshops[i].conductors.Count()}).");
+                }
+            }
         }
     }
 }

@@ -13,7 +13,7 @@ namespace WSolve
         
         private readonly int[] _array;
         private readonly InputData _inputData;
-
+        
         public int Length => _inputData.Workshops.Count + _inputData.Participants.Count * _inputData.Slots.Count;
 
         public InputData InputData => _inputData;
@@ -128,6 +128,15 @@ namespace WSolve
             }
 
             return h / (float) Length;
+        }
+
+        public Solution ToSolution()
+        {
+            var _this = this;
+            return new Solution(InputData,
+                Enumerable.Range(0, InputData.Workshops.Count).Select(w => (w, _this.Slot(w))),
+                Enumerable.Range(0, InputData.Participants.Count).SelectMany(p =>
+                    Enumerable.Range(0, _this.InputData.Slots.Count).Select(s => (p, _this.Workshop(p,s)))));
         }
 
         public override bool Equals(object obj)

@@ -43,10 +43,10 @@ namespace WSolve
                     
                     var firstError = compilationErrors.First();
                     var errorDescription = firstError.GetMessage();
-                    var errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line - CodeEnvPlaceholderLineOffset;
+                    var errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line - CodeEnvPlaceholderLineOffset + 1;
                     var firstErrorMessage = $"{errorDescription} (Line {errorLine})";
                     
-                    throw new ArgumentException("Could not compile extra conditions: " + firstErrorMessage);
+                    throw new WSolveException("Could not compile extra conditions: " + firstErrorMessage);
                 }
 
                 s.Seek(0, SeekOrigin.Begin);
