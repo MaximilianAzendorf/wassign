@@ -1,8 +1,8 @@
-﻿namespace WSolve
-{
-    using System.Collections.Generic;
-    using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 
+namespace WSolve
+{
     public class ChromosomeList : List<Chromosome>
     {
         private readonly GaLevel _level;
@@ -17,7 +17,7 @@
         {
             _level = level;
         }
-        
+
 #if DEBUG
         public IEnumerable<((float major, float minor) fitness, Chromosome chromosome)> DebugBestView =>
             this.Select(c => (_level.System.Fitness.Evaluate(c), c)).OrderBy(x => x.Item1);

@@ -8,5 +8,4 @@ namespace WSolve
         public const int INVALID_INPUT_FILE = 3;
         public const int INPUT_FILE_NOT_FOUND = 4;
     }
-
 }

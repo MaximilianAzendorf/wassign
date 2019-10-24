@@ -1,63 +1,59 @@
-﻿namespace WSolve
-{
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Threading;
-    using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
+namespace WSolve
+{
     [DebuggerDisplay("GaLevel [{" + nameof(PreferenceLevel) + "}]")]
     public class GaLevel
     {
-        private int _insuffBucketGens = 0;
-        
+        private int _insuffBucketGens;
+
         public GaLevel(MultiLevelGaSystem system, int level, BlockingCollection<Chromosome> bucket)
         {
             System = system;
             PreferenceLevel = level;
             Bucket = bucket;
         }
-        
+
         public int StartLimit => 1;
-        
-        public int GenerationsPassed { get; private set; } = 0;
-        
+
+        public int GenerationsPassed { get; private set; }
+
         public ChromosomeList CurrentGeneration { get; private set; }
-        
-        public Chromosome BestChromosome => CurrentGeneration?.OrderBy(System.Fitness.Evaluate)?.FirstOrDefault() ?? Chromosome.Null;
-        
+
+        public Chromosome BestChromosome =>
+            CurrentGeneration?.OrderBy(System.Fitness.Evaluate)?.FirstOrDefault() ?? Chromosome.Null;
+
         public (float major, float minor) BestFitness => System.Fitness.Evaluate(BestChromosome);
-        
+
         public MultiLevelGaSystem System { get; }
-        
+
         public int PreferenceLevel { get; }
 
         public ParallelOptions ParallelOptions => new ParallelOptions
         {
-            MaxDegreeOfParallelism = PreferenceLevel == System.FirstRunningLevel ? System.NumberofSubthreads : 1,
+            MaxDegreeOfParallelism = PreferenceLevel == System.FirstRunningLevel ? System.NumberofSubthreads : 1
         };
 
-        public bool HasStarted { get; private set; } = false;
+        public bool HasStarted { get; private set; }
 
-        public bool HasFinished { get; private set; } = false;
+        public bool HasFinished { get; private set; }
 
         public BlockingCollection<Chromosome> Bucket { get; }
-        
+
         public void Run(CancellationToken ct)
         {
             HasFinished = false;
-            while (Bucket.Count < StartLimit && !ct.IsCancellationRequested)
-            {
-                Thread.Sleep(50);
-            }
-            
+            while (Bucket.Count < StartLimit && !ct.IsCancellationRequested) Thread.Sleep(50);
+
             CurrentGeneration = new ChromosomeList(this);
             while (CurrentGeneration.Count < StartLimit && Bucket.TryTake(out var x) && !ct.IsCancellationRequested)
-            {
                 CurrentGeneration.Add(x);
-            }
 
             HasStarted = true;
 
@@ -66,48 +62,40 @@
                 var newGen = AdvanceGeneration(CurrentGeneration);
                 var oldBestFitness = BestFitness;
                 CurrentGeneration = newGen;
-                
+
                 if (BestFitness == oldBestFitness)
-                {
-                }
-                else
                 {
                 }
 
                 if (PreferenceLevel != System.FirstRunningLevel)
-                {
-                    Thread.Sleep((System.LevelIndex(PreferenceLevel) - System.LevelIndex(System.FirstRunningLevel)) * 100);
-                }
+                    Thread.Sleep((System.LevelIndex(PreferenceLevel) - System.LevelIndex(System.FirstRunningLevel)) *
+                                 100);
             }
 
             HasFinished = true;
         }
-        
+
         private ChromosomeList AdvanceGeneration(ChromosomeList list)
         {
-            ChromosomeList origList = list;
-            
             list = new ChromosomeList(this, list.Select(c => new Chromosome(c)));
-            
+
             list.Remove(BestChromosome);
-            var best = BestChromosome.Copy();
 
-            int populationSize = System.PopulationSize.Evalutate(System) / Math.Max(1, 1 + System.LevelIndex(PreferenceLevel) - System.LevelIndex(System.FirstRunningLevel));
-            float crossChance = System.CrossoverChance.Evalutate(System);
-            float mutChance = System.MutationChance.Evalutate(System);
+            var populationSize = System.PopulationSize.Evalutate(System) / Math.Max(1,
+                                     1 + System.LevelIndex(PreferenceLevel) -
+                                     System.LevelIndex(System.FirstRunningLevel));
+            var crossChance = System.CrossoverChance.Evalutate(System);
+            var mutChance = System.MutationChance.Evalutate(System);
 
-            ChromosomeList nextGenPool = new ChromosomeList(this, list);
-            
+            var nextGenPool = new ChromosomeList(this, list);
+
             Parallel.For(0, nextGenPool.Count / System.Crossover.ParentCount, ParallelOptions, rawi =>
             {
-                int i = rawi * System.Crossover.ParentCount;
+                var i = rawi * System.Crossover.ParentCount;
                 if (RNG.NextFloat() <= crossChance)
                 {
-                    List<Chromosome> parents = new List<Chromosome>(System.Crossover.ParentCount);
-                    for (int j = i; j < i + System.Crossover.ParentCount; j++)
-                    {
-                        parents.Add(nextGenPool[j]);
-                    }
+                    var parents = new List<Chromosome>(System.Crossover.ParentCount);
+                    for (var j = i; j < i + System.Crossover.ParentCount; j++) parents.Add(nextGenPool[j]);
 
                     var res = System.Crossover.Crossover(parents);
                     lock (nextGenPool)
@@ -117,47 +105,36 @@
                 }
             });
 
-            List<Chromosome> mutated = new List<Chromosome>();
-            foreach (Chromosome chromosome in nextGenPool)
-            {
+            var mutated = new List<Chromosome>();
+            foreach (var chromosome in nextGenPool)
                 if (RNG.NextFloat() < mutChance)
                 {
                     var copy = chromosome.Copy();
                     Mutate(copy);
                     mutated.Add(copy);
                 }
-            }
-            
+
             nextGenPool.AddRange(mutated);
 
-            ChromosomeList samePref = new ChromosomeList(this);
+            var samePref = new ChromosomeList(this);
 
             foreach (var chromosome in nextGenPool)
             {
-                if (!System.Fitness.IsFeasible(chromosome))
-                {
-                    continue;
-                }
+                if (!System.Fitness.IsFeasible(chromosome)) continue;
 
-                int maxUsedPreference = chromosome.MaxUsedPreference;
+                var maxUsedPreference = chromosome.MaxUsedPreference;
                 if (maxUsedPreference == PreferenceLevel)
-                {
                     samePref.Add(chromosome);
-                }
                 else
-                {
                     System.AddToBucket(chromosome, maxUsedPreference);
-                }
             }
-            
-            for (int i = 0; i < Bucket.Count / 4 && Bucket.TryTake(out var x); i++)
-            {
-                samePref.Add(x);
-            }
-            
-            var nextGen = new ChromosomeList(this, System.Selection.Select(populationSize, this, samePref.Where(f => System.Fitness.IsFeasible(f))));
+
+            for (var i = 0; i < Bucket.Count / 4 && Bucket.TryTake(out var x); i++) samePref.Add(x);
+
+            var nextGen = new ChromosomeList(this,
+                System.Selection.Select(populationSize, this, samePref.Where(f => System.Fitness.IsFeasible(f))));
             nextGen.Add(BestChromosome);
-            
+
             if (nextGen.Count < populationSize && nextGen.Count > 0)
             {
                 _insuffBucketGens++;
@@ -176,21 +153,18 @@
         {
             var table = System.Mutations.GetSelectionSnapshot();
 
-            float s = RNG.NextFloat();
+            var s = RNG.NextFloat();
 
-            IMutation m = table[table.Length - 1].mutation;
-            for (int i = 0; i < table.Length; i++)
+            var m = table[table.Length - 1].mutation;
+            for (var i = 0; i < table.Length; i++)
             {
                 s -= table[i].cost;
-                if (!(s <= 0f))
-                {
-                    continue;
-                }
+                if (!(s <= 0f)) continue;
 
                 m = table[i].mutation;
                 break;
             }
-            
+
             m.Mutate(chromosome);
         }
     }

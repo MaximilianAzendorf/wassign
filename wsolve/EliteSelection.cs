@@ -1,8 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace WSolve
 {
-    using System.Collections.Generic;
-    using System.Linq;
-
     public class EliteSelection : ISelection
     {
         public IEnumerable<Chromosome> Select(int number, GaLevel level, IEnumerable<Chromosome> list)

@@ -1,23 +1,23 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
+
 namespace WSolve
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Linq;
-    using System.Reflection;
-    using System.Runtime.Loader;
-    using System.Text;
-    using Microsoft.CodeAnalysis;
-    using Microsoft.CodeAnalysis.CSharp;
-    using Microsoft.CodeAnalysis.Text;
-
     public static class ExtraConditionsCompiler
     {
         private static readonly string CodeEnvPlaceholder = "##C";
         private static readonly string CodeEnvExtraPlaceholder = "##E";
         private static readonly string CodeEnvClassName = "WSolve.Generated.ExtraConditions";
         private static readonly int CodeEnvPlaceholderLineOffset;
-        
+
         private static readonly string CodeEnvironment;
 
         static ExtraConditionsCompiler()
@@ -27,23 +27,24 @@ namespace WSolve
                     "WSolve.resources.ExtraConditionsCodeEnvironment.txt") ?? throw new InvalidOperationException()))
             {
                 CodeEnvironment = reader.ReadToEnd();
-                CodeEnvPlaceholderLineOffset = CodeEnvironment.Split('\n').ToList().FindIndex(l => l.Contains(CodeEnvPlaceholder));
+                CodeEnvPlaceholderLineOffset =
+                    CodeEnvironment.Split('\n').ToList().FindIndex(l => l.Contains(CodeEnvPlaceholder));
             }
         }
-        
+
         public static string GenerateExtraDefinitions(InputData data)
         {
-            StringBuilder extraDefinitions = new StringBuilder();
+            var extraDefinitions = new StringBuilder();
 
             (int s, int w, int p) ignored = (0, 0, 0);
             (int s, int w, int p) conflicts = (0, 0, 0);
-            int total = 0;
-            
-            HashSet<string> usedNames = new HashSet<string>();
-            
+            var total = 0;
+
+            var usedNames = new HashSet<string>();
+
             foreach (var s in data.Slots)
             {
-                string name = s.Split(' ')[0];
+                var name = s.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.s++;
@@ -59,10 +60,10 @@ namespace WSolve
                     total++;
                 }
             }
-            
+
             foreach (var s in data.Workshops.Select(ws => ws.name))
             {
-                string name = s.Split(' ')[0];
+                var name = s.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.p++;
@@ -78,10 +79,10 @@ namespace WSolve
                     total++;
                 }
             }
-            
+
             foreach (var s in data.Participants.Select(p => p.name))
             {
-                string name = s.Split(' ')[0];
+                var name = s.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.w++;
@@ -99,17 +100,15 @@ namespace WSolve
             }
 
             if (ignored != (0, 0, 0))
-            {
-                Status.Warning($"{ignored.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were ignored.");
-            }
+                Status.Warning(
+                    $"{ignored.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were ignored.");
 
             if (conflicts != (0, 0, 0))
-            {
-                Status.Warning($"{conflicts.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were omitted due to name conflics.");
-            }
+                Status.Warning(
+                    $"{conflicts.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were omitted due to name conflics.");
 
             Status.Info($"{total} identifier(s) were generated.");
-            
+
             return extraDefinitions.ToString();
         }
 
@@ -120,7 +119,7 @@ namespace WSolve
                 .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(data));
 
             var comp = GenerateCode(conditionCode);
-            using (MemoryStream s = new MemoryStream())
+            using (var s = new MemoryStream())
             {
                 var compRes = comp.Emit(s);
                 if (!compRes.Success)
@@ -129,12 +128,13 @@ namespace WSolve
                             diagnostic.IsWarningAsError ||
                             diagnostic.Severity == DiagnosticSeverity.Error)
                         .ToList();
-                    
+
                     var firstError = compilationErrors.First();
                     var errorDescription = firstError.GetMessage();
-                    var errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line - CodeEnvPlaceholderLineOffset + 1;
+                    var errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line -
+                                    CodeEnvPlaceholderLineOffset + 1;
                     var firstErrorMessage = $"{errorDescription} (Line {errorLine})";
-                    
+
                     throw new WSolveException("Could not compile extra conditions: " + firstErrorMessage);
                 }
 
@@ -143,10 +143,10 @@ namespace WSolve
                 var type = assembly.GetType(CodeEnvClassName);
 
                 return chromosome =>
-                    ((CustomFilter) Activator.CreateInstance(type, new object[] {(Chromosome) chromosome})).Result;
+                    ((CustomFilter) Activator.CreateInstance(type, chromosome)).Result;
             }
         }
-        
+
         private static CSharpCompilation GenerateCode(string sourceCode)
         {
             var codeString = SourceText.From(sourceCode);
@@ -154,26 +154,26 @@ namespace WSolve
 
             var parsedSyntaxTree = SyntaxFactory.ParseSyntaxTree(codeString, options);
             var dotNetCoreDir = Path.GetDirectoryName(typeof(object).GetTypeInfo().Assembly.Location);
-            
+
             var references = new MetadataReference[]
             {
                 MetadataReference.CreateFromFile(Path.Combine(dotNetCoreDir, "System.Runtime.dll")),
                 MetadataReference.CreateFromFile(typeof(Math).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(CustomFilter).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(CustomFilter).Assembly.Location)
             };
 
             return CSharpCompilation.Create(
                 "Generated.dll",
-                new[] { parsedSyntaxTree }, 
-                references: references, 
-                options: new CSharpCompilationOptions(
-                    OutputKind.DynamicallyLinkedLibrary, 
+                new[] {parsedSyntaxTree},
+                references,
+                new CSharpCompilationOptions(
+                    OutputKind.DynamicallyLinkedLibrary,
                     optimizationLevel: OptimizationLevel.Release,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default));
         }
-        
+
         private static bool IsValidIdentifier(string name)
         {
             return name != "Slot" && name != "Workshop" && name != "Participant" && SyntaxFacts.IsValidIdentifier(name);

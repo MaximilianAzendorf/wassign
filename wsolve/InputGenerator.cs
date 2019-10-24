@@ -1,4 +1,5 @@
 // ReSharper disable all
+
 namespace WSolve
 {
     using System;
@@ -12,16 +13,17 @@ namespace WSolve
         public static int GenMain()
         {
             Random rnd = new Random();
-            
+
             string ws(int i) => $"Workshop {i}";
             string hn(int i) => $"Human {i}";
             string sl(int i) => $"Slot {i}";
-            
+
             int humanCount, workshopCount, slotCount, workshopOff;
             float workshopSizeVar;
-            
+
             Console.WriteLine("Input: #part #ws #slot wsvar wsoff");
-            float[] input = Console.ReadLine().Split(' ').Select(f => float.Parse(f, CultureInfo.InvariantCulture)).ToArray();
+            float[] input = Console.ReadLine().Split(' ').Select(f => float.Parse(f, CultureInfo.InvariantCulture))
+                .ToArray();
 
             humanCount = (int) input[0];
             workshopCount = (int) input[1];
@@ -40,7 +42,7 @@ namespace WSolve
             }
 
             int[] conductors = new int[workshopCount];
-            
+
             for (int i = 0; i < workshopCount; i++)
             {
                 int min = (int) (avgWsSize * (1 - workshopSizeVar));
@@ -58,7 +60,7 @@ namespace WSolve
 
                 min += workshopOff;
                 max += workshopOff;
-                
+
                 Console.Error.WriteLine($"(workshop) {ws(i)}: {hn(cond)}, {min}-{max}");
             }
 
@@ -66,7 +68,7 @@ namespace WSolve
             {
                 Console.Error.Write($"(person) {hn(i)}:");
                 int favourite = rnd.Next(workshopCount);
-                
+
                 for (int j = 0; j < workshopCount; j++)
                 {
                     if (conductors[j] == i)
@@ -82,7 +84,7 @@ namespace WSolve
                         Console.Error.Write($" {Math.Min(100, Math.Max(0, rnd.Next(-35, 122)))}");
                     }
                 }
-                
+
                 Console.Error.WriteLine();
             }
 

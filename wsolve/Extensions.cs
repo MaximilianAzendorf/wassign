@@ -1,7 +1,7 @@
+using System;
+
 namespace WSolve
 {
-    using System;
-
     public static class Extensions
     {
         public static string WithoutMilliseconds(this TimeSpan timeSpan)
