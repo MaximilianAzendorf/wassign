@@ -1,28 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Threading;
-using NDesk.Options;
-namespace WSolve
+﻿namespace WSolve
 {
+    using System;
+    using System.Diagnostics;
+    using System.Globalization;
+    using System.IO;
+    using System.Linq;
+    using System.Reflection;
+    using System.Threading;
+
     internal static class Program
     {
-        private static void PrintHeader()
+        public static void PrintHeader()
         {
             Assembly assembly = Assembly.GetExecutingAssembly();
-            Console.Error.WriteLine("{0} [Version {1}]",
-                ((AssemblyTitleAttribute) assembly.GetCustomAttributes(
-                    typeof(AssemblyTitleAttribute)).SingleOrDefault())?.Title,
+            Console.Error.WriteLine(
+                "{0} [Version {1}]",
+                ((AssemblyTitleAttribute) assembly.GetCustomAttributes(typeof(AssemblyTitleAttribute)).SingleOrDefault())?.Title,
                 Assembly.GetExecutingAssembly().GetName().Version);
-            Console.Error.WriteLine("{0}\n",
-                ((AssemblyCopyrightAttribute) assembly.GetCustomAttributes(
-                    typeof(AssemblyCopyrightAttribute)).SingleOrDefault())?.Copyright);
+            Console.Error.WriteLine(
+                "{0}\n",
+                ((AssemblyCopyrightAttribute) assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute)).SingleOrDefault())?.Copyright);
 #if DEBUG
             Status.Info($"PID: {Process.GetCurrentProcess().Id}");
 #endif
@@ -35,6 +32,15 @@ namespace WSolve
 
         private static int Main(string[] args)
         {
+#if DEBUG
+            if (!Debugger.IsAttached)
+            {
+                Console.Error.WriteLine("[Press Enter to start Program]");
+                Console.ReadKey();
+                Thread.Sleep(1000);
+            }
+#endif
+            
             CultureInfo ci = CultureInfo.InvariantCulture;
             Thread.CurrentThread.CurrentCulture = ci;
             Thread.CurrentThread.CurrentUICulture = ci;
@@ -48,23 +54,26 @@ namespace WSolve
             if (args.Length == 1 && args[0] == "--version")
             {
                 PrintVersion();
-                return Exit.Ok;
+                return Exit.OK;
             }
-            
-            PrintHeader();
             
             if (!Options.ParseFromArgs(args))
             {
-                return Exit.Ok;
+                return Exit.OK;
+            }
+
+            if (Options.Verbosity > 0)
+            {
+                PrintHeader();
             }
 
             var input = InputReader.ReadInput();
-
+            
             if (Options.Seed != null)
             {
                 input.Shuffle(Options.Seed.Value);
             }
-
+            
             TextWriter wr = null;
             if (Options.OutputFile != null)
             {
@@ -78,22 +87,24 @@ namespace WSolve
 
                 var output = solver.Solve(input);
                 output.Verify();
+                
                 OutputWriter.WriteSolution(output);
             }
             catch (WSolveException ex)
             {
                 Status.Error(ex.Message);
-                return Exit.Error;
+                return Exit.ERROR;
             }
             catch (VerifyException ex)
             {
                 Status.Error("Solution failed verification: " + ex.Message);
-                return Exit.Error;
+                return Exit.ERROR;
             }
             
             wr?.Close();
 
-            return Exit.Ok;
+            Status.ImportantInfo("Finished computation without errors.");
+            return Exit.OK;
         }
     }
 }

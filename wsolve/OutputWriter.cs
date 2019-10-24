@@ -1,11 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Text;
+
     public static class OutputWriter
     {
         public static void WriteSolution(Solution solution)
@@ -24,7 +24,7 @@ namespace WSolve
             int[] slotMax = new int[solution.InputData.Slots.Count];
             int[] slotCnt = new int[solution.InputData.Slots.Count];
             
-            foreach(var x in scheduling)
+            foreach (var x in scheduling)
             {
                 var ws = solution.InputData.Workshops[x.ws];
                 var slot = solution.InputData.Slots[x.slot];
@@ -42,7 +42,7 @@ namespace WSolve
             if (Options.CsvOutputFile != null)
             {
                 StringBuilder str = new StringBuilder();
-                str.AppendLine($"\"Workshop\",\"Slot\"");
+                str.AppendLine("\"Workshop\",\"Slot\"");
                 
                 foreach (var x in scheduling)
                 {
@@ -85,7 +85,7 @@ namespace WSolve
             int[] wsParts = new int[solution.InputData.Workshops.Count];
             int[] partCnt = new int[solution.InputData.Participants.Max(p => p.preferences.Max()) + 1];
 
-            foreach(var x in assignment)
+            foreach (var x in assignment)
             {
                 var p = solution.InputData.Participants[x.p];
                 var ws = solution.InputData.Workshops[x.ws];
@@ -135,7 +135,9 @@ namespace WSolve
                 for (int i = solution.InputData.Participants.Min(p => p.preferences.Min()); i < partCnt.Length; i++)
                 {
                     if (partCnt[i] > 0)
+                    {
                         Status.Info($"        Preference {100 - i}: {partCnt[i]} participant(s).");
+                    }
                 }
 
                 for (int i = 0; i < wsParts.Length; i++)

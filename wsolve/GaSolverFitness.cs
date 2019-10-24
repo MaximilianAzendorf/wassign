@@ -1,23 +1,22 @@
-using System;
-using System.Linq;
-
 namespace WSolve
 {
+    using System;
+    using System.Linq;
+
     public class GaSolverFitness : IFitness
     {
-        public float Scaling { get; }
-        
-        public InputData InputData { get; }
-        
-        public Func<Chromosome, bool> ExtraFilter { get; }
-
         public GaSolverFitness(InputData inputData, Func<Chromosome, bool> extraFilter = null)
         {
             InputData = inputData;
             Scaling = (float)Math.Pow(InputData.MaxPreference, Options.PreferenceExponent);
             ExtraFilter = extraFilter;
         }
-
+        
+        public float Scaling { get; }
+        
+        public InputData InputData { get; }
+        
+        public Func<Chromosome, bool> ExtraFilter { get; }
 
         public bool IsFeasible(Chromosome chromosome)
         {
@@ -56,6 +55,7 @@ namespace WSolve
                 {
                     return false;
                 }
+                
                 isInSlot[p, slots[ws]] = true;
                 partCounts[ws]++;
             }
@@ -73,7 +73,11 @@ namespace WSolve
                 }
             }
 
-            if (!(ExtraFilter?.Invoke(chromosome) ?? true)) return false;
+            if (!(ExtraFilter?.Invoke(chromosome) ?? true))
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -92,8 +96,11 @@ namespace WSolve
         
         public float EvaluateMinor(Chromosome chromosome)
         {
-            if (!IsFeasible(chromosome)) return float.PositiveInfinity;
-                
+            if (!IsFeasible(chromosome))
+            {
+                return float.PositiveInfinity;
+            }
+
             int[] prefArray = Enumerable.Range(0, InputData.MaxPreference + 1).ToArray();
             int[] prefCount = new int[InputData.MaxPreference + 1];
 
@@ -106,19 +113,24 @@ namespace WSolve
 
             return prefCount
                        .Zip(prefArray, (count, pref) => (pref, count))
-                       .Sum(p => p.Item2 * (float)Math.Pow(p.Item1 + 1, Options.PreferenceExponent)) / Scaling;
+                       .Sum(p => p.count * (float)Math.Pow(p.pref + 1, Options.PreferenceExponent)) / Scaling;
         }
-
         
         public (float major, float minor) Evaluate(Chromosome chromosome)
         {
-            if (chromosome == Chromosome.Null) return (float.PositiveInfinity, float.PositiveInfinity);
-        
+            if (chromosome == Chromosome.Null)
+            {
+                return (float.PositiveInfinity, float.PositiveInfinity);
+            }
+
             float major = EvaluateMajor(chromosome);
             float minor = EvaluateMinor(chromosome);
 
             if (!float.IsFinite(major) || !float.IsFinite(minor))
+            {
                 return (float.PositiveInfinity, float.PositiveInfinity);
+            }
+
             return (major, minor);
         }
     }

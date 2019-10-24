@@ -1,12 +1,11 @@
-using System;
-using System.Diagnostics;
-using System.Linq;
-
 namespace WSolve
 {
+    using System.Linq;
+    
     public static class LocalOptimization
     {
-        public static Chromosome Apply(Chromosome chromosome, IFitness fitness, out int alterationCount)
+        // TODO: Refractor goto
+        public static Chromosome Apply(Chromosome chromosome, IFitness fitness, out int alterationCount, bool quiet = false, int maxAlterations = int.MaxValue)
         {
             int round = 0;
 
@@ -15,7 +14,11 @@ namespace WSolve
             int roundAlteration = 1;
             while (roundAlteration > 0)
             {
-                Status.Info($"Starting local optimization round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
+                if (!quiet)
+                {
+                    Status.Info($"Starting local optimization round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
+                }
+
                 roundAlteration = 0;
                 var input = chromosome.InputData;
                 int[] remainingSpace = Enumerable.Range(0, input.Workshops.Count)
@@ -40,9 +43,20 @@ namespace WSolve
                     {
                         for (int w = 0; w < input.Workshops.Count; w++)
                         {
-                            if (remainingSpace[w] <= 0) continue;
-                            if (chromosome.Slot(w) != s) continue;
-                            if (w == assignment[p, s]) continue;
+                            if (remainingSpace[w] <= 0)
+                            {
+                                continue;
+                            }
+
+                            if (chromosome.Slot(w) != s)
+                            {
+                                continue;
+                            }
+
+                            if (w == assignment[p, s])
+                            {
+                                continue;
+                            }
 
                             if (input.Participants[p].preferences[w] <
                                 input.Participants[p].preferences[assignment[p, s]])
@@ -60,6 +74,11 @@ namespace WSolve
                                 assignment[p, s] = w;
                                 roundAlteration++;
                                 shifts += 1;
+
+                                if (roundAlteration >= maxAlterations)
+                                {
+                                    goto Exit;
+                                }
                             }
                         }
                     }
@@ -91,11 +110,18 @@ namespace WSolve
                                 assignment[p2, s] = w1;
                                 roundAlteration++;
                                 swaps += 1;
+                                
+                                if (roundAlteration >= maxAlterations)
+                                {
+                                    goto Exit;
+                                }
                             }
                         }
                     }
                 }
             }
+            
+            Exit:
 
             alterationCount = swaps + shifts;
             return chromosome;

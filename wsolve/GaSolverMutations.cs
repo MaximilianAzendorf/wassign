@@ -4,12 +4,12 @@ namespace WSolve
     {
         public class ExchangeAssignment : IMutation
         {
-            public InputData InputData { get; }
-
             public ExchangeAssignment(InputData inputData)
             {
                 InputData = inputData;
             }
+            
+            public InputData InputData { get; }
             
             public void Mutate(Chromosome chromosome)
             {
@@ -21,7 +21,7 @@ namespace WSolve
                 {
                     for (int si = 0; si < InputData.Slots.Count; si++)
                     {
-                        int w = (int)chromosome.Workshop(p[0],si);
+                        int w = (int) chromosome.Workshop(p[0], si);
                         int ws = (int) chromosome.Slot(w);
                         if (ws == slot)
                         {
@@ -41,12 +41,12 @@ namespace WSolve
 
         public class ExchangeScheduling : IMutation
         {
-            public InputData InputData { get; }
-
             public ExchangeScheduling(InputData inputData)
             {
                 InputData = inputData;
             }
+
+            public InputData InputData { get; }
 
             public void Mutate(Chromosome chromosome)
             {
@@ -79,19 +79,34 @@ namespace WSolve
 
         public class ChangeAssignment : IMutation
         {
-            public InputData InputData { get; }
-
             public ChangeAssignment(InputData inputData)
             {
                 InputData = inputData;
             }
-            
+
+            public InputData InputData { get; }
+
             public void Mutate(Chromosome chromosome)
             {
                 int s = RNG.NextInt(0, InputData.Slots.Count);
                 var p = RNG.NextInt(0, InputData.Participants.Count);
 
                 chromosome.Workshop(p, s) = chromosome.GenerateWorkshopGene();
+            }
+        }
+
+        public class OptimizeLocally : IMutation
+        {            
+            public OptimizeLocally(IFitness fitness)
+            {
+                Fitness = fitness;
+            }
+
+            public IFitness Fitness { get; }
+
+            public void Mutate(Chromosome chromosome)
+            {
+                LocalOptimization.Apply(chromosome, Fitness, out var unused, true, 1);
             }
         }
     }

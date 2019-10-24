@@ -12,11 +12,14 @@ namespace WSolve.Generated
     using Slot = CustomFilter.SlotAccessor;
     
     public class ExtraConditions : CustomFilter
-    {
+    {    
         public ExtraConditions(Chromosome chromosome) : base(chromosome)
         {
             // Condition code is inserted here
-            ###
+            ##C
         }
+        
+        // Generated extra definitions are placed here
+        ##E
     }
 }

@@ -1,74 +1,24 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
+    using System.Threading;
+
     public class MultiLevelGaSystem
     {
-        public IParameter<int> GenerationSize { get; set; }
-
-        public ISelection Selection { get; set; }
-        
-        public IFitness Fitness { get; set; }
-
-        public ICrossover Crossover { get; set; }
-
-        public IParameter<int> PopulationSize { get; set; }
-        public IParameter<float> CrossoverChance { get; set; }
-        public IParameter<float> MutationChance { get; set; }
-
-        public TimeSpan Timeout { get; set; }
-        
-        public MutationCollection Mutations { get; } = new MutationCollection();
-
-        public (float major, float minor) BestFitness
-        {
-            get
-            {
-                var started = _levels.Where(l => l.HasStarted);
-                if (!started.Any()) return default;
-                else
-                {
-                    return _levels.Where(l => l.HasStarted).Min(l => l.BestFitness);
-                }
-            }
-        }
-
         private readonly int[] _preferenceLevels;
-
-        public int NumberOfGeneticThreads => _preferenceLevels.Length;
-
-        public int NumberofSubthreads { get; } = Environment.ProcessorCount / 2;
-        public int NumberOfPresolverThreads { get; } = Environment.ProcessorCount / 2;
-        public int NumberOfPrefPumpThreads => Options.NoPrefPump ? 0 : 1;
-        public InputData InputData { get; }
-        public int BucketLimit { get; }
-
-        public int FirstRunningLevel => _levels.OrderBy(l => l.PreferenceLevel).FirstOrDefault(l => l.HasStarted)?.PreferenceLevel ?? 0;
-
-        public int LevelIndex(int preferenceLevel) => Array.IndexOf(_preferenceLevels, preferenceLevel);
-        
-        public bool PresolversWaiting => _buckets[FirstRunningLevel].Count > 0 && Progress > Options.FinalPhaseStart / 2;
-
-        public int GenerationsPassed => _levels.Sum(l => l?.GenerationsPassed ?? 0);
-
-        public DateTime TimeStarted { get; private set; }
-        
-        public double Progress => (DateTime.Now - TimeStarted) / Timeout;
-
         private readonly BlockingCollection<Chromosome>[] _buckets;
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly CriticalSetAnalysis _criticalSetAnalysis;
         private GaLevel[] _levels;
         private List<Thread> _threads;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         
-        public MultiLevelGaSystem(InputData inputData, int bucketLimit)
+        private volatile int _prefPumpMinFound = int.MaxValue;
+        
+        public MultiLevelGaSystem(InputData inputData, CriticalSetAnalysis csAnalysis, int bucketLimit)
         {
             BucketLimit = bucketLimit;   
             
@@ -81,17 +31,78 @@ namespace WSolve
             {
                 _buckets[i] = new BlockingCollection<Chromosome>(BucketLimit);
             }
+
+            _criticalSetAnalysis = csAnalysis;
+        }
+        
+        public IParameter<int> GenerationSize { get; set; }
+
+        public ISelection Selection { get; set; }
+        
+        public IFitness Fitness { get; set; }
+
+        public ICrossover Crossover { get; set; }
+
+        public IParameter<int> PopulationSize { get; set; }
+        
+        public IParameter<float> CrossoverChance { get; set; }
+        
+        public IParameter<float> MutationChance { get; set; }
+
+        public TimeSpan Timeout { get; set; }
+        
+        public MutationCollection Mutations { get; } = new MutationCollection();
+
+        public (float major, float minor) BestFitness
+        {
+            get
+            {
+                var started = _levels.Where(l => l.HasStarted);
+                if (!started.Any())
+                {
+                    return default;
+                }
+                else
+                {
+                    return _levels.Where(l => l.HasStarted).Min(l => l.BestFitness);
+                }
+            }
         }
 
+        public int NumberOfGeneticThreads => _preferenceLevels.Length;
+
+        public int NumberofSubthreads { get; } = Math.Max(1, Environment.ProcessorCount / 2);
+        
+        public int NumberOfPresolverThreads { get; } = Math.Max(1, Environment.ProcessorCount / 4);
+        
+        public int NumberOfPrefPumpThreads => Options.NoPrefPump ? 0 : 1;
+        
+        public InputData InputData { get; }
+        
+        public int BucketLimit { get; }
+
+        public int FirstRunningLevel => _levels.OrderBy(l => l.PreferenceLevel).FirstOrDefault(l => l.HasStarted)?.PreferenceLevel ?? 0;
+        
+        public bool PresolversWaiting => _buckets[FirstRunningLevel].Count == BucketLimit && (Progress > Options.FinalPhaseStart / 2);
+
+        public int GenerationsPassed => _levels.Sum(l => l?.GenerationsPassed ?? 0);
+
+        public DateTime TimeStarted { get; private set; }
+        
+        public double Progress => (DateTime.Now - TimeStarted) / Timeout;
+
+        public int LevelIndex(int preferenceLevel) => Array.IndexOf(_preferenceLevels, preferenceLevel);
+        
         public void Start()
         {
-            if (_threads != null) throw new InvalidOperationException("MLGA already started.");
+            if (_threads != null)
+            {
+                throw new InvalidOperationException("MLGA already started.");
+            }
 
             TimeStarted = DateTime.Now;
             
             Status.Info($"Starting GA System (Workers: {NumberOfPresolverThreads} Presolver, {(NumberOfPrefPumpThreads == 0 ? "no" : NumberOfPrefPumpThreads.ToString())} PRP, {NumberOfGeneticThreads}*{NumberofSubthreads} GA).");
-
-            //Status.Info("Preference levels: " + string.Join(", ", _preferenceLevels));
             
             _threads = new List<Thread>();
 
@@ -99,11 +110,12 @@ namespace WSolve
             
             for (int i = 0; i < NumberOfPresolverThreads; i++)
             {
-                _threads.Add(new Thread(() => PresolverWorker(_cts.Token)));
+                bool tryCriticalSets = i == 0;
+                _threads.Add(new Thread(() => PresolverWorker(_cts.Token, tryCriticalSets)));
                 _threads.Last().Start();
             }
 
-            foreach(int i in _preferenceLevels)
+            foreach (int i in _preferenceLevels)
             {
                 int closurei = i;
                 _threads.Add(new Thread(() => GaWorker(_cts.Token, closurei, NumberOfGeneticThreads / Environment.ProcessorCount)));
@@ -135,15 +147,18 @@ namespace WSolve
                 string extraPresolverState = PresolversWaiting ? "   " : "(+)";
 
                 state.Append($"{extraPresolverState} BEST=({((int)BestFitness.major + ",").PadRight(3)} {BestFitness.minor:0.00000}), ETA={((TimeStarted + Timeout) - DateTime.Now).WithoutMilliseconds()}  :: ");
-                
                 int minStarted = LevelIndex(_levels.Where(l => l.HasStarted).Min(l => l.PreferenceLevel));
                 minStarted = Math.Min(_levels.Length - 3, Math.Max(0, minStarted));
                 
-                for(int i = minStarted; i <= minStarted + 2; i++)
+                for (int i = minStarted; i <= minStarted + 2; i++)
                 {
                     GaLevel level = _levels[i];
-                    if (level == null) continue;
-                    string status = $" [{_levels[i].PreferenceLevel}({_levels[i].GenerationsPassed}):{level.CurrentGeneration?.Count ?? 0}/{_buckets[i].Count}] ";
+                    if (level == null)
+                    {
+                        continue;
+                    }
+
+                    string status = $" [{_levels[i].PreferenceLevel}({_levels[i].GenerationsPassed}):{level.CurrentGeneration?.Count ?? 0}/{_buckets[_levels[i].PreferenceLevel].Count}] ";
                     state.Append(status);
                 }
 
@@ -152,7 +167,10 @@ namespace WSolve
             
             Status.Info("Stopped GA System. Waiting for workers to finish.");
             _cts.Cancel();
-            foreach (var t in _threads) t?.Join();
+            foreach (var t in _threads)
+            {
+                t?.Join();
+            }
 
             var best = _levels.Select(l => l.BestChromosome).OrderBy(Fitness.Evaluate).First();
             
@@ -164,9 +182,9 @@ namespace WSolve
             _buckets[prefLevel].TryAdd(chromosome);
         }
 
-        private void PresolverWorker(CancellationToken token)
+        private void PresolverWorker(CancellationToken token, bool tryCriticalSets)
         {
-            bool controller(Solution _)
+            bool controller(Solution s)
             {
                 while (PresolversWaiting && !token.IsCancellationRequested)
                 {
@@ -178,15 +196,22 @@ namespace WSolve
             
             GreedySolver baseSolver = new GreedySolver();
             PrefPumpPresolver presolver = new PrefPumpPresolver();
+
+            CriticalSetAnalysis cs = tryCriticalSets ? _criticalSetAnalysis : CriticalSetAnalysis.Empty(InputData);
             
-            presolver.Presolve(InputData, 
-                baseSolver.SolveIndefinitely(InputData, token)
+            presolver.Presolve(
+                InputData, 
+                baseSolver.SolveIndefinitely(InputData, cs, token)
                     .TakeWhile(controller)
-                    .Where(s => Fitness.IsFeasible(Chromosome.FromOutput(InputData, s))), token,
+                    .Where(s => Fitness.IsFeasible(Chromosome.FromOutput(InputData, s))), 
+                Fitness, 
+                token,
                 (r, pref) =>
                 {
-                    if(Fitness.IsFeasible(r))
+                    if (Fitness.IsFeasible(r))
+                    {
                         AddToBucket(r, pref);
+                    }
                 });
         }
         
@@ -199,11 +224,13 @@ namespace WSolve
             ga.Run(token);
         }
         
-        private volatile int _prefPumpMinFound = int.MaxValue;
         private void PrefPumpWorker(CancellationToken ct)
         {
-            while(_levels.Any(l => l == null))
+            while (_levels.Any(l => l == null))
+            {
                 Thread.Sleep(500);
+            }
+
             Status.Info($"Begin preference pumping (Timeout {Options.PreferencePumpTimeoutSeconds}s, Depth {(Options.PreferencePumpMaxDepth < 0 ? "any" : Options.PreferencePumpMaxDepth.ToString())}).");
 
             while (!ct.IsCancellationRequested)
@@ -219,23 +246,30 @@ namespace WSolve
                         continue;
                     }
 
-                    foreach (Chromosome c in chromosomes)
+                    foreach (Chromosome chromosome in chromosomes)
                     {
-                        if (ct.IsCancellationRequested) return;
-                        var r = PrefPumpHeuristic.TryPump(c, level.PreferenceLevel, Options.PreferencePumpMaxDepth,
-                            TimeSpan.FromSeconds(Options.PreferencePumpTimeoutSeconds));
-                        if (r == PrefPumpResult.Partial || r == PrefPumpResult.Success)
+                        if (ct.IsCancellationRequested)
                         {
-                            if (r == PrefPumpResult.Success && c.MaxUsedPreference < _prefPumpMinFound)
+                            return;
+                        }
+
+                        var result = PrefPumpHeuristic.TryPump(
+                            chromosome, 
+                            level.PreferenceLevel, 
+                            Options.PreferencePumpMaxDepth,
+                            TimeSpan.FromSeconds(Options.PreferencePumpTimeoutSeconds));
+                        if (result == PrefPumpResult.Partial || result == PrefPumpResult.Success)
+                        {
+                            if (result == PrefPumpResult.Success && chromosome.MaxUsedPreference < _prefPumpMinFound)
                             {
                                 Status.Info(
-                                    $"Preference Pump Heuristic found better preference limit ({c.MaxUsedPreference}).");
-                                _prefPumpMinFound = c.MaxUsedPreference;
+                                    $"Preference Pump Heuristic found better preference limit ({chromosome.MaxUsedPreference}).");
+                                _prefPumpMinFound = chromosome.MaxUsedPreference;
                             }
 
-                            while (!_buckets[c.MaxUsedPreference].TryAdd(c))
+                            while (!_buckets[chromosome.MaxUsedPreference].TryAdd(chromosome))
                             {
-                                _buckets[c.MaxUsedPreference].Take();
+                                _buckets[chromosome.MaxUsedPreference].Take();
                             }
                         }
                     }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WSolve
+﻿namespace WSolve
 {
     public interface IMutation
     {

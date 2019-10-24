@@ -1,20 +1,12 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace WSolve
+﻿namespace WSolve
 {
+    using System.Collections.Generic;
+    using System.Linq;
+
     public class ChromosomeList : List<Chromosome>
     {
-        private GaLevel _level;
+        private readonly GaLevel _level;
 
-#if DEBUG
-        public IEnumerable<((float, float), Chromosome)> DebugBestView =>
-            this.Select(c => (_level.System.Fitness.Evaluate(c), c)).OrderBy(x => x.Item1);
-#endif
-        
         public ChromosomeList(GaLevel level)
         {
             _level = level;
@@ -25,5 +17,10 @@ namespace WSolve
         {
             _level = level;
         }
+        
+#if DEBUG
+        public IEnumerable<((float major, float minor) fitness, Chromosome chromosome)> DebugBestView =>
+            this.Select(c => (_level.System.Fitness.Evaluate(c), c)).OrderBy(x => x.Item1);
+#endif
     }
 }

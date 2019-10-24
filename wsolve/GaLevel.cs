@@ -1,40 +1,16 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace WSolve
+﻿namespace WSolve
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
+
     [DebuggerDisplay("GaLevel [{" + nameof(PreferenceLevel) + "}]")]
     public class GaLevel
     {
-        public int StartLimit => 1;//Math.Max(1, System.PopulationSize.Evalutate(System) / 25);
-        public int GenerationsPassed { get; private set; } = 0;
-        public ChromosomeList CurrentGeneration { get; private set; }
-        
-        public (int Full, int Partial, int Fail) PrefPumpSuccessStats { get; private set; }
-
-        public Chromosome BestChromosome => CurrentGeneration?.OrderBy(System.Fitness.Evaluate)?.FirstOrDefault() ?? Chromosome.Null;
-        public (float, float) BestFitness => System.Fitness.Evaluate(BestChromosome);
-
-        private int _gensSinceLastImprovement = 0;
-
-        public MultiLevelGaSystem System { get; }
-        public int PreferenceLevel { get; }
-
-        public ParallelOptions ParallelOptions => new ParallelOptions()
-            {MaxDegreeOfParallelism = PreferenceLevel == System.FirstRunningLevel ? System.NumberofSubthreads : 1};
-
-        public bool HasStarted { get; private set; } = false;
-
-        public bool HasFinished { get; private set; } = false;
-
-        public BlockingCollection<Chromosome> Bucket { get; }
-
         private int _insuffBucketGens = 0;
         
         public GaLevel(MultiLevelGaSystem system, int level, BlockingCollection<Chromosome> bucket)
@@ -43,6 +19,31 @@ namespace WSolve
             PreferenceLevel = level;
             Bucket = bucket;
         }
+        
+        public int StartLimit => 1;
+        
+        public int GenerationsPassed { get; private set; } = 0;
+        
+        public ChromosomeList CurrentGeneration { get; private set; }
+        
+        public Chromosome BestChromosome => CurrentGeneration?.OrderBy(System.Fitness.Evaluate)?.FirstOrDefault() ?? Chromosome.Null;
+        
+        public (float major, float minor) BestFitness => System.Fitness.Evaluate(BestChromosome);
+        
+        public MultiLevelGaSystem System { get; }
+        
+        public int PreferenceLevel { get; }
+
+        public ParallelOptions ParallelOptions => new ParallelOptions
+        {
+            MaxDegreeOfParallelism = PreferenceLevel == System.FirstRunningLevel ? System.NumberofSubthreads : 1,
+        };
+
+        public bool HasStarted { get; private set; } = false;
+
+        public bool HasFinished { get; private set; } = false;
+
+        public BlockingCollection<Chromosome> Bucket { get; }
         
         public void Run(CancellationToken ct)
         {
@@ -68,11 +69,9 @@ namespace WSolve
                 
                 if (BestFitness == oldBestFitness)
                 {
-                    _gensSinceLastImprovement++;
                 }
                 else
                 {
-                    _gensSinceLastImprovement = 0;
                 }
 
                 if (PreferenceLevel != System.FirstRunningLevel)
@@ -83,21 +82,10 @@ namespace WSolve
 
             HasFinished = true;
         }
-
-        public float CalculateDiversity()
-        {
-            float d = 0;
-            var gen = CurrentGeneration;
-            foreach(var c1 in gen)
-            foreach (var c2 in gen)
-                d += c1.Distance(c2);
-            return d / (gen.Count * gen.Count);
-        }
         
         private ChromosomeList AdvanceGeneration(ChromosomeList list)
         {
             ChromosomeList origList = list;
-            PrefPumpSuccessStats = (0, 0, 0);
             
             list = new ChromosomeList(this, list.Select(c => new Chromosome(c)));
             
@@ -122,12 +110,15 @@ namespace WSolve
                     }
 
                     var res = System.Crossover.Crossover(parents);
-                    lock(nextGenPool) nextGenPool.AddRange(res);
+                    lock (nextGenPool)
+                    {
+                        nextGenPool.AddRange(res);
+                    }
                 }
             });
 
             List<Chromosome> mutated = new List<Chromosome>();
-            foreach(Chromosome chromosome in nextGenPool)
+            foreach (Chromosome chromosome in nextGenPool)
             {
                 if (RNG.NextFloat() < mutChance)
                 {
@@ -136,6 +127,7 @@ namespace WSolve
                     mutated.Add(copy);
                 }
             }
+            
             nextGenPool.AddRange(mutated);
 
             ChromosomeList samePref = new ChromosomeList(this);
@@ -143,8 +135,10 @@ namespace WSolve
             foreach (var chromosome in nextGenPool)
             {
                 if (!System.Fitness.IsFeasible(chromosome))
+                {
                     continue;
-                
+                }
+
                 int maxUsedPreference = chromosome.MaxUsedPreference;
                 if (maxUsedPreference == PreferenceLevel)
                 {
@@ -156,7 +150,7 @@ namespace WSolve
                 }
             }
             
-            for(int i = 0; i < Bucket.Count / 4 && Bucket.TryTake(out var x); i++)
+            for (int i = 0; i < Bucket.Count / 4 && Bucket.TryTake(out var x); i++)
             {
                 samePref.Add(x);
             }
@@ -188,8 +182,11 @@ namespace WSolve
             for (int i = 0; i < table.Length; i++)
             {
                 s -= table[i].cost;
-                if (!(s <= 0f)) continue;
-                
+                if (!(s <= 0f))
+                {
+                    continue;
+                }
+
                 m = table[i].mutation;
                 break;
             }

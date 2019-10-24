@@ -1,24 +1,17 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
-using NDesk.Options;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Text.RegularExpressions;
+
     public static class InputReader
     {
-        private static readonly Regex LineSplit = new Regex(@"\r\n|\r|\n", RegexOptions.Compiled);
-        
         private static readonly Regex WorkshopRegex = new Regex(@"^\(workshop\)\s+((?<name>[a-zA-Z0-9_\- ]+)\s*:\s*(?<conductor>[a-zA-Z0-9+_\- ]+)\s*,\s*(?<min>[0-9]+)\s*\-\s*(?<max>[0-9]+)\s*)*$", RegexOptions.Compiled);
         private static readonly Regex SlotRegex = new Regex(@"^\(slot\)\s+(?<name>[a-zA-Z0-9_\- ]+)", RegexOptions.Compiled);
         private static readonly Regex ParticipantRegex = new Regex(@"^\(person\)\s+(?<name>[a-zA-Z0-9_\- ]+)\s*:(?:\s*(?<pref>[0-9]+))+", RegexOptions.Compiled);
+        
         public static InputData ReadInput()
         {
             try
@@ -29,8 +22,9 @@ namespace WSolve
             catch (FileNotFoundException)
             {
                 Status.Error("Input file not found.");
-                Environment.Exit(Exit.InputFileNotFound);
+                Environment.Exit(Exit.INPUT_FILE_NOT_FOUND);
             }
+            
             return null;
         }
 
@@ -42,7 +36,10 @@ namespace WSolve
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if(!string.IsNullOrEmpty(lines[i])) ParseLine(inputData, preWorkshops, lines, i);
+                if (!string.IsNullOrEmpty(lines[i]))
+                {
+                    ParseLine(inputData, preWorkshops, lines, i);
+                }
             }
 
             int wsidx = 0;
@@ -52,8 +49,11 @@ namespace WSolve
                 int[] conductors = conductorNames.Select(c => inputData.Participants.FindIndex(0, x => x.name == c))
                     .ToArray();
 
-                foreach (int c in conductors) inputData.Participants[c].preferences[wsidx] = 0;
-                
+                foreach (int c in conductors)
+                {
+                    inputData.Participants[c].preferences[wsidx] = 0;
+                }
+
                 inputData.Workshops.Add((
                     name,
                     conductors,
@@ -66,13 +66,11 @@ namespace WSolve
             return inputData;
         }
         
-        private static void InvalidInputFile()
-        {
-            Status.Error("Invalid input.");
-            Environment.Exit(Exit.InvalidInputFile);
-        }
-
-        private static void ParseLine(InputData inputData, List<(string, string, int, int)> preWorkshops, IReadOnlyList<string> lines, int index)
+        private static void ParseLine(
+            InputData inputData, 
+            List<(string name, string conductor, int min, int max)> preWorkshops, 
+            IReadOnlyList<string> lines, 
+            int index)
         {
             Match m;
             try
@@ -99,10 +97,10 @@ namespace WSolve
                     throw new FormatException();
                 }
             }
-            catch(FormatException)
+            catch (FormatException)
             {
                 Status.Error($"Error in input line {index+1}.");
-                Environment.Exit(Exit.InvalidInputFile);
+                Environment.Exit(Exit.INVALID_INPUT_FILE);
             }
         }
     }

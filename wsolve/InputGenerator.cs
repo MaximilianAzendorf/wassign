@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-
 // ReSharper disable all
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Linq;
+
 #if DEBUG
     public static class InputGenerator
     {
@@ -18,36 +17,36 @@ namespace WSolve
             string hn(int i) => $"Human {i}";
             string sl(int i) => $"Slot {i}";
             
-            int HumanCount, WorkshopCount, SlotCount, WorkshopOff;
-            float WorkshopSizeVar;
+            int humanCount, workshopCount, slotCount, workshopOff;
+            float workshopSizeVar;
             
             Console.WriteLine("Input: #part #ws #slot wsvar wsoff");
             float[] input = Console.ReadLine().Split(' ').Select(f => float.Parse(f, CultureInfo.InvariantCulture)).ToArray();
 
-            HumanCount = (int) input[0];
-            WorkshopCount = (int) input[1];
-            SlotCount = (int) input[2];
-            WorkshopSizeVar = input[3];
-            WorkshopOff = (int) input[4];
+            humanCount = (int) input[0];
+            workshopCount = (int) input[1];
+            slotCount = (int) input[2];
+            workshopSizeVar = input[3];
+            workshopOff = (int) input[4];
 
-            int _avgWsSize = HumanCount * SlotCount / WorkshopCount;
-            int rem = HumanCount;
+            int avgWsSize = humanCount * slotCount / workshopCount;
+            int rem = humanCount;
 
-            List<int> conductorHumans = Enumerable.Range(0, HumanCount).ToList();
+            List<int> conductorHumans = Enumerable.Range(0, humanCount).ToList();
 
-            for (int i = 0; i < SlotCount; i++)
+            for (int i = 0; i < slotCount; i++)
             {
                 Console.Error.WriteLine($"(slot) {sl(i)}");
             }
 
-            int[] conductors = new int[WorkshopCount];
+            int[] conductors = new int[workshopCount];
             
-            for (int i = 0; i < WorkshopCount; i++)
+            for (int i = 0; i < workshopCount; i++)
             {
-                int min = (int) (_avgWsSize * (1 - WorkshopSizeVar));
-                int max = (int) (_avgWsSize * (1 + WorkshopSizeVar));
+                int min = (int) (avgWsSize * (1 - workshopSizeVar));
+                int max = (int) (avgWsSize * (1 + workshopSizeVar));
                 rem -= max;
-                if (i == WorkshopCount - 1 && rem > 0)
+                if (i == workshopCount - 1 && rem > 0)
                 {
                     max += rem;
                     min += rem;
@@ -57,18 +56,18 @@ namespace WSolve
                 conductors[i] = cond;
                 conductorHumans.Remove(cond);
 
-                min += WorkshopOff;
-                max += WorkshopOff;
+                min += workshopOff;
+                max += workshopOff;
                 
                 Console.Error.WriteLine($"(workshop) {ws(i)}: {hn(cond)}, {min}-{max}");
             }
 
-            for (int i = 0; i < HumanCount; i++)
+            for (int i = 0; i < humanCount; i++)
             {
                 Console.Error.Write($"(person) {hn(i)}:");
-                int favourite = rnd.Next(WorkshopCount);
+                int favourite = rnd.Next(workshopCount);
                 
-                for (int j = 0; j < WorkshopCount; j++)
+                for (int j = 0; j < workshopCount; j++)
                 {
                     if (conductors[j] == i)
                     {

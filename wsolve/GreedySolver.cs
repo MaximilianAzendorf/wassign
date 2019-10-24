@@ -1,101 +1,46 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
+    
     public class GreedySolver : ISolver
     {
-        private List<int>[] SolveAssignment(InputData inputData, int seed, CancellationToken ctoken)
+        public Solution Solve(InputData inputData)
         {
-            Random rnd = new Random(seed);
-
-            int[] workshopScramble = Enumerable.Range(0, inputData.Workshops.Count).OrderBy(x => rnd.Next()).ToArray();
-            
-            Stack<(int ws, int slot)> decisions = new Stack<(int, int)>();
-
-            Stack<List<int>> backtracking = new Stack<List<int>>();
-            
-            for(int depth = 0; depth < workshopScramble.Length;)
-            {
-                if (ctoken.IsCancellationRequested)
-                    return null;
-                
-                if (depth == -1) // no solution
-                    return null;
-                
-                int workshop = workshopScramble[depth];
-                
-                if(backtracking.Count <= depth)
-                {
-                    int availableMaxPush = workshopScramble.Skip(depth).Sum(w => inputData.Workshops[w].max);
-
-                    var impossibilities = Enumerable.Range(0, inputData.Slots.Count)
-                        .Where(s =>
-                            decisions
-                                .Where(w => w.slot == s)
-                                .Sum(w => inputData.Workshops[w.ws].max) + availableMaxPush < inputData.Participants.Count);
-
-                    if (impossibilities.Any())
-                    {
-                        backtracking.Push(new List<int>());
-                    }
-                    else
-                    {
-                        var feasibleSlots = Enumerable.Range(0, inputData.Slots.Count)
-                            .Where(s =>
-                                decisions
-                                    .Where(w => w.slot == s)
-                                    .Sum(w => inputData.Workshops[w.ws].min) + inputData.Workshops[workshop].min <=
-                                inputData.Participants.Count)
-                            .OrderBy(s =>
-                                decisions
-                                    .Where(w => w.slot == s)
-                                    .Sum(w => inputData.Workshops[w.ws].max))
-                            .ToArray();
-
-                        backtracking.Push(feasibleSlots.ToList());
-                    }
-                }
-
-                if (!backtracking.Peek().Any())
-                {
-                    backtracking.Pop();
-                    decisions.Pop();
-                    depth--; // backtrack
-                    continue;
-                }
-                
-                int nextSlot = backtracking.Peek().First();
-                backtracking.Peek().Remove(nextSlot);
-                decisions.Push((workshop, nextSlot));
-                depth++;
-            }
-            
-            List<int>[] slots = new List<int>[inputData.Slots.Count];
-            for (int i = 0; i < slots.Length; i++) slots[i] = new List<int>();
-
-            foreach (var decision in decisions)
-            {
-                slots[decision.slot].Add(decision.ws);
-            }
-
-            return slots;
+            return SolveIndefinitely(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None).First();
         }
-        
-        public IEnumerable<Solution> SolveIndefinitely(InputData inputData, CancellationToken ctoken)
-        {
-            Random rootRnd = new Random(Options.Seed ?? 2);
 
+        public IEnumerable<Solution> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis, CancellationToken ctoken)
+        {
+            Random rootRnd = new Random(Options.Seed ?? 123);
+            
             while (!ctoken.IsCancellationRequested)
             {
-                List<int>[] slots = SolveAssignment(inputData, rootRnd.Next(), ctoken);
+                int preferenceLimit = csAnalysis.PreferenceBound;
+                
+                List<int>[] slots = null;
+                while (slots == null)
+                {
+                    var sets = csAnalysis.ForPreference(preferenceLimit).ToArray();
 
-                if (slots == null) yield break;
+                    TimeSpan timeout = TimeSpan.FromSeconds(Options.CriticalSetTimeoutSeconds);
+                    
+                    slots = SolveAssignment(inputData, sets, timeout, rootRnd.Next(), ctoken);
+
+                    if (slots == null)
+                    {
+                        try
+                        {
+                            preferenceLimit = inputData.PreferenceLevels.SkipWhile(p => p <= preferenceLimit).First();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            preferenceLimit = int.MaxValue;
+                        }
+                    }
+                }
                 
                 int[] scheduling = new int[inputData.Workshops.Count];
                 for (int i = 0; i < slots.Length; i++)
@@ -127,8 +72,11 @@ namespace WSolve
 
                 foreach ((int p, int s) in indices)
                 {
-                    if (ctoken.IsCancellationRequested) yield break;
-                    
+                    if (ctoken.IsCancellationRequested)
+                    {
+                        yield break;
+                    }
+
                     if (assignment[p * inputData.Slots.Count + s] != -1)
                     {
                         continue;
@@ -138,7 +86,10 @@ namespace WSolve
                     {
                         for (int w = 0; w < inputData.Workshops.Count; w++)
                         {
-                            if (scheduling[w] != s) continue;
+                            if (scheduling[w] != s)
+                            {
+                                continue;
+                            }
 
                             int limit = l == 0 ? inputData.Workshops[w].min : inputData.Workshops[w].max;
 
@@ -151,8 +102,7 @@ namespace WSolve
                         }
                     }
 
-                    assigned:
-                    continue;
+                    assigned: continue;
                 }
 
                 List<(int workshop, int slot)> outputScheduling = new List<(int workshop, int slot)>();
@@ -175,6 +125,132 @@ namespace WSolve
             }
         }
 
-        public Solution Solve(InputData inputData) => SolveIndefinitely(inputData, new CancellationToken()).First();
+        private List<int>[] SolveAssignment(InputData inputData, CriticalSet[] criticalSets, TimeSpan timeout, int seed, CancellationToken ctoken)
+        {
+            DateTime startTime = DateTime.Now;
+            Random rnd = new Random(seed);
+
+            int[] workshopScramble = Enumerable.Range(0, inputData.Workshops.Count).OrderBy(x => rnd.Next()).ToArray();
+            
+            Stack<(int ws, int slot)> decisions = new Stack<(int, int)>();
+           
+            Stack<List<int>> backtracking = new Stack<List<int>>();
+            
+            for (int depth = 0; depth < workshopScramble.Length;)
+            {
+                if (ctoken.IsCancellationRequested)
+                {
+                    return null;
+                }
+
+                if (DateTime.Now > startTime + timeout)
+                {
+                    return null;
+                }
+                
+                // no solution
+                if (depth == -1)
+                {
+                    return null;
+                }
+
+                int workshop = workshopScramble[depth];
+                
+                if (backtracking.Count <= depth)
+                {
+                    int availableMaxPush = workshopScramble.Skip(depth).Sum(w => inputData.Workshops[w].max);
+
+                    var impossibilities = Enumerable.Range(0, inputData.Slots.Count)
+                        .Where(s =>
+                            decisions
+                                .Where(w => w.slot == s)
+                                .Sum(w => inputData.Workshops[w.ws].max) + availableMaxPush < inputData.Participants.Count);
+
+                    if (impossibilities.Any())
+                    {
+                        backtracking.Push(new List<int>());
+                    }
+                    else
+                    {
+                        if (!SatisfiesCriticalSets(inputData, decisions, criticalSets))
+                        {
+                            backtracking.Push(new List<int>());
+                        }
+                        else
+                        {
+                            var feasibleSlots = Enumerable.Range(0, inputData.Slots.Count)
+                                .Where(s =>
+                                    decisions
+                                        .Where(w => w.slot == s)
+                                        .Sum(w => inputData.Workshops[w.ws].min) + inputData.Workshops[workshop].min <=
+                                    inputData.Participants.Count)
+                                .OrderBy(s =>
+                                    decisions
+                                        .Where(w => w.slot == s)
+                                        .Sum(w => inputData.Workshops[w.ws].max))
+                                .ToArray();
+
+                            backtracking.Push(feasibleSlots.ToList());
+                        }
+                    }
+                }
+
+                if (!backtracking.Peek().Any())
+                {
+                    backtracking.Pop();
+                    decisions.Pop();
+                    depth--; // backtrack
+                    continue;
+                }
+                
+                int nextSlot = backtracking.Peek().First();
+                backtracking.Peek().Remove(nextSlot);
+                decisions.Push((workshop, nextSlot));
+                depth++;
+            }
+            
+            List<int>[] slots = new List<int>[inputData.Slots.Count];
+            for (int i = 0; i < slots.Length; i++)
+            {
+                slots[i] = new List<int>();
+            }
+
+            foreach (var decision in decisions)
+            {
+                slots[decision.slot].Add(decision.ws);
+            }
+
+            return slots;
+        }
+        
+        private bool SatisfiesCriticalSets(InputData inputData, Stack<(int ws, int slot)> decisions, IEnumerable<CriticalSet> criticalSets)
+        {
+            Dictionary<int, int> decisionMap = decisions.ToDictionary(d => d.ws, d => d.slot);
+
+            foreach (var set in criticalSets)
+            {
+                HashSet<int> coveredSlots = new HashSet<int>();
+                int missing = 0;
+                    
+                foreach (var element in set)
+                {
+                    if (!decisionMap.TryGetValue(element, out int slot))
+                    {
+                        missing++;
+                    }
+                    else
+                    {
+                        coveredSlots.Add(slot);
+                    }
+                }
+
+                if (coveredSlots.Count + missing < inputData.Slots.Count)
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
     }
 }

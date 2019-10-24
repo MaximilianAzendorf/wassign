@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WSolve
+﻿namespace WSolve
 {
+    using System.Collections.Generic;
+
     public interface ISelection
     {
         IEnumerable<Chromosome> Select(int number, GaLevel level, IEnumerable<Chromosome> list);

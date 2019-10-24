@@ -2,11 +2,11 @@ namespace WSolve
 {
     internal static class Exit
     {
-        public const int Ok = 0;
-        public const int Error = 1;
-        public const int InvalidArguments = 2;
-        public const int InvalidInputFile = 3;
-        public const int InputFileNotFound = 4;
+        public const int OK = 0;
+        public const int ERROR = 1;
+        public const int INVALID_ARGUMENTS = 2;
+        public const int INVALID_INPUT_FILE = 3;
+        public const int INPUT_FILE_NOT_FOUND = 4;
     }
 
 }

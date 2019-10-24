@@ -1,20 +1,21 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+
     public class InputData
     {
-        public List<(string name, IEnumerable<int> conductors, int min, int max)> Workshops { get; private set; } = new List<(string name, IEnumerable<int> conductors, int min, int max)>();
-        public List<(string name, int[] preferences)> Participants  { get; private set; } = new List<(string name, int[] preferences)>();
+        public List<(string name, int[] conductors, int min, int max)> Workshops { get; private set; } = new List<(string name, int[] conductors, int min, int max)>();
+        
+        public List<(string name, int[] preferences)> Participants { get; private set; } = new List<(string name, int[] preferences)>();
+        
         public List<string> Slots { get; private set; } = new List<string>();
 
-        public int MaxPreference => Participants.Max(p => p.preferences.Max());
+        public int MaxPreference => Participants.Any() ? Participants.Max(p => p.preferences.Max()) : 0;
 
-        public InputData()
-        {
-        }
+        public IEnumerable<int> PreferenceLevels =>
+            Participants.SelectMany(p => p.preferences).Distinct().OrderBy(x => x);
 
         public void Shuffle(int seed)
         {
@@ -33,15 +34,14 @@ namespace WSolve
 
             T[] applyShuffle<T>(int[] shuffle, T[] array)
             {
-                T[] n = new T[array.Length];
+                T[] shuffledArray = new T[array.Length];
 
                 for (int i = 0; i < array.Length; i++)
                 {
-                    n[i] = array[shuffle[i]];
+                    shuffledArray[i] = array[shuffle[i]];
                 }
                 
-                Array.Copy(n, array, array.Length);
-                return array;
+                return shuffledArray;
             }
             
             Status.Info("Applying shuffle.");
@@ -50,10 +50,24 @@ namespace WSolve
             int[] wShuffle = getShuffle(Workshops.Count, random);
             int[] pShuffle = getShuffle(Participants.Count, random);
 
-            Workshops = applyShuffle(wShuffle, Workshops.ToArray()).ToList();
+            Workshops = applyShuffle(wShuffle, Workshops.ToArray())
+                .Select(ws => (ws.name, ws.conductors.Select(c => Array.IndexOf(pShuffle, c)).ToArray(), ws.min, ws.max))
+                .ToList();
+            
             Participants = applyShuffle(pShuffle, Participants.ToArray())
                 .Select(x => (x.name, applyShuffle(wShuffle, x.preferences)))
                 .ToList();
+            
+            for (int ws = 0; ws < Workshops.Count; ws++)
+            {
+                foreach (var c in Workshops[ws].conductors)
+                {
+                    if (Participants[c].preferences[ws] != 0)
+                    {
+                        Status.Warning("Pref " + Participants[c].preferences[ws]);
+                    }
+                }
+            }
         }
     }
 }

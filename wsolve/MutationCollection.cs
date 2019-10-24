@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace WSolve
+﻿namespace WSolve
 {
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Linq;
+
     public class MutationCollection : ICollection<(float propability, IMutation mutation)>
     {
         private readonly Dictionary<IMutation, float> _mutations = new Dictionary<IMutation, float>();
@@ -46,7 +44,7 @@ namespace WSolve
 
         public bool Remove((float propability, IMutation mutation) item)
         {
-            if(!_mutations.TryGetValue(item.mutation, out float p) || p != item.propability)
+            if (!_mutations.TryGetValue(item.mutation, out float p) || p != item.propability)
             {
                 return false;
             }

@@ -1,24 +1,35 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace WSolve
 {
+    using System;
+    using System.IO;
+    using System.Linq;
+    using System.Threading;
+
     public class GaSolver : ISolver
     {
         public Solution Solve(InputData inputData)
         {
-            IFitness fitness = new GaSolverFitness(inputData, GetExtraConditions());
-            
+            IFitness fitness = new GaSolverFitness(inputData, GetExtraConditions(inputData));
+
+            CriticalSetAnalysis criticalSetAnalysis;
+
+            if (!Options.NoCriticalSets)
+            {
+                Status.Info("Performing critical set analysis.");
+                criticalSetAnalysis = new CriticalSetAnalysis(inputData);
+                Status.Info($"{criticalSetAnalysis.AllSets.Count()} critical sets found, Preference limit is {criticalSetAnalysis.PreferenceBound}.");
+            }
+            else
+            {
+                Status.Info("Skipping critical set analysis.");
+                criticalSetAnalysis = CriticalSetAnalysis.Empty(inputData);
+            }
+
             Chromosome res;
             if (Options.NoGeneticOptimizations)
             {
                 int tries = 0;
-                using (var solutionSource = new GreedySolver().SolveIndefinitely(inputData, CancellationToken.None)
+                using (var solutionSource = new GreedySolver().SolveIndefinitely(inputData, criticalSetAnalysis, CancellationToken.None)
                     .GetEnumerator())
                 {
                     Status.Info("Skipping genetic optimization; just computing greedy solution.");
@@ -43,17 +54,11 @@ namespace WSolve
                 if (!Options.NoPrefPump)
                 {
                     Status.Info("Applying preference pump heuristic.");
-                    foreach (int pref in inputData.Participants.SelectMany(p => p.preferences).Distinct()
-                        .OrderBy(x => -x))
-                    {
-                        Status.Info($"Trying to pump preference {pref}.");
-                        if (PrefPumpHeuristic.TryPump(res, pref, Options.PreferencePumpMaxDepth,
-                                TimeSpan.FromSeconds(Options.PreferencePumpTimeoutSeconds)) != PrefPumpResult.Success)
-                        {
-                            Status.Info($"Preference pump heuristic could not pump preference {pref}.");
-                            break;
-                        }
-                    }
+                    ApplyStaticPrefPumpHeuristic(res);
+                }
+                else if (res.MaxUsedPreference == criticalSetAnalysis.PreferenceBound)
+                {
+                    Status.Info("Reached preference bound; preference pump not needed.");
                 }
                 else
                 {
@@ -62,7 +67,7 @@ namespace WSolve
             }
             else
             {
-                MultiLevelGaSystem ga = new MultiLevelGaSystem(inputData, Options.BucketSize)
+                MultiLevelGaSystem ga = new MultiLevelGaSystem(inputData, criticalSetAnalysis, Options.BucketSize)
                 {
                     Fitness = fitness,
                     Crossover = new GaSolverCrossover(inputData),
@@ -76,9 +81,13 @@ namespace WSolve
                         (float) Options.CrossoverChance.GetValue(g.Progress / Options.FinalPhaseStart)),
                 };
 
-                ga.Mutations.Add(15, new GaSolverMutations.ChangeAssignment(inputData));
-                ga.Mutations.Add(3, new GaSolverMutations.ExchangeAssignment(inputData));
-                ga.Mutations.Add(1, new GaSolverMutations.ExchangeScheduling(inputData));
+                ga.Mutations.Add(30, new GaSolverMutations.ChangeAssignment(inputData));
+                ga.Mutations.Add(8, new GaSolverMutations.ExchangeAssignment(inputData));
+                ga.Mutations.Add(4, new GaSolverMutations.ExchangeScheduling(inputData));
+                if (!Options.NoLocalOptimizations)
+                {
+                    ga.Mutations.Add(1, new GaSolverMutations.OptimizeLocally(fitness));
+                }
 
                 ga.Start();
 
@@ -87,9 +96,22 @@ namespace WSolve
 
             if (!Options.NoLocalOptimizations)
             {
-                res = LocalOptimization.Apply(res, fitness, out int altCount);
+                bool retry;
+                do
+                {
+                    retry = false;
+                    res = LocalOptimization.Apply(res, fitness, out int altCount);
 
-                Status.Info($"Local Optimizations made {altCount} alteration(s).");
+                    Status.Info($"Local Optimizations made {altCount} alteration(s).");
+
+                    if (!Options.NoPrefPump && altCount > 0 && res.MaxUsedPreference != criticalSetAnalysis.PreferenceBound)
+                    {
+                        Status.Info("Retrying preference pumping because local optimizations made changes.");
+                        retry = true;
+
+                        ApplyStaticPrefPumpHeuristic(res);
+                    }
+                } while (retry);
             }
             else
             {
@@ -100,16 +122,43 @@ namespace WSolve
             return res.ToSolution();
         }
 
-        private Func<Chromosome, bool> GetExtraConditions()
+        private Func<Chromosome, bool> GetExtraConditions(InputData inputData)
         {
-            if(Options.ExtraConditions == null) return null;
+            if (Options.ExtraConditions == null)
+            {
+                return null;
+            }
 
             string condition = File.Exists(Options.ExtraConditions)
                 ? File.ReadAllText(Options.ExtraConditions)
                 : $"AddCondition({Options.ExtraConditions});";
 
             Status.Info("Compiling extra conditions.");
-            return ExtraConditionsCompiler.Compile(condition);
+            return ExtraConditionsCompiler.Compile(condition, inputData);
+        }
+        
+        private void ApplyStaticPrefPumpHeuristic(Chromosome chromosome)
+        {
+            int maxPref = chromosome.MaxUsedPreference;
+            
+            foreach (int pref in chromosome.InputData.Participants.SelectMany(p => p.preferences).Distinct()
+                .OrderBy(x => -x))
+            {
+                if (pref > maxPref)
+                {
+                    continue;
+                }
+
+                if (PrefPumpHeuristic.TryPump(
+                        chromosome, 
+                        pref, 
+                        Options.PreferencePumpMaxDepth,
+                        TimeSpan.FromSeconds(Options.PreferencePumpTimeoutSeconds)) != PrefPumpResult.Success)
+                {
+                    Status.Info($"Preference pump heuristic could not pump preference {pref}.");
+                    break;
+                }
+            }
         }
     }
 }

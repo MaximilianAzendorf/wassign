@@ -1,55 +1,75 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using NDesk.Options;
-
 namespace WSolve
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Reflection;
+    using System.Text.RegularExpressions;
+    using NDesk.Options;
+
     public static class Options
     {
+        private static readonly Regex TimeRegex = new Regex(@"(?<amount>[0-9]+)(?<mult>[s|m|h|d|w])", RegexOptions.Compiled);
+        private static readonly Regex ExpIntRegex = new Regex(@"^(?<from>[0-9.]+)(?:-(?<to>[0-9.]+)(?:\^(?<exp>[0-9.]+))?)?$", RegexOptions.Compiled);
+        private static readonly Regex TournamentRegex = new Regex(@"^tournament\((?<size>[1-9][0-9]*)\)$", RegexOptions.Compiled);
+        
+        private static readonly IReadOnlyDictionary<string, int> TimeMultipliers = new Dictionary<string, int>
+        {
+            ["s"] = 1,
+            ["m"] = 60,
+            ["h"] = 60 * 60,
+            ["d"] = 60 * 60 * 24,
+            ["w"] = 60 * 60 * 24 * 7,
+        };
+        
         public static int Verbosity { get; private set; } = 3;
+        
         public static int? Seed { get; private set; }
+        
         public static string InputFile { get; private set; }
+        
         public static string OutputFile { get; private set; }
+        
         public static string CsvOutputFile { get; private set; }
+        
         public static bool ShowHelp { get; private set; }
+        
         public static int TimeoutSeconds { get; private set; } = 60 * 60;
+        
         public static int PreferencePumpTimeoutSeconds { get; private set; } = 10;
+        
+        public static int CriticalSetTimeoutSeconds { get; private set; } = 1;
+        
+        public static int CriticalSetProbingRetries { get; private set; } = 120;
+        
         public static int PreferencePumpMaxDepth { get; private set; } = -1;
+        
         public static double FinalPhaseStart { get; private set; } = 0.8;
-
+        
         public static bool NoGeneticOptimizations { get; private set; } = false;
+        
         public static bool NoLocalOptimizations { get; private set; } = false;
+        
         public static bool NoPrefPump { get; private set; } = false;
         
+        public static bool NoCriticalSets { get; private set; } = false;
+        
         public static bool NoStats { get; private set; } = false;
-            
-        public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.4, 0.4, 1.0);
-        public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.6, 0.6, 1.0);
-        public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 40, 1.8);
-        public static ISelection Selection { get; private set; } = new TournamentSelection(1.75f);
+        
+        public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.5, 0.3, 1.0);
+        
+        public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.75, 0.5, 1.0);
+        
+        public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 30, 1.8);
+        
+        public static ISelection Selection { get; private set; } = new TournamentSelection(1.65f);
+        
         public static int BucketSize { get; private set; } = 5000;
 
         public static string ExtraConditions { get; private set; } = null;
         
         public static double PreferenceExponent { get; private set; } = 3;
-
-        private static readonly Regex TimeRegex = new Regex(@"(?<amount>[0-9]+)(?<mult>[s|m|h|d|w])", RegexOptions.Compiled);
-        private static readonly Regex ExpIntRegex = new Regex(@"^(?<from>[0-9.]+)(?:-(?<to>[0-9.]+)(?:\^(?<exp>[0-9.]+))?)?$", RegexOptions.Compiled);
-        private static readonly Regex TournamentRegex = new Regex(@"^tournament\((?<size>[1-9][0-9]*)\)$", RegexOptions.Compiled);
-
-        private static readonly IReadOnlyDictionary<string, int> TimeMultipliers = new Dictionary<string, int>
-            {
-                ["s"] = 1,
-                ["m"] = 60,
-                ["h"] = 60 * 60,
-                ["d"] = 60 * 60 * 24,
-                ["w"] = 60 * 60 * 24 * 7
-            };
         
         private static void ThrowInvalidParameter(string value) => 
             throw new FormatException($"Could not undestand parameter value \"{value}\".");
@@ -64,7 +84,10 @@ namespace WSolve
                 matchedLength += m.Length;
             }
 
-            if (matchedLength != timeString.Length) ThrowInvalidParameter(timeString);
+            if (matchedLength != timeString.Length)
+            {
+                ThrowInvalidParameter(timeString);
+            }
 
             return time;
         }
@@ -72,7 +95,10 @@ namespace WSolve
         private static ExpInterpolation ParseExpInt(string expIntString)
         {
             Match match = ExpIntRegex.Match(expIntString);
-            if (!match.Success) ThrowInvalidParameter(expIntString);
+            if (!match.Success)
+            {
+                ThrowInvalidParameter(expIntString);
+            }
 
             double from = double.NaN, to = double.NaN, exp = double.NaN;
             
@@ -80,7 +106,7 @@ namespace WSolve
             {
                 from = double.Parse(match.Groups["from"].Value);
                 to = match.Groups["to"].Success ? double.Parse(match.Groups["to"].Value) : from;
-                exp = match.Groups["exp"].Success ? double.Parse(match.Groups["exp"].Value) : to;
+                exp = match.Groups["exp"].Success ? double.Parse(match.Groups["exp"].Value) : 1.0;
             }
             catch (FormatException)
             {
@@ -92,12 +118,33 @@ namespace WSolve
 
         private static ISelection ParseSelection(string selectionString)
         {
-            if(selectionString == "elite") return new EliteSelection();
+            if (selectionString == "elite")
+            {
+                return new EliteSelection();
+            }
 
             Match match = TournamentRegex.Match(selectionString);
-            if (!match.Success) ThrowInvalidParameter(selectionString);
-            
+            if (!match.Success)
+            {
+                ThrowInvalidParameter(selectionString);
+            }
+
             return new TournamentSelection(int.Parse(match.Groups["size"].Value));
+        }
+
+        private static int ParseSeed(string seedString)
+        {
+            unchecked
+            {
+                int seed = 0;
+
+                foreach (char c in seedString)
+                {
+                    seed = seed * 37 + c.GetHashCode();
+                }
+                
+                return seed;
+            }
         }
         
         private static OptionSet OptionSet { get; } = new OptionSet
@@ -112,7 +159,7 @@ namespace WSolve
                 (string i) => CsvOutputFile = i },
             
             {"s|shuffle=", "Sets the seed for the random number generator and shuffles the input.", 
-                (int x) => Seed = (x == -1 ? (int?)null : x) },
+                (string x) => Seed = ParseSeed(x) },
             
             {"v|verbosity=", "A number between 0 and 3 (default 3) indicating how much status information should be given.", 
                 (int v) => Verbosity = v },
@@ -126,14 +173,20 @@ namespace WSolve
             {"t|timeout=", $"Sets the optimization timeout. Default is {TimeoutSeconds}s.",
                 (string x) => TimeoutSeconds = ParseTime(x) },
             
+            {"cs-timeout=", $"Sets the timeout for attempting to statisfy critical sets of a certain pereference level. Default is {CriticalSetTimeoutSeconds}s.",
+                (string x) => CriticalSetTimeoutSeconds = ParseTime(x) },
+            
+            //{"cs-retries=", $"Sets the number of retries for critical set lower bound probing. Default is {CriticalSetProbingRetries}.",
+            //    (int x) => CriticalSetProbingRetries = x },
+            
             {"prp-timeout=", $"Sets the timeout for the preference pump heuristic. Default is {PreferencePumpTimeoutSeconds}s.", 
                 (string x) => PreferencePumpTimeoutSeconds = ParseTime(x) },
             
             {"prp-depth=", $"Sets the maximum search depth for the preference pump heuristic. Specify -1 for unbounded depth. Default is {PreferencePumpTimeoutSeconds}.", 
                 (int x) => PreferencePumpMaxDepth = x },
             
-            { "a|any-solution", "Only compute a greedy solution and perform local optimizations. Same as --no-ga --no-prp --no-lopt.",
-                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = true },
+            { "a|any-solution", "Only compute a greedy solution without any optimizations. Same as --no-ga --no-prp --no-lopt --no-cs.",
+                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true },
             
             { "no-ga", "Do not perform genetic optimizations.",
                 x => NoGeneticOptimizations = true },
@@ -143,6 +196,9 @@ namespace WSolve
             
             { "no-prp", "Do not use preference pump heuristics.",
                 x => NoPrefPump = true },
+            
+            { "no-cs", "Do not perform critical set anaylsis.",
+                x => NoCriticalSets = true },
             
             { "no-stats", "Do not print solution statistics.", 
                 x => NoStats = true },
@@ -187,7 +243,7 @@ namespace WSolve
             {
                 Status.Error("Invalid Arguments.");
                 PrintHelp();
-                Environment.Exit(Exit.InvalidArguments);
+                Environment.Exit(Exit.INVALID_ARGUMENTS);
             }
 
             if (ShowHelp)
@@ -201,11 +257,11 @@ namespace WSolve
 
         public static void PrintHelp()
         {
+            Program.PrintHeader();
             Console.Error.WriteLine("USAGE: {0} [Options]\n", Path.GetFileNameWithoutExtension(Assembly.GetExecutingAssembly().Location));
             Console.Error.WriteLine("OPTIONS:");
             OptionSet.WriteOptionDescriptions(Console.Error);
             Console.Error.WriteLine("\nINPUT: Consult the Readme file for information about the input format.\n");
         }
-
     }
 }

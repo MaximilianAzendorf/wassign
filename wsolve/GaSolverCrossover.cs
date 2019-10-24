@@ -1,19 +1,20 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace WSolve
 {
+    using System.Collections.Generic;
+    using System.Linq;
+
     public class GaSolverCrossover : ICrossover
     {
-        public int ParentCount { get; } = 2;
-        public int ChildrenCount { get; } = 2;
-        
-        public InputData InputData { get; }
-
         public GaSolverCrossover(InputData inputData)
         {
             InputData = inputData;
         }
+        
+        public int ParentCount { get; } = 2;
+        
+        public int ChildrenCount { get; } = 2;
+        
+        public InputData InputData { get; }
         
         public IEnumerable<Chromosome> Crossover(IReadOnlyList<Chromosome> parents)
         {
@@ -47,11 +48,11 @@ namespace WSolve
                     c1.Workshop(p, s) = w0;
                 }
 
-                return new[] {c0, c1};
+                return new[] { c0, c1 };
             }
             else
             {
-                return new[] {p0, p1};
+                return new[] { p0, p1 };
             }
         }
     }
