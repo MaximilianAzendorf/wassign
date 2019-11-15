@@ -66,7 +66,7 @@ All collections are of type `IReadOnlyCollection<T>`.
 
 Apart from this API, the namespaces `System`, `System.Text`, `System.Linq` and `System.Collections.Generic` are available. Also, the class `System.Math` is statically imported (so you can use Functions like `Abs(...)` directly instead of `Math.Abs(...)`).
 
-For implementation details, see [ExtraConditionsCodeEnvironment.txt](wsolve/resources/ExtraConditionsCodeEnvironment.txt), [ExtraConditionsBase.cs](wsolve/ExtraConditionsBase.cs) and [ExtraConditionsCompiler.cs](wsolve/ExtraConditionsCompiler.cs).
+For implementation details, see [ExtraConditionsCodeEnvironment.txt](wsolve/Resources/ExtraConditionsCodeEnvironment.txt), [ExtraConditionsBase.cs](wsolve/ExtraConditionsBase.cs) and [ExtraConditionsCompiler.cs](wsolve/ExtraConditionsCompiler.cs).
 
 #### Examples:
 
