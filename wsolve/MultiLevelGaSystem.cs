@@ -28,7 +28,10 @@ namespace WSolve
                 .ToArray();
 
             _buckets = new BlockingCollection<Chromosome>[InputData.MaxPreference + 1];
-            for (var i = 0; i < _buckets.Length; i++) _buckets[i] = new BlockingCollection<Chromosome>(BucketLimit);
+            for (int i = 0; i < _buckets.Length; i++)
+            {
+                _buckets[i] = new BlockingCollection<Chromosome>(BucketLimit);
+            }
 
             _criticalSetAnalysis = csAnalysis;
         }
@@ -55,9 +58,12 @@ namespace WSolve
         {
             get
             {
-                var started = _levels.Where(l => l.HasStarted);
+                IEnumerable<GaLevel> started = _levels.Where(l => l.HasStarted);
                 if (!started.Any())
+                {
                     return default;
+                }
+
                 return _levels.Where(l => l.HasStarted).Min(l => l.BestFitness);
             }
         }
@@ -93,7 +99,10 @@ namespace WSolve
 
         public void Start()
         {
-            if (_threads != null) throw new InvalidOperationException("MLGA already started.");
+            if (_threads != null)
+            {
+                throw new InvalidOperationException("MLGA already started.");
+            }
 
             TimeStarted = DateTime.Now;
 
@@ -104,21 +113,21 @@ namespace WSolve
 
             _levels = new GaLevel[_preferenceLevels.Length];
 
-            for (var i = 0; i < NumberOfPresolverThreads; i++)
+            for (int i = 0; i < NumberOfPresolverThreads; i++)
             {
-                var tryCriticalSets = i == 0;
+                bool tryCriticalSets = i == 0;
                 _threads.Add(new Thread(() => PresolverWorker(_cts.Token, tryCriticalSets)));
                 _threads.Last().Start();
             }
 
-            foreach (var i in _preferenceLevels)
+            foreach (int i in _preferenceLevels)
             {
-                var closurei = i;
+                int closurei = i;
                 _threads.Add(new Thread(() => GaWorker(_cts.Token, closurei)));
                 _threads.Last().Start();
             }
 
-            for (var i = 0; i < NumberOfPrefPumpThreads; i++)
+            for (int i = 0; i < NumberOfPrefPumpThreads; i++)
             {
                 _threads.Add(new Thread(() => PrefPumpWorker(_cts.Token)));
                 _threads.Last().Start();
@@ -140,19 +149,22 @@ namespace WSolve
 
                 var state = new StringBuilder();
 
-                var extraPresolverState = PresolversWaiting ? "   " : "(+)";
+                string extraPresolverState = PresolversWaiting ? "   " : "(+)";
 
                 state.Append(
-                    $"{extraPresolverState} BEST=({((int) BestFitness.major + ",").PadRight(3)} {BestFitness.minor:0.00000}), ETA={(TimeStarted + Timeout - DateTime.Now).WithoutMilliseconds()}  :: ");
-                var minStarted = LevelIndex(_levels.Where(l => l.HasStarted).Min(l => l.PreferenceLevel));
+                    $"{extraPresolverState} BEST=({((int) BestFitness.major + ",").PadRight(3)} {BestFitness.minor:0.00000}), ETA={(TimeStarted + Timeout - DateTime.Now).ToStringNoMilliseconds()}  :: ");
+                int minStarted = LevelIndex(_levels.Where(l => l.HasStarted).Min(l => l.PreferenceLevel));
                 minStarted = Math.Min(_levels.Length - 3, Math.Max(0, minStarted));
 
-                for (var i = minStarted; i <= minStarted + 2; i++)
+                for (int i = minStarted; i <= minStarted + 2; i++)
                 {
-                    var level = _levels[i];
-                    if (level == null) continue;
+                    GaLevel level = _levels[i];
+                    if (level == null)
+                    {
+                        continue;
+                    }
 
-                    var status =
+                    string status =
                         $" [{_levels[i].PreferenceLevel}({_levels[i].GenerationsPassed}):{level.CurrentGeneration?.Count ?? 0}/{_buckets[_levels[i].PreferenceLevel].Count}] ";
                     state.Append(status);
                 }
@@ -162,9 +174,12 @@ namespace WSolve
 
             Status.Info("Stopped GA System. Waiting for workers to finish.");
             _cts.Cancel();
-            foreach (var t in _threads) t?.Join();
+            foreach (Thread t in _threads)
+            {
+                t?.Join();
+            }
 
-            var best = _levels.Select(l => l.BestChromosome).OrderBy(Fitness.Evaluate).First();
+            Chromosome best = _levels.Select(l => l.BestChromosome).OrderBy(Fitness.Evaluate).First();
 
             return best;
         }
@@ -178,7 +193,10 @@ namespace WSolve
         {
             bool controller(Solution s)
             {
-                while (PresolversWaiting && !token.IsCancellationRequested) Thread.Sleep(50);
+                while (PresolversWaiting && !token.IsCancellationRequested)
+                {
+                    Thread.Sleep(50);
+                }
 
                 return true;
             }
@@ -186,7 +204,7 @@ namespace WSolve
             var baseSolver = new GreedySolver();
             var presolver = new PrefPumpPresolver();
 
-            var cs = tryCriticalSets ? _criticalSetAnalysis : CriticalSetAnalysis.Empty(InputData);
+            CriticalSetAnalysis cs = tryCriticalSets ? _criticalSetAnalysis : CriticalSetAnalysis.Empty(InputData);
 
             presolver.Presolve(
                 InputData,
@@ -197,7 +215,10 @@ namespace WSolve
                 token,
                 (r, pref) =>
                 {
-                    if (Fitness.IsFeasible(r)) AddToBucket(r, pref);
+                    if (Fitness.IsFeasible(r))
+                    {
+                        AddToBucket(r, pref);
+                    }
                 });
         }
 
@@ -212,7 +233,10 @@ namespace WSolve
 
         private void PrefPumpWorker(CancellationToken ct)
         {
-            while (_levels.Any(l => l == null)) Thread.Sleep(500);
+            while (_levels.Any(l => l == null))
+            {
+                Thread.Sleep(500);
+            }
 
             Status.Info(
                 $"Begin preference pumping (Timeout {Options.PreferencePumpTimeoutSeconds}s, Depth {(Options.PreferencePumpMaxDepth < 0 ? "any" : Options.PreferencePumpMaxDepth.ToString())}).");
@@ -220,9 +244,9 @@ namespace WSolve
             while (!ct.IsCancellationRequested)
             {
                 _prefPumpMinFound = Math.Min(_prefPumpMinFound, FirstRunningLevel);
-                foreach (var level in _levels.Where(l => l.HasStarted))
+                foreach (GaLevel level in _levels.Where(l => l.HasStarted))
                 {
-                    var chromosomes = level?.CurrentGeneration?.Select(c => c.Copy())
+                    Chromosome[] chromosomes = level?.CurrentGeneration?.Select(c => c.Clone())
                         ?.Where(Fitness.IsFeasible)?.ToArray();
                     if (chromosomes == null)
                     {
@@ -230,11 +254,14 @@ namespace WSolve
                         continue;
                     }
 
-                    foreach (var chromosome in chromosomes)
+                    foreach (Chromosome chromosome in chromosomes)
                     {
-                        if (ct.IsCancellationRequested) return;
+                        if (ct.IsCancellationRequested)
+                        {
+                            return;
+                        }
 
-                        var result = PrefPumpHeuristic.TryPump(
+                        PrefPumpResult result = PrefPumpHeuristic.TryPump(
                             chromosome,
                             level.PreferenceLevel,
                             Options.PreferencePumpMaxDepth,
@@ -249,7 +276,9 @@ namespace WSolve
                             }
 
                             while (!_buckets[chromosome.MaxUsedPreference].TryAdd(chromosome))
+                            {
                                 _buckets[chromosome.MaxUsedPreference].Take();
+                            }
                         }
                     }
                 }

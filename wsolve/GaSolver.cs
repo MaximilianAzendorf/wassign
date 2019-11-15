@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -29,15 +30,18 @@ namespace WSolve
             Chromosome res;
             if (Options.NoGeneticOptimizations)
             {
-                var tries = 0;
-                using (var solutionSource = new GreedySolver()
+                int tries = 0;
+                using (IEnumerator<Solution> solutionSource = new GreedySolver()
                     .SolveIndefinitely(inputData, criticalSetAnalysis, CancellationToken.None)
                     .GetEnumerator())
                 {
                     Status.Info("Skipping genetic optimization; just computing greedy solution.");
                     do
                     {
-                        if (tries == 1) Status.Warning("Greedy solution was not feasible on first try.");
+                        if (tries == 1)
+                        {
+                            Status.Warning("Greedy solution was not feasible on first try.");
+                        }
 
                         solutionSource.MoveNext();
                         res = Chromosome.FromOutput(inputData, solutionSource.Current);
@@ -45,7 +49,10 @@ namespace WSolve
                     } while (!fitness.IsFeasible(res));
                 }
 
-                if (tries > 1) Status.Info($"Needed {tries} tries to find feasible greedy solution.");
+                if (tries > 1)
+                {
+                    Status.Info($"Needed {tries} tries to find feasible greedy solution.");
+                }
 
                 if (!Options.NoPrefPump)
                 {
@@ -80,7 +87,10 @@ namespace WSolve
                 ga.Mutations.Add(30, new GaSolverMutations.ChangeAssignment(inputData));
                 ga.Mutations.Add(8, new GaSolverMutations.ExchangeAssignment(inputData));
                 ga.Mutations.Add(4, new GaSolverMutations.ExchangeScheduling(inputData));
-                if (!Options.NoLocalOptimizations) ga.Mutations.Add(1, new GaSolverMutations.OptimizeLocally(fitness));
+                if (!Options.NoLocalOptimizations)
+                {
+                    ga.Mutations.Add(1, new GaSolverMutations.OptimizeLocally(fitness));
+                }
 
                 ga.Start();
 
@@ -93,7 +103,7 @@ namespace WSolve
                 do
                 {
                     retry = false;
-                    res = LocalOptimization.Apply(res, fitness, out var altCount);
+                    res = LocalOptimization.Apply(res, fitness, out int altCount);
 
                     Status.Info($"Local Optimizations made {altCount} alteration(s).");
 
@@ -118,9 +128,12 @@ namespace WSolve
 
         private Func<Chromosome, bool> GetExtraConditions(InputData inputData)
         {
-            if (Options.ExtraConditions == null) return null;
+            if (Options.ExtraConditions == null)
+            {
+                return null;
+            }
 
-            var condition = File.Exists(Options.ExtraConditions)
+            string condition = File.Exists(Options.ExtraConditions)
                 ? File.ReadAllText(Options.ExtraConditions)
                 : $"AddCondition({Options.ExtraConditions});";
 
@@ -130,12 +143,15 @@ namespace WSolve
 
         private void ApplyStaticPrefPumpHeuristic(Chromosome chromosome)
         {
-            var maxPref = chromosome.MaxUsedPreference;
+            int maxPref = chromosome.MaxUsedPreference;
 
-            foreach (var pref in chromosome.InputData.Participants.SelectMany(p => p.preferences).Distinct()
+            foreach (int pref in chromosome.InputData.Participants.SelectMany(p => p.preferences).Distinct()
                 .OrderBy(x => -x))
             {
-                if (pref > maxPref) continue;
+                if (pref > maxPref)
+                {
+                    continue;
+                }
 
                 if (PrefPumpHeuristic.TryPump(
                         chromosome,

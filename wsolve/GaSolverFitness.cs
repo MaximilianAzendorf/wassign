@@ -24,66 +24,88 @@ namespace WSolve
             var isInSlot = new bool[InputData.Participants.Count, InputData.Slots.Count];
             var slots = new int[InputData.Workshops.Count];
 
-            for (var i = 0; i < InputData.Workshops.Count; i++)
+            for (int i = 0; i < InputData.Workshops.Count; i++)
             {
                 slots[i] = chromosome.Slot(i);
 
-                foreach (var conductor in InputData.Workshops[i].conductors)
+                foreach (int conductor in InputData.Workshops[i].conductors)
                 {
-                    var foundConductor = false;
-                    for (var sl = 0; sl < InputData.Slots.Count; sl++)
+                    bool foundConductor = false;
+                    for (int sl = 0; sl < InputData.Slots.Count; sl++)
+                    {
                         if (chromosome.Workshop(conductor, sl) == i)
                         {
                             foundConductor = true;
                             break;
                         }
+                    }
 
-                    if (!foundConductor) return false;
+                    if (!foundConductor)
+                    {
+                        return false;
+                    }
                 }
             }
 
-            for (var i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
+            for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
-                var p = i / InputData.Slots.Count;
-                var ws = chromosome.Workshop(p, i % InputData.Slots.Count);
-                if (isInSlot[p, slots[ws]]) return false;
+                int p = i / InputData.Slots.Count;
+                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                if (isInSlot[p, slots[ws]])
+                {
+                    return false;
+                }
 
                 isInSlot[p, slots[ws]] = true;
                 partCounts[ws]++;
             }
 
-            for (var i = 0; i < InputData.Workshops.Count; i++)
+            for (int i = 0; i < InputData.Workshops.Count; i++)
             {
-                if (partCounts[i] < InputData.Workshops[i].min) return false;
+                if (partCounts[i] < InputData.Workshops[i].min)
+                {
+                    return false;
+                }
 
-                if (partCounts[i] > InputData.Workshops[i].max) return false;
+                if (partCounts[i] > InputData.Workshops[i].max)
+                {
+                    return false;
+                }
             }
 
-            if (!(ExtraFilter?.Invoke(chromosome) ?? true)) return false;
+            if (!(ExtraFilter?.Invoke(chromosome) ?? true))
+            {
+                return false;
+            }
 
             return true;
         }
 
         public (float major, float minor) Evaluate(Chromosome chromosome)
         {
-            if (chromosome == Chromosome.Null) return (float.PositiveInfinity, float.PositiveInfinity);
+            if (chromosome == Chromosome.Null)
+            {
+                return (float.PositiveInfinity, float.PositiveInfinity);
+            }
 
             float major = EvaluateMajor(chromosome);
-            var minor = EvaluateMinor(chromosome);
+            float minor = EvaluateMinor(chromosome);
 
             if (!float.IsFinite(major) || !float.IsFinite(minor))
+            {
                 return (float.PositiveInfinity, float.PositiveInfinity);
+            }
 
             return (major, minor);
         }
 
         public int EvaluateMajor(Chromosome chromosome)
         {
-            var m = 0;
-            for (var i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
+            int m = 0;
+            for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
-                var p = i / InputData.Slots.Count;
-                var ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                int p = i / InputData.Slots.Count;
+                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
                 m = Math.Max(m, InputData.Participants[p].preferences[ws]);
             }
 
@@ -92,15 +114,18 @@ namespace WSolve
 
         public float EvaluateMinor(Chromosome chromosome)
         {
-            if (!IsFeasible(chromosome)) return float.PositiveInfinity;
+            if (!IsFeasible(chromosome))
+            {
+                return float.PositiveInfinity;
+            }
 
-            var prefArray = Enumerable.Range(0, InputData.MaxPreference + 1).ToArray();
+            int[] prefArray = Enumerable.Range(0, InputData.MaxPreference + 1).ToArray();
             var prefCount = new int[InputData.MaxPreference + 1];
 
-            for (var i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
+            for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
-                var p = i / InputData.Slots.Count;
-                var ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                int p = i / InputData.Slots.Count;
+                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
                 prefCount[InputData.Participants[p].preferences[ws]]++;
             }
 

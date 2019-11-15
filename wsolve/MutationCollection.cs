@@ -24,7 +24,7 @@ namespace WSolve
 
         public bool Contains((float propability, IMutation mutation) item)
         {
-            return _mutations.TryGetValue(item.mutation, out var p) && p == item.propability;
+            return _mutations.TryGetValue(item.mutation, out float p) && p == item.propability;
         }
 
         public void CopyTo((float propability, IMutation mutation)[] array, int arrayIndex)
@@ -34,7 +34,10 @@ namespace WSolve
 
         public bool Remove((float propability, IMutation mutation) item)
         {
-            if (!_mutations.TryGetValue(item.mutation, out var p) || p != item.propability) return false;
+            if (!_mutations.TryGetValue(item.mutation, out float p) || p != item.propability)
+            {
+                return false;
+            }
 
             return _mutations.Remove(item.mutation);
         }
@@ -56,7 +59,7 @@ namespace WSolve
 
         public bool Contains(float propability, IMutation mutation)
         {
-            return _mutations.TryGetValue(mutation, out var p) && p == propability;
+            return _mutations.TryGetValue(mutation, out float p) && p == propability;
         }
 
         public bool Remove(IMutation mutation)
@@ -66,12 +69,14 @@ namespace WSolve
 
         public (float cost, IMutation mutation)[] GetSelectionSnapshot()
         {
-            var psum = _mutations.Sum(kvp => kvp.Value);
+            float psum = _mutations.Sum(kvp => kvp.Value);
 
             var snapshot = new List<(float, IMutation)>(_mutations.Count);
 
             foreach ((IMutation key, float value) in _mutations.OrderByDescending(kvp => kvp.Value))
+            {
                 snapshot.Add((value / psum, key));
+            }
 
             return snapshot.ToArray();
         }

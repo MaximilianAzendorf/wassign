@@ -1,29 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace WSolve
 {
-    public abstract class CustomFilter
+    public abstract class ExtraConditionsBase
     {
         private readonly Chromosome _chromosome;
 
-        protected CustomFilter(Chromosome chromosome)
+        protected ExtraConditionsBase(Chromosome chromosome)
         {
             _chromosome = chromosome;
         }
 
         public bool Result { get; private set; } = true;
 
-        protected IEnumerable<ParticipantAccessor> Participants => Enumerable
+        protected IReadOnlyCollection<ParticipantAccessor> Participants => Enumerable
             .Range(0, _chromosome.InputData.Participants.Count)
-            .Select(n => new ParticipantAccessor(n, this, _chromosome));
+            .Select(n => new ParticipantAccessor(n, this, _chromosome))
+            .ToImmutableList();
 
-        protected IEnumerable<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Workshops.Count)
-            .Select(n => new WorkshopAccessor(n, this, _chromosome));
+        protected IReadOnlyCollection<WorkshopAccessor> Workshops => Enumerable
+            .Range(0, _chromosome.InputData.Workshops.Count)
+            .Select(n => new WorkshopAccessor(n, this, _chromosome))
+            .ToImmutableList();
 
-        protected IEnumerable<SlotAccessor> Slots => Enumerable.Range(0, _chromosome.InputData.Slots.Count)
-            .Select(n => new SlotAccessor(n, this, _chromosome));
+        protected IReadOnlyCollection<SlotAccessor> Slots => Enumerable
+            .Range(0, _chromosome.InputData.Slots.Count)
+            .Select(n => new SlotAccessor(n, this, _chromosome))
+            .ToImmutableList();
 
         protected void AddCondition(bool condition)
         {
@@ -32,53 +38,80 @@ namespace WSolve
 
         protected ParticipantAccessor Participant(string nameFragment)
         {
-            var res = _chromosome.InputData.Participants.FindIndex(p => p.name == nameFragment);
-            if (res >= 0) return new ParticipantAccessor(res, this, _chromosome);
+            int res = _chromosome.InputData.Participants.FindIndex(p => p.name == nameFragment);
+            if (res >= 0)
+            {
+                return new ParticipantAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Participants.FindIndex(p => p.name.StartsWith(nameFragment));
-            if (res >= 0) return new ParticipantAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new ParticipantAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Participants.FindIndex(p => p.name.Contains(nameFragment));
-            if (res >= 0) return new ParticipantAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new ParticipantAccessor(res, this, _chromosome);
+            }
 
             throw new ArgumentException($"Could not find participant with name fragment '{nameFragment}'.");
         }
 
         protected WorkshopAccessor Workshop(string nameFragment)
         {
-            var res = _chromosome.InputData.Workshops.FindIndex(w => w.name == nameFragment);
-            if (res >= 0) return new WorkshopAccessor(res, this, _chromosome);
+            int res = _chromosome.InputData.Workshops.FindIndex(w => w.name == nameFragment);
+            if (res >= 0)
+            {
+                return new WorkshopAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Workshops.FindIndex(w => w.name.StartsWith(nameFragment));
-            if (res >= 0) return new WorkshopAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new WorkshopAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Workshops.FindIndex(w => w.name.Contains(nameFragment));
-            if (res >= 0) return new WorkshopAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new WorkshopAccessor(res, this, _chromosome);
+            }
 
             throw new ArgumentException($"Could not find workshop with name fragment '{nameFragment}'.");
         }
 
         protected SlotAccessor Slot(string nameFragment)
         {
-            var res = _chromosome.InputData.Slots.FindIndex(s => s == nameFragment);
-            if (res >= 0) return new SlotAccessor(res, this, _chromosome);
+            int res = _chromosome.InputData.Slots.FindIndex(s => s == nameFragment);
+            if (res >= 0)
+            {
+                return new SlotAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Slots.FindIndex(s => s.StartsWith(nameFragment));
-            if (res >= 0) return new SlotAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new SlotAccessor(res, this, _chromosome);
+            }
 
             res = _chromosome.InputData.Slots.FindIndex(s => s.Contains(nameFragment));
-            if (res >= 0) return new SlotAccessor(res, this, _chromosome);
+            if (res >= 0)
+            {
+                return new SlotAccessor(res, this, _chromosome);
+            }
 
             throw new ArgumentException($"Could not find slot with name fragment '{nameFragment}'.");
         }
 
         public class ParticipantAccessor
         {
-            private readonly CustomFilter _base;
+            private readonly ExtraConditionsBase _base;
             private readonly Chromosome _chromosome;
             private readonly int _id;
 
-            public ParticipantAccessor(int id, CustomFilter @base, Chromosome chromosome)
+            public ParticipantAccessor(int id, ExtraConditionsBase @base, Chromosome chromosome)
             {
                 _id = id;
                 _base = @base;
@@ -87,8 +120,10 @@ namespace WSolve
 
             public string Name => _chromosome.InputData.Participants[_id].name;
 
-            public IEnumerable<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Slots.Count)
-                .Select(n => _chromosome.Workshop(_id, n)).Select(w => new WorkshopAccessor(w, _base, _chromosome));
+            public IReadOnlyCollection<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Slots.Count)
+                .Select(n => _chromosome.Workshop(_id, n))
+                .Select(w => new WorkshopAccessor(w, _base, _chromosome))
+                .ToImmutableList();
 
             public static bool operator ==(ParticipantAccessor left, ParticipantAccessor right)
             {
@@ -132,13 +167,25 @@ namespace WSolve
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
 
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
 
-                if (obj is string s) return this == s;
+                if (obj is string s)
+                {
+                    return this == s;
+                }
 
-                if (obj.GetType() != GetType()) return false;
+                if (obj.GetType() != GetType())
+                {
+                    return false;
+                }
 
                 return Equals((ParticipantAccessor) obj);
             }
@@ -156,30 +203,40 @@ namespace WSolve
 
         public class WorkshopAccessor
         {
-            private readonly CustomFilter _base;
+            private readonly ExtraConditionsBase _base;
             private readonly Chromosome _chromosome;
             private readonly int _id;
 
-            public WorkshopAccessor(int id, CustomFilter @base, Chromosome chromosome)
+            public WorkshopAccessor(int id, ExtraConditionsBase @base, Chromosome chromosome)
             {
                 _id = id;
                 _base = @base;
                 _chromosome = chromosome;
             }
 
-            public IEnumerable<ParticipantAccessor> Participants
+            public IReadOnlyCollection<ParticipantAccessor> Participants
             {
                 get
                 {
-                    for (var p = 0; p < _chromosome.InputData.Participants.Count; p++)
-                    for (var n = 0; n < _chromosome.InputData.Slots.Count; n++)
-                        if (_chromosome.Workshop(p, n) == _id)
-                            yield return new ParticipantAccessor(p, _base, _chromosome);
+                    var list = new List<ParticipantAccessor>();
+                    for (int p = 0; p < _chromosome.InputData.Participants.Count; p++)
+                    {
+                        for (int n = 0; n < _chromosome.InputData.Slots.Count; n++)
+                        {
+                            if (_chromosome.Workshop(p, n) == _id)
+                            {
+                                list.Add(new ParticipantAccessor(p, _base, _chromosome));
+                            }
+                        }
+                    }
+
+                    return list.ToImmutableList();
                 }
             }
 
-            public IEnumerable<ParticipantAccessor> Conductors => _chromosome.InputData.Workshops[_id].conductors
-                .Select(n => new ParticipantAccessor(n, _base, _chromosome));
+            public IReadOnlyCollection<ParticipantAccessor> Conductors => _chromosome.InputData.Workshops[_id].conductors
+                .Select(n => new ParticipantAccessor(n, _base, _chromosome))
+                .ToImmutableList();
 
             public SlotAccessor Slot => new SlotAccessor(_chromosome.Slot(_id), _base, _chromosome);
 
@@ -221,13 +278,25 @@ namespace WSolve
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
 
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
 
-                if (obj is string s) return this == s;
+                if (obj is string s)
+                {
+                    return this == s;
+                }
 
-                if (obj.GetType() != GetType()) return false;
+                if (obj.GetType() != GetType())
+                {
+                    return false;
+                }
 
                 return Equals((WorkshopAccessor) obj);
             }
@@ -245,19 +314,21 @@ namespace WSolve
 
         public class SlotAccessor
         {
-            private readonly CustomFilter _base;
+            private readonly ExtraConditionsBase _base;
             private readonly Chromosome _chromosome;
             private readonly int _id;
 
-            public SlotAccessor(int id, CustomFilter @base, Chromosome chromosome)
+            public SlotAccessor(int id, ExtraConditionsBase @base, Chromosome chromosome)
             {
                 _id = id;
                 _base = @base;
                 _chromosome = chromosome;
             }
 
-            public IEnumerable<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Workshops.Count)
-                .Where(w => _chromosome.Slot(w) == _id).Select(w => new WorkshopAccessor(w, _base, _chromosome));
+            public IReadOnlyCollection<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Workshops.Count)
+                .Where(w => _chromosome.Slot(w) == _id)
+                .Select(w => new WorkshopAccessor(w, _base, _chromosome))
+                .ToImmutableList();
 
             public string Name => _chromosome.InputData.Slots[_id];
 
@@ -293,13 +364,25 @@ namespace WSolve
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
 
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
 
-                if (obj is string s) return this == s;
+                if (obj is string s)
+                {
+                    return this == s;
+                }
 
-                if (obj.GetType() != GetType()) return false;
+                if (obj.GetType() != GetType())
+                {
+                    return false;
+                }
 
                 return Equals((SlotAccessor) obj);
             }

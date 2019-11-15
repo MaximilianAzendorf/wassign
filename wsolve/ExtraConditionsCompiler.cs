@@ -7,6 +7,7 @@ using System.Runtime.Loader;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 
 namespace WSolve
@@ -20,11 +21,14 @@ namespace WSolve
 
         private static readonly string CodeEnvironment;
 
+        private static readonly string CodeEnvironmentResourceName =
+            "WSolve.Resources.ExtraConditionsCodeEnvironment.txt";
+
         static ExtraConditionsCompiler()
         {
             using (var reader = new StreamReader(
-                typeof(CustomFilter).Assembly.GetManifestResourceStream(
-                    "WSolve.resources.ExtraConditionsCodeEnvironment.txt") ?? throw new InvalidOperationException()))
+                typeof(ExtraConditionsBase).Assembly.GetManifestResourceStream(
+                    CodeEnvironmentResourceName) ?? throw new InvalidOperationException()))
             {
                 CodeEnvironment = reader.ReadToEnd();
                 CodeEnvPlaceholderLineOffset =
@@ -38,13 +42,13 @@ namespace WSolve
 
             (int s, int w, int p) ignored = (0, 0, 0);
             (int s, int w, int p) conflicts = (0, 0, 0);
-            var total = 0;
+            int total = 0;
 
             var usedNames = new HashSet<string>();
 
-            foreach (var s in data.Slots)
+            foreach (string s in data.Slots)
             {
-                var name = s.Split(' ')[0];
+                string name = s.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.s++;
@@ -55,15 +59,15 @@ namespace WSolve
                 }
                 else
                 {
-                    extraDefinitions.AppendLine($"private Slot {name} => Slot(\"{name}\");");
+                    extraDefinitions.AppendLine($"private Slot {name} => Slot(\"{s}\");");
                     usedNames.Add(name);
                     total++;
                 }
             }
 
-            foreach (var s in data.Workshops.Select(ws => ws.name))
+            foreach (string w in data.Workshops.Select(ws => ws.name))
             {
-                var name = s.Split(' ')[0];
+                string name = w.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.p++;
@@ -74,15 +78,15 @@ namespace WSolve
                 }
                 else
                 {
-                    extraDefinitions.AppendLine($"private Workshop {name} => Workshop(\"{name}\");");
+                    extraDefinitions.AppendLine($"private Workshop {name} => Workshop(\"{w}\");");
                     usedNames.Add(name);
                     total++;
                 }
             }
 
-            foreach (var s in data.Participants.Select(p => p.name))
+            foreach (string p in data.Participants.Select(p => p.name))
             {
-                var name = s.Split(' ')[0];
+                string name = p.Split(' ')[0];
                 if (!IsValidIdentifier(name))
                 {
                     ignored.w++;
@@ -93,19 +97,23 @@ namespace WSolve
                 }
                 else
                 {
-                    extraDefinitions.AppendLine($"private Participant {name} => Participant(\"{name}\");");
+                    extraDefinitions.AppendLine($"private Participant {name} => Participant(\"{p}\");");
                     usedNames.Add(name);
                     total++;
                 }
             }
 
             if (ignored != (0, 0, 0))
+            {
                 Status.Warning(
                     $"{ignored.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were ignored.");
+            }
 
             if (conflicts != (0, 0, 0))
+            {
                 Status.Warning(
                     $"{conflicts.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were omitted due to name conflics.");
+            }
 
             Status.Info($"{total} identifier(s) were generated.");
 
@@ -118,42 +126,42 @@ namespace WSolve
                 .Replace(CodeEnvPlaceholder, conditionCode)
                 .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(data));
 
-            var comp = GenerateCode(conditionCode);
+            CSharpCompilation comp = GenerateCode(conditionCode);
             using (var s = new MemoryStream())
             {
-                var compRes = comp.Emit(s);
+                EmitResult compRes = comp.Emit(s);
                 if (!compRes.Success)
                 {
-                    var compilationErrors = compRes.Diagnostics.Where(diagnostic =>
+                    List<Diagnostic> compilationErrors = compRes.Diagnostics.Where(diagnostic =>
                             diagnostic.IsWarningAsError ||
                             diagnostic.Severity == DiagnosticSeverity.Error)
                         .ToList();
 
-                    var firstError = compilationErrors.First();
-                    var errorDescription = firstError.GetMessage();
-                    var errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line -
+                    Diagnostic firstError = compilationErrors.First();
+                    string errorDescription = firstError.GetMessage();
+                    int errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line -
                                     CodeEnvPlaceholderLineOffset + 1;
-                    var firstErrorMessage = $"{errorDescription} (Line {errorLine})";
+                    string firstErrorMessage = $"{errorDescription} (Line {errorLine})";
 
                     throw new WSolveException("Could not compile extra conditions: " + firstErrorMessage);
                 }
 
                 s.Seek(0, SeekOrigin.Begin);
-                var assembly = AssemblyLoadContext.Default.LoadFromStream(s);
-                var type = assembly.GetType(CodeEnvClassName);
+                Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(s);
+                Type type = assembly.GetType(CodeEnvClassName);
 
                 return chromosome =>
-                    ((CustomFilter) Activator.CreateInstance(type, chromosome)).Result;
+                    ((ExtraConditionsBase) Activator.CreateInstance(type, chromosome)).Result;
             }
         }
 
         private static CSharpCompilation GenerateCode(string sourceCode)
         {
-            var codeString = SourceText.From(sourceCode);
-            var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp7_3);
+            SourceText codeString = SourceText.From(sourceCode);
+            CSharpParseOptions options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp7_3);
 
-            var parsedSyntaxTree = SyntaxFactory.ParseSyntaxTree(codeString, options);
-            var dotNetCoreDir = Path.GetDirectoryName(typeof(object).GetTypeInfo().Assembly.Location);
+            SyntaxTree parsedSyntaxTree = SyntaxFactory.ParseSyntaxTree(codeString, options);
+            string dotNetCoreDir = Path.GetDirectoryName(typeof(object).GetTypeInfo().Assembly.Location);
 
             var references = new MetadataReference[]
             {
@@ -161,7 +169,7 @@ namespace WSolve
                 MetadataReference.CreateFromFile(typeof(Math).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(CustomFilter).Assembly.Location)
+                MetadataReference.CreateFromFile(typeof(ExtraConditionsBase).Assembly.Location)
             };
 
             return CSharpCompilation.Create(

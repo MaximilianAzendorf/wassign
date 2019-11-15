@@ -6,8 +6,8 @@ Per default, the input is read from the standard input stream. You can also spec
     (slot) Morning
     (slot) Afternoon
      
-    (workshop) WSOLVE Usage: John Doe, 3-4
-    (workshop) How to hold a Workshop: Jane Adams+John Doe, 2-5
+    (event) WSOLVE Usage: John Doe, 3-4
+    (event) How to hold an event: Jane Adams+John Doe, 2-5
      
     (person) John Doe:       1 2
     (person) Jane Adams:     2 1
@@ -19,8 +19,8 @@ Per default, the input is read from the standard input stream. You can also spec
 There are three types of lines in an input file:
 
 - Slot descriptions: They begin with `(slot)`, followed by a name.
-- Workshop descriptions: They begin with `(workshop)` and have the following form: `(workshop) [workshop-name]: [workshop-tutor(s)], [min-number-of-participants]-[max-number-of-participants]`.
-- Person descriptions: They begin with `(person)` and have the following form: `(person) [name]: [preference for workshop n]{N times}`, where N is the number of workshops. The preferences are given in the order in which the workshops appear in the input.
+- Event descriptions: They begin with `(event)` and have the following form: `(event) [event-name]: [event-tutor(s)], [min-number-of-participants]-[max-number-of-participants]`.
+- Person descriptions: They begin with `(person)` and have the following form: `(person) [name]: [preference for event n]{N times}`, where N is the number of events. The preferences are given in the order in which the events appear in the input.
 
 ## Usage
 See `wsolve --help` to get basic information about command line usage of wsolve.
@@ -44,64 +44,69 @@ wsolve currently supports two different selection schemes:
 You can specify extra conditions which the solution must satisfy. These extra conditions can be expressed in C#-Syntax. The following utility functions and collections are exposed:
 
 - `AddCondition(condition)`: Adds a boolean condition that must be satisfied by all solutions.
-- `Participants`, `Workshops`, `Slots`: These are collections containing all participants, workshops and slots respectively.
-- `Participant(name)`, `Workshop(name)`, `Slot(name)`: Gets the participant, workshop or slot with the given name. The given does not have to be exact; `Workshop("W1")` will find a Workshop with name `"W1"`, `"W1 How to hold a Workshop"` and `"[W1] How to hold a workshop"`, in this order of precedence.
-- Given a Participant `p` (e.g. `var p = Participant("John")`):
+- `Participants`, `Events`, `Slots`: These are collections containing all participants, events and slots respectively.
+- `Participant(name)`, `Event(name)`, `Slot(name)`: Gets the participant, event or slot with the given name. The given does not have to be exact; `Event("W1")` will find an event with name `"W1"`, `"W1 How to hold an event"` and `"[W1] How to hold an event"`, in this order of precedence.
+- For all participants, events and slots, there are auto-generated properties named after the first word in the name. For example, an event called `"W1 How to hold an event"` will be accessible through a property with the name `W1`, so instead of using `Workshop("W1").Name` you can write `W1.Name`. Note that on naming collisions some of these properties may be omitted and a warning will be shown. 
+- Given a Participant `p` (e.g. `var p = Participant("John")` or `var p = John`):
   - `p.Name`: The name of the participant.
-  - `p.Workshops`: A collection containing all workshops this participant is assigned to.
-  - `p.WorkshopAt(slot)`: Returns the workshop this participant is assigned to in slot `slot`.
-- Given a Workshop `w` (e.g. `var w = Workshop("W1")`):
-  - `w.Name`: The name of the workshop.
-  - `w.MinParticipants`: The minimum number of participants of this workshop.
-  - `w.MaxParticipants`: The maximum number of participants of this workshop.
-  - `w.Participants`: A collection containing all participants that are assigned to this workshop.
-  - `w.Conductors`: A collection cintaining all conductors of this workshop.
-  - `w.Slot`: Returns the slot this workshop is assigned to.
-- Given a slot `s` (e.g. `var s = Slot("Morning")`):
+  - `p.Events`: A collection containing all events this participant is assigned to.
+  - `p.EventAt(slot)`: Returns the event this participant is assigned to in slot `slot`.
+- Given an event `w` (e.g. `var w = Event("W1")` or `var w = W1`):
+  - `w.Name`: The name of the event.
+  - `w.MinParticipants`: The minimum number of participants of this event.
+  - `w.MaxParticipants`: The maximum number of participants of this event.
+  - `w.Participants`: A collection containing all participants that are assigned to this event.
+  - `w.Conductors`: A collection cintaining all conductors of this event.
+  - `w.Slot`: Returns the slot this event is assigned to.
+- Given a slot `s` (e.g. `var s = Slot("Morning")` or `var s = Morning`):
   - `s.Name`: The name of the slot.
-  - `s.Workshops`: A collection containing all workshops that are assigned to this slot.
+  - `s.Events`: A collection containing all events that are assigned to this slot.
 
-All collections are of type `IEnumerable<T>`.
+All collections are of type `IReadOnlyCollection<T>`.
 
 Apart from this API, the namespaces `System`, `System.Text`, `System.Linq` and `System.Collections.Generic` are available. Also, the class `System.Math` is statically imported (so you can use Functions like `Abs(...)` directly instead of `Math.Abs(...)`).
 
-For implementation details, see [ExtraConditionsCodeEnvironment.txt](wsolve/resources/ExtraConditionsCodeEnvironment.txt), [CustomFilter.cs](wsolve/CustomFilter.cs) and [ExtraConditionsCompiler.cs](wsolve/ExtraConditionsCompiler.cs).
+For implementation details, see [ExtraConditionsCodeEnvironment.txt](wsolve/resources/ExtraConditionsCodeEnvironment.txt), [ExtraConditionsBase.cs](wsolve/ExtraConditionsBase.cs) and [ExtraConditionsCompiler.cs](wsolve/ExtraConditionsCompiler.cs).
 
 #### Examples:
 
 ##### Example 1
-Workshops W1 and W2 must be in the same slot:
+Events W1 and W2 must be in the same slot:
 
-    AddCondition(Workshop["W1"].Slot == Workshop["W2"].Slot);
+    AddCondition(W1.Slot == W2.Slot);
 
 ##### Example 2
-Workshop W1 must have less participants than Workshop W2:
+Event W1 must have less participants than event W2:
 
-    AddCondition(Workshop["W1"].Participants.Count() < Workshop["W2"].Participants.Count());
+    AddCondition(W1.Participants.Count < W2.Participants.Count);
 
 ##### Example 3
-All Workshops in Slot "Morning" must have an even number of participants IF they are not full:
+All events in slot "Morning" must have an even number of participants IF they are not full:
 
-    foreach(Workshop w in Slot("Morning").Workshops)
+    foreach(Event w in Morning.Events)
     {
-        if(w.Participants.Count() != w.MaxParticipants)
-            AddCondition(w.Participants.Count() % 2 == 0);
+        if(w.Participants.Count != w.MaxParticipants)
+            AddCondition(w.Participants.Count % 2 == 0);
     }
 
 ##### Example 4
 Example 3 can also be accomplished with the usage of Linq's `Where`:
 
-    foreach(Workshop w in Slot("Morning").Workshops.Where(w => w.Participants.Count() != w.MaxParticipants))
+    foreach(Event w in Morning.Events.Where(w => w.Participants.Count != w.MaxParticipants))
     {
-        AddCondition(w.Participants.Count() % 2 == 0);
+        AddCondition(w.Participants.Count % 2 == 0);
     }
 
-##### Example 5
-Participant John must be in Workshop W3:
+Or, as a one-liner:
 
-    AddCondition(Participant("John").Workshops.Contains("W3"));
+    AddCondition(Morning.Events.Where(w => w.Participants.Count != w.MaxParticipants).All(w => w.Participants.Count % 2 == 0))
+
+##### Example 5
+Participant John must be in event W3:
+
+    AddCondition(John.Events.Contains(W3));
 
 ##### Example 6
 Note that when you specify conditions directly with `--conditions=[condition]`, you have to omit the `AddCondition(...)`. The first example would then be:
 
-    wsolve ... --conditions='Workshop["W1"].Slot == Workshop["W2"].Slot' ...
+    wsolve ... --conditions="W3.Slot == W2.Slot" ...

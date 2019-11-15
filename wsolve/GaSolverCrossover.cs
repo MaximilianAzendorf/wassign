@@ -18,30 +18,32 @@ namespace WSolve
 
         public IEnumerable<Chromosome> Crossover(IReadOnlyList<Chromosome> parents)
         {
-            var p0 = parents[0];
-            var p1 = parents[1];
+            Chromosome p0 = parents[0];
+            Chromosome p1 = parents[1];
 
             var differentSchedule = new bool[InputData.Slots.Count];
-            for (var i = 0; i < InputData.Workshops.Count; i++)
+            for (int i = 0; i < InputData.Workshops.Count; i++)
+            {
                 if (p0.Slot(i) != p1.Slot(i))
                 {
                     differentSchedule[p0.Slot(i)] = true;
                     differentSchedule[p1.Slot(i)] = true;
                 }
+            }
 
-            var validExchangeSlots =
+            int[] validExchangeSlots =
                 Enumerable.Range(0, InputData.Slots.Count).Where(s => !differentSchedule[s]).ToArray();
-            if (differentSchedule.Any(x => x == false))
+            if (validExchangeSlots.Any())
             {
-                var sIdx = RNG.NextInt(0, validExchangeSlots.Length);
-                var s = validExchangeSlots[sIdx];
+                int sIdx = RNG.NextInt(0, validExchangeSlots.Length);
+                int s = validExchangeSlots[sIdx];
 
                 var c0 = new Chromosome(p0);
                 var c1 = new Chromosome(p1);
-                for (var p = 0; p < InputData.Participants.Count; p++)
+                for (int p = 0; p < InputData.Participants.Count; p++)
                 {
-                    var w0 = p0.Workshop(p, s);
-                    var w1 = p1.Workshop(p, s);
+                    int w0 = p0.Workshop(p, s);
+                    int w1 = p1.Workshop(p, s);
 
                     c0.Workshop(p, s) = w1;
                     c1.Workshop(p, s) = w0;

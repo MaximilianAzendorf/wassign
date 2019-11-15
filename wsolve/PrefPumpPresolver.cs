@@ -11,11 +11,11 @@ namespace WSolve
         public void Presolve(InputData inputData, IEnumerable<Solution> primalSolutionSource, IFitness fitness,
             CancellationToken ct, ResultHandlerDelegate resultHandler)
         {
-            using (var init = primalSolutionSource.GetEnumerator())
+            using (IEnumerator<Solution> init = primalSolutionSource.GetEnumerator())
             {
                 while (init.MoveNext() && !ct.IsCancellationRequested)
                 {
-                    var c = Chromosome.FromOutput(inputData, init.Current);
+                    Chromosome c = Chromosome.FromOutput(inputData, init.Current);
 
                     if (Options.NoPrefPump)
                     {
@@ -23,9 +23,9 @@ namespace WSolve
                         break;
                     }
 
-                    for (var pref = inputData.MaxPreference; pref >= 0 && !ct.IsCancellationRequested; pref--)
+                    for (int pref = inputData.MaxPreference; pref >= 0 && !ct.IsCancellationRequested; pref--)
                     {
-                        var r = PrefPumpHeuristic.TryPump(c, pref, 8, TimeSpan.FromMilliseconds(1000));
+                        PrefPumpResult r = PrefPumpHeuristic.TryPump(c, pref, 8, TimeSpan.FromMilliseconds(1000));
                         if (r == PrefPumpResult.Fail || r == PrefPumpResult.Partial)
                         {
                             resultHandler(c, pref);

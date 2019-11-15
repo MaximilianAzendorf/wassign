@@ -125,9 +125,6 @@ namespace WSolve
                 x => CriticalSetTimeoutSeconds = ParseTime(x)
             },
 
-            //{"cs-retries=", $"Sets the number of retries for critical set lower bound probing. Default is {CriticalSetProbingRetries}.",
-            //    (int x) => CriticalSetProbingRetries = x },
-
             {
                 "prp-timeout=",
                 $"Sets the timeout for the preference pump heuristic. Default is {PreferencePumpTimeoutSeconds}s.",
@@ -221,23 +218,29 @@ namespace WSolve
 
         private static int ParseTime(string timeString)
         {
-            var time = 0;
-            var matchedLength = 0;
+            int time = 0;
+            int matchedLength = 0;
             foreach (Match m in TimeRegex.Matches(timeString))
             {
                 time += int.Parse(m.Groups["amount"].Value) * TimeMultipliers[m.Groups["mult"].Value];
                 matchedLength += m.Length;
             }
 
-            if (matchedLength != timeString.Length) ThrowInvalidParameter(timeString);
+            if (matchedLength != timeString.Length)
+            {
+                ThrowInvalidParameter(timeString);
+            }
 
             return time;
         }
 
         private static ExpInterpolation ParseExpInt(string expIntString)
         {
-            var match = ExpIntRegex.Match(expIntString);
-            if (!match.Success) ThrowInvalidParameter(expIntString);
+            Match match = ExpIntRegex.Match(expIntString);
+            if (!match.Success)
+            {
+                ThrowInvalidParameter(expIntString);
+            }
 
             double from = double.NaN, to = double.NaN, exp = double.NaN;
 
@@ -257,10 +260,16 @@ namespace WSolve
 
         private static ISelection ParseSelection(string selectionString)
         {
-            if (selectionString == "elite") return new EliteSelection();
+            if (selectionString == "elite")
+            {
+                return new EliteSelection();
+            }
 
-            var match = TournamentRegex.Match(selectionString);
-            if (!match.Success) ThrowInvalidParameter(selectionString);
+            Match match = TournamentRegex.Match(selectionString);
+            if (!match.Success)
+            {
+                ThrowInvalidParameter(selectionString);
+            }
 
             return new TournamentSelection(int.Parse(match.Groups["size"].Value));
         }
@@ -269,9 +278,12 @@ namespace WSolve
         {
             unchecked
             {
-                var seed = 0;
+                int seed = 0;
 
-                foreach (var c in seedString) seed = seed * 37 + c.GetHashCode();
+                foreach (char c in seedString)
+                {
+                    seed = seed * 37 + c.GetHashCode();
+                }
 
                 return seed;
             }
@@ -281,9 +293,12 @@ namespace WSolve
         {
             try
             {
-                var rem = OptionSet.Parse(args);
+                List<string> rem = OptionSet.Parse(args);
 
-                if (rem.Any()) throw new OptionException();
+                if (rem.Any())
+                {
+                    throw new OptionException();
+                }
             }
             catch (Exception ex) when (ex is OptionException || ex is InvalidOperationException)
             {

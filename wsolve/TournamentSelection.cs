@@ -15,32 +15,45 @@ namespace WSolve
 
         public IEnumerable<Chromosome> Select(int number, GaLevel level, IEnumerable<Chromosome> list)
         {
-            var arr = list.ToArray();
+            Chromosome[] arr = list.ToArray();
 
-            if (arr.Length == 0) yield break;
+            if (arr.Length == 0)
+            {
+                yield break;
+            }
 
             if (arr.Length <= number)
-                foreach (var a in arr)
+            {
+                foreach (Chromosome a in arr)
+                {
                     yield return a;
+                }
+            }
 
-            var fitness = arr.Select(level.System.Fitness.Evaluate).ToArray();
+            (float major, float minor)[] fitness = arr.Select(level.ParentSystem.Fitness.Evaluate).ToArray();
 
             var candidates = new List<int>(Enumerable.Range(0, arr.Length));
 
             while (number-- > 0)
             {
-                var nsize = RNG.NextFloat() + Math.Floor(TournamentSize) > TournamentSize
+                int nsize = RNG.NextFloat() + Math.Floor(TournamentSize) > TournamentSize
                     ? (int) Math.Floor(TournamentSize)
                     : (int) Math.Ceiling(TournamentSize);
 
-                if (candidates.Count == 0) yield break;
-
-                var best = candidates[RNG.NextInt(0, candidates.Count)];
-
-                for (var i = 1; i < nsize; i++)
+                if (candidates.Count == 0)
                 {
-                    var next = candidates[RNG.NextInt(0, candidates.Count)];
-                    if (fitness[best].CompareTo(fitness[next]) > 0) best = next;
+                    yield break;
+                }
+
+                int best = candidates[RNG.NextInt(0, candidates.Count)];
+
+                for (int i = 1; i < nsize; i++)
+                {
+                    int next = candidates[RNG.NextInt(0, candidates.Count)];
+                    if (fitness[best].CompareTo(fitness[next]) > 0)
+                    {
+                        best = next;
+                    }
                 }
 
                 yield return arr[best];

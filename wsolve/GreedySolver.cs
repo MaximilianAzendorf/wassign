@@ -17,70 +17,115 @@ namespace WSolve
         {
             var rootRnd = new Random(Options.Seed ?? 123);
 
+            // We try to satisfy all critical sets until the timeout is reached. Then we discard the critical sets of
+            // the lowest preference level and try again.
+            //
             while (!ctoken.IsCancellationRequested)
             {
-                var preferenceLimit = csAnalysis.PreferenceBound;
+                int preferenceLimit = csAnalysis.PreferenceBound;
 
                 List<int>[] slots = null;
-                while (slots == null)
+                while (slots == null && !ctoken.IsCancellationRequested)
                 {
-                    var sets = csAnalysis.ForPreference(preferenceLimit).ToArray();
+                    CriticalSet[] sets = csAnalysis.ForPreference(preferenceLimit).ToArray();
 
-                    var timeout = TimeSpan.FromSeconds(Options.CriticalSetTimeoutSeconds);
+                    TimeSpan timeout = TimeSpan.FromSeconds(Options.CriticalSetTimeoutSeconds);
 
                     slots = SolveAssignment(inputData, sets, timeout, rootRnd.Next(), ctoken);
 
                     if (slots == null)
+                    {
                         try
                         {
                             preferenceLimit = inputData.PreferenceLevels.SkipWhile(p => p <= preferenceLimit).First();
                         }
                         catch (InvalidOperationException)
                         {
-                            preferenceLimit = int.MaxValue;
+                            preferenceLimit = inputData.MaxPreference;
                         }
+                    }
                 }
 
+                if (ctoken.IsCancellationRequested)
+                {
+                    yield break;
+                }
+
+                // Just copy the scheduling solution to a flat array for better access.
+                //
                 var scheduling = new int[inputData.Workshops.Count];
-                for (var i = 0; i < slots.Length; i++)
-                for (var j = 0; j < slots[i].Count; j++)
-                    scheduling[slots[i][j]] = i;
 
-                var assignment = new int[inputData.Participants.Count * inputData.Slots.Count];
-                var part = new int[inputData.Workshops.Count];
-                Array.Fill(assignment, -1);
-
-                for (var i = 0; i < inputData.Workshops.Count; i++)
-                    foreach (var conductor in inputData.Workshops[i].conductors)
+                for (int s = 0; s < slots.Length; s++)
+                {
+                    for (int w = 0; w < slots[s].Count; w++)
                     {
-                        assignment[conductor * inputData.Slots.Count + scheduling[i]] = i;
+                        scheduling[slots[s][w]] = s;
+                    }
+                }
+
+                var assignment = new int[inputData.Participants.Count, inputData.Slots.Count];
+                var part = new int[inputData.Workshops.Count];
+
+                for (int i = 0; i < assignment.GetLength(0); i++)
+                {
+                    for (int j = 0; j < assignment.GetLength(1); j++)
+                    {
+                        assignment[i, j] = -1;
+                    }
+                }
+
+                // Workshop conductors have to be in their own workshop.
+                //
+                for (int i = 0; i < inputData.Workshops.Count; i++)
+                {
+                    foreach (int conductor in inputData.Workshops[i].conductors)
+                    {
+                        assignment[conductor, scheduling[i]] = i;
                         part[i]++;
                     }
+                }
 
                 var rnd = new Random(rootRnd.Next());
 
-                var indices = Enumerable.Range(0, inputData.Participants.Count)
+                // Just create a shuffled list of all (participant, slot)-pairs.
+                //
+                IOrderedEnumerable<(int p, int s)> indices = Enumerable.Range(0, inputData.Participants.Count)
                     .SelectMany(p => Enumerable.Range(0, inputData.Slots.Count).Select(s => (p, s)))
                     .OrderBy(x => rnd.Next());
 
-                foreach (var (p, s) in indices)
+                foreach ((int p, int s) in indices)
                 {
-                    if (ctoken.IsCancellationRequested) yield break;
-
-                    if (assignment[p * inputData.Slots.Count + s] != -1) continue;
-
-                    for (var l = 0; l < 2; l++)
-                    for (var w = 0; w < inputData.Workshops.Count; w++)
+                    if (ctoken.IsCancellationRequested)
                     {
-                        if (scheduling[w] != s) continue;
+                        yield break;
+                    }
 
-                        var limit = l == 0 ? inputData.Workshops[w].min : inputData.Workshops[w].max;
+                    if (assignment[p, s] != -1)
+                    {
+                        continue;
+                    }
 
-                        if (part[w] < limit)
+                    // When limitIndex = 0, we search for workshops that don't have yet reached ther minimum participant
+                    // number. At limitIndex = 1 we search for all workshops that don't have yet reached their maximum
+                    // participant number.
+                    //
+                    for (int limitIndex = 0; limitIndex < 2; limitIndex++)
+                    {
+                        for (int w = 0; w < inputData.Workshops.Count; w++)
                         {
-                            assignment[p * inputData.Slots.Count + s] = w;
-                            part[w]++;
-                            goto assigned;
+                            if (scheduling[w] != s)
+                            {
+                                continue;
+                            }
+
+                            int limit = limitIndex == 0 ? inputData.Workshops[w].min : inputData.Workshops[w].max;
+
+                            if (part[w] < limit)
+                            {
+                                assignment[p, s] = w;
+                                part[w]++;
+                                goto assigned;
+                            }
                         }
                     }
 
@@ -90,11 +135,18 @@ namespace WSolve
                 var outputScheduling = new List<(int workshop, int slot)>();
                 var outputAssignment = new List<(int participant, int workshop)>();
 
-                for (var i = 0; i < inputData.Workshops.Count; i++) outputScheduling.Add((i, scheduling[i]));
+                for (int i = 0; i < inputData.Workshops.Count; i++)
+                {
+                    outputScheduling.Add((i, scheduling[i]));
+                }
 
-                for (var i = 0; i < inputData.Participants.Count; i++)
-                for (var s = 0; s < inputData.Slots.Count; s++)
-                    outputAssignment.Add((i, assignment[i * inputData.Slots.Count + s]));
+                for (int i = 0; i < inputData.Participants.Count; i++)
+                {
+                    for (int s = 0; s < inputData.Slots.Count; s++)
+                    {
+                        outputAssignment.Add((i, assignment[i, s]));
+                    }
+                }
 
                 yield return new Solution(inputData, outputScheduling, outputAssignment);
             }
@@ -103,50 +155,88 @@ namespace WSolve
         private List<int>[] SolveAssignment(InputData inputData, CriticalSet[] criticalSets, TimeSpan timeout, int seed,
             CancellationToken ctoken)
         {
-            var startTime = DateTime.Now;
+            DateTime startTime = DateTime.Now;
             var rnd = new Random(seed);
 
-            var workshopScramble = Enumerable.Range(0, inputData.Workshops.Count).OrderBy(x => rnd.Next()).ToArray();
+            int[] workshopScramble = Enumerable.Range(0, inputData.Workshops.Count).OrderBy(x => rnd.Next()).ToArray();
 
             Stack<(int ws, int slot)> decisions = new Stack<(int, int)>();
 
             var backtracking = new Stack<List<int>>();
 
-            for (var depth = 0; depth < workshopScramble.Length;)
+            for (int depth = 0; depth < workshopScramble.Length;)
             {
-                if (ctoken.IsCancellationRequested) return null;
+                if (ctoken.IsCancellationRequested)
+                {
+                    return null;
+                }
 
-                if (DateTime.Now > startTime + timeout) return null;
+                if (DateTime.Now > startTime + timeout)
+                {
+                    return null;
+                }
 
                 // no solution
-                if (depth == -1) return null;
+                //
+                if (depth == -1)
+                {
+                    return null;
+                }
 
-                var workshop = workshopScramble[depth];
+                int workshop = workshopScramble[depth];
 
                 if (backtracking.Count <= depth)
                 {
-                    var availableMaxPush = workshopScramble.Skip(depth).Sum(w => inputData.Workshops[w].max);
+                    // The maximum number of participants that can be covered with all workshops that are not yet assigned
+                    // to a slot.
+                    //
+                    int availableMaxPush = workshopScramble.Skip(depth).Sum(w => inputData.Workshops[w].max);
 
-                    var impossibilities = Enumerable.Range(0, inputData.Slots.Count)
+                    // Impossibilities are slots that contain so few workshops that even with all the workshops not yet
+                    // assigned they would not have enough capacity for all participants.
+                    //
+                    IEnumerable<int> impossibilities = Enumerable.Range(0, inputData.Slots.Count)
                         .Where(s =>
                             decisions
                                 .Where(w => w.slot == s)
                                 .Sum(w => inputData.Workshops[w.ws].max) + availableMaxPush <
                             inputData.Participants.Count);
 
+                    // If there are any impossibilities, the current partial solution is infeasible.
+                    //
                     if (impossibilities.Any())
                     {
                         backtracking.Push(new List<int>());
                     }
                     else
                     {
+                        // If the partial solution does not satisfy critical set constraints it is infeasible.
+                        //
+                        // This is the case when there aren't enough elements in a critical set to cover all slots. For
+                        // example, for 4 Slots and the critical set {A, B, C, D}, a partial solution of the form
+                        //
+                        //      Slot 1:    ... A, C ....
+                        //      Slot 2:    ... D .......
+                        //      Slot 3:    .............
+                        //      Slot 4:    .............
+                        //   Not assigned: ... B .......
+                        //
+                        // Would not be feasible, because the critical set can not be covered anymore (we would need at
+                        // least 2 open workshops in the critical set to cover Slot 3 and 4).
+                        //
                         if (!SatisfiesCriticalSets(inputData, decisions, criticalSets))
                         {
                             backtracking.Push(new List<int>());
                         }
                         else
                         {
-                            var feasibleSlots = Enumerable.Range(0, inputData.Slots.Count)
+                            // Feasible slots are all slots for which adding the current workshop would not cause the
+                            // minimal participant number of this slot to exceed the total participant count.
+                            //
+                            // We order the feasible slots by the maximal participant number as a heuristic to get more
+                            // balanced schedulings.
+                            //
+                            int[] feasibleSlots = Enumerable.Range(0, inputData.Slots.Count)
                                 .Where(s =>
                                     decisions
                                         .Where(w => w.slot == s)
@@ -171,16 +261,22 @@ namespace WSolve
                     continue;
                 }
 
-                var nextSlot = backtracking.Peek().First();
+                int nextSlot = backtracking.Peek().First();
                 backtracking.Peek().Remove(nextSlot);
                 decisions.Push((workshop, nextSlot));
                 depth++;
             }
 
             var slots = new List<int>[inputData.Slots.Count];
-            for (var i = 0; i < slots.Length; i++) slots[i] = new List<int>();
+            for (int i = 0; i < slots.Length; i++)
+            {
+                slots[i] = new List<int>();
+            }
 
-            foreach (var decision in decisions) slots[decision.slot].Add(decision.ws);
+            foreach ((int ws, int slot) decision in decisions)
+            {
+                slots[decision.slot].Add(decision.ws);
+            }
 
             return slots;
         }
@@ -188,20 +284,29 @@ namespace WSolve
         private bool SatisfiesCriticalSets(InputData inputData, Stack<(int ws, int slot)> decisions,
             IEnumerable<CriticalSet> criticalSets)
         {
-            var decisionMap = decisions.ToDictionary(d => d.ws, d => d.slot);
+            Dictionary<int, int> decisionMap = decisions.ToDictionary(d => d.ws, d => d.slot);
 
-            foreach (var set in criticalSets)
+            foreach (CriticalSet set in criticalSets)
             {
                 var coveredSlots = new HashSet<int>();
-                var missing = 0;
+                int missing = 0;
 
-                foreach (var element in set)
-                    if (!decisionMap.TryGetValue(element, out var slot))
+                foreach (int element in set)
+                {
+                    if (!decisionMap.TryGetValue(element, out int slot))
+                    {
                         missing++;
+                    }
                     else
+                    {
                         coveredSlots.Add(slot);
+                    }
+                }
 
-                if (coveredSlots.Count + missing < inputData.Slots.Count) return false;
+                if (coveredSlots.Count + missing < inputData.Slots.Count)
+                {
+                    return false;
+                }
             }
 
             return true;

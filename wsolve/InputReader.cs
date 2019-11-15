@@ -37,22 +37,29 @@ namespace WSolve
 
         private static InputData Parse(string textInput)
         {
-            var lines = textInput.Split('\n');
-            var inputData = new InputData();
+            string[] lines = textInput.Split('\n');
+            var inputData = new MutableInputData();
             var preWorkshops = new List<(string, string, int, int)>();
 
-            for (var i = 0; i < lines.Length; i++)
-                if (!string.IsNullOrEmpty(lines[i]))
-                    ParseLine(inputData, preWorkshops, lines, i);
-
-            var wsidx = 0;
-            foreach (var (name, cond, min, max) in preWorkshops)
+            for (int i = 0; i < lines.Length; i++)
             {
-                var conductorNames = cond.Split('+');
-                var conductors = conductorNames.Select(c => inputData.Participants.FindIndex(0, x => x.name == c))
+                if (!string.IsNullOrEmpty(lines[i]))
+                {
+                    ParseLine(inputData, preWorkshops, lines, i);
+                }
+            }
+
+            int wsidx = 0;
+            foreach ((string name, string cond, int min, int max) in preWorkshops)
+            {
+                string[] conductorNames = cond.Split('+');
+                int[] conductors = conductorNames.Select(c => inputData.Participants.FindIndex(0, x => x.name == c))
                     .ToArray();
 
-                foreach (var c in conductors) inputData.Participants[c].preferences[wsidx] = 0;
+                foreach (int c in conductors)
+                {
+                    inputData.Participants[c].preferences[wsidx] = 0;
+                }
 
                 inputData.Workshops.Add((
                     name,
@@ -63,11 +70,16 @@ namespace WSolve
                 wsidx++;
             }
 
-            return inputData;
+            if (Options.Seed != null)
+            {
+                inputData.Shuffle(Options.Seed.Value);
+            }
+
+            return inputData.ToImmutableInputData();
         }
 
         private static void ParseLine(
-            InputData inputData,
+            MutableInputData inputData,
             List<(string name, string conductor, int min, int max)> preWorkshops,
             IReadOnlyList<string> lines,
             int index)
@@ -89,7 +101,7 @@ namespace WSolve
                 }
                 else if ((m = ParticipantRegex.Match(lines[index])).Success)
                 {
-                    var pref = m.Groups["pref"].Captures.Select(x => 100 - int.Parse(x.Value)).ToArray();
+                    int[] pref = m.Groups["pref"].Captures.Select(x => 100 - int.Parse(x.Value)).ToArray();
                     inputData.Participants.Add((m.Groups["name"].Value, pref));
                 }
                 else

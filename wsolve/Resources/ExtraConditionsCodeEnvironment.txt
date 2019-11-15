@@ -7,11 +7,11 @@ using static System.Math;
 
 namespace WSolve.Generated
 {
-    using Participant = CustomFilter.ParticipantAccessor;
-    using Workshop = CustomFilter.WorkshopAccessor;
-    using Slot = CustomFilter.SlotAccessor;
+    using Participant = ExtraConditionsBase.ParticipantAccessor;
+    using Workshop = ExtraConditionsBase.WorkshopAccessor;
+    using Slot = ExtraConditionsBase.SlotAccessor;
     
-    public class ExtraConditions : CustomFilter
+    public class ExtraConditions : ExtraConditionsBase
     {    
         public ExtraConditions(Chromosome chromosome) : base(chromosome)
         {

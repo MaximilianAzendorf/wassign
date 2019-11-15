@@ -33,45 +33,61 @@ namespace WSolve
             void workshopMinConstraint(int w)
             {
                 if (FlatAssignment.Count(kvp => kvp.workshop == w) < InputData.Workshops[w].min)
+                {
                     throw new VerifyException($"Workshop '{InputData.Workshops[w].name}' has too few participants.");
+                }
             }
 
             void workshopMaxConstraint(int w)
             {
                 if (FlatAssignment.Count(kvp => kvp.workshop == w) > InputData.Workshops[w].max)
+                {
                     throw new VerifyException($"Workshop '{InputData.Workshops[w].name}' has too many participants.");
+                }
             }
 
             void conductorsAreInOwnWorkshop(int w)
             {
-                foreach (var conductor in InputData.Workshops[w].conductors)
+                foreach (int conductor in InputData.Workshops[w].conductors)
+                {
                     if (!Assignment[conductor].Contains(w))
+                    {
                         throw new VerifyException(
                             $"Participant '{InputData.Participants[conductor]}', conductor of '{InputData.Workshops[w].name}', is not in his own workshop.");
+                    }
+                }
             }
 
             void oneWorkshopPerSlot(int p, int s)
             {
-                var c = FlatAssignment.Count(kvp => kvp.participant == p && Scheduling[kvp.workshop] == s);
+                int c = FlatAssignment.Count(kvp => kvp.participant == p && Scheduling[kvp.workshop] == s);
                 if (c < 1)
+                {
                     throw new VerifyException(
                         $"Participant '{InputData.Participants[p].name}' has no workshop in slot '{InputData.Slots[s]}'.");
+                }
 
                 if (c > 1)
+                {
                     throw new VerifyException(
                         $"Participant '{InputData.Participants[p].name}' has more than one workshop in slot '{InputData.Slots[s]}'.");
+                }
             }
 
-            for (var w = 0; w < InputData.Workshops.Count; w++)
+            for (int w = 0; w < InputData.Workshops.Count; w++)
             {
                 workshopMinConstraint(w);
                 workshopMaxConstraint(w);
                 conductorsAreInOwnWorkshop(w);
             }
 
-            for (var p = 0; p < InputData.Participants.Count; p++)
-            for (var s = 0; s < InputData.Slots.Count; s++)
-                oneWorkshopPerSlot(p, s);
+            for (int p = 0; p < InputData.Participants.Count; p++)
+            {
+                for (int s = 0; s < InputData.Slots.Count; s++)
+                {
+                    oneWorkshopPerSlot(p, s);
+                }
+            }
         }
     }
 }

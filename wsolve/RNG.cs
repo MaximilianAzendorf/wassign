@@ -26,7 +26,10 @@ namespace WSolve
         public static int[] NextInts(int number, int min, int max)
         {
             var x = new int[number];
-            for (var i = 0; i < x.Length; i++) x[i] = NextInt(min, max);
+            for (int i = 0; i < x.Length; i++)
+            {
+                x[i] = NextInt(min, max);
+            }
 
             return x;
         }

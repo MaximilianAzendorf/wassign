@@ -29,7 +29,7 @@ namespace WSolve
                 : $"{From}-{To}^{Exp}";
         }
 
-        private double Clamp(double f)
+        private static double Clamp(double f)
         {
             return Math.Max(0, Math.Min(1, f));
         }

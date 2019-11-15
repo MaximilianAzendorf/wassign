@@ -4,9 +4,7 @@ namespace WSolve
 {
     public class VerifyException : Exception
     {
-        public VerifyException(string msg)
-            : base(msg)
-        {
-        }
+        public VerifyException(string message)
+            : base(message) { }
     }
 }
