@@ -10,7 +10,7 @@ namespace WSolve
     {
         private static readonly Regex WorkshopRegex =
             new Regex(
-                @"^\(workshop\)\s+((?<name>[a-zA-Z0-9_\- ]+)\s*:\s*(?<conductor>[a-zA-Z0-9+_\- ]+)\s*,\s*(?<min>[0-9]+)\s*\-\s*(?<max>[0-9]+)\s*)*$",
+                @"^\(event\)\s+((?<name>[a-zA-Z0-9_\- ]+)\s*:\s*(?<conductor>[a-zA-Z0-9+_\- ]+)\s*,\s*(?<min>[0-9]+)\s*\-\s*(?<max>[0-9]+)\s*)*$",
                 RegexOptions.Compiled);
 
         private static readonly Regex SlotRegex =
