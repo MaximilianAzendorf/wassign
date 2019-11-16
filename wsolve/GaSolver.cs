@@ -139,7 +139,7 @@ namespace WSolve
                 : $"AddCondition({Options.ExtraConditions});";
 
             Status.Info("Compiling extra conditions.");
-            return ExtraConditionsCompiler.Compile(condition, inputData);
+            return ExtraConditionsCompiler.Compile(condition, inputData, false);
         }
 
         private void ApplyStaticPrefPumpHeuristic(Chromosome chromosome)
