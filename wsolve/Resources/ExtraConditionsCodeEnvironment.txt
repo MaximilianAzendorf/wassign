@@ -2,13 +2,16 @@ using System;
 using System.Text;
 using System.Linq;
 using System.Collections.Generic;
+
 using WSolve;
+using WSolve.ExtraConditions;
+
 using static System.Math;
 
 namespace WSolve.Generated
 {
-    using Participant = ExtraConditionsBase.ParticipantAccessor;
-    using Workshop = ExtraConditionsBase.WorkshopAccessor;
+    using Participant = ExtraConditionsBase.ParticipantAccessor##S;
+    using Workshop = ExtraConditionsBase.WorkshopAccessor##S;
     using Slot = ExtraConditionsBase.SlotAccessor;
     
     public class ExtraConditions : ExtraConditionsBase

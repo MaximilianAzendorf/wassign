@@ -9,13 +9,19 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
+using WSolve.ExtraConditions.StatelessAccess;
 
-namespace WSolve
+namespace WSolve.ExtraConditions
 {
     public static class ExtraConditionsCompiler
     {
         private static readonly string CodeEnvPlaceholder = "##C";
         private static readonly string CodeEnvExtraPlaceholder = "##E";
+        private static readonly string CodeEnvStatelessPlaceholder = "##S";
+
+        private static readonly string CodeEnvStatelessPostfix =
+            nameof(WorkshopAccessorStateless).Substring(nameof(WorkshopAccessor).Length);
+        
         private static readonly string CodeEnvClassName = "WSolve.Generated.ExtraConditions";
         private static readonly int CodeEnvPlaceholderLineOffset;
 
@@ -120,11 +126,12 @@ namespace WSolve
             return extraDefinitions.ToString();
         }
 
-        public static Func<Chromosome, bool> Compile(string conditionCode, InputData data)
+        public static Func<Chromosome, bool> Compile(string conditionCode, InputData data, bool stateless)
         {
             conditionCode = CodeEnvironment
                 .Replace(CodeEnvPlaceholder, conditionCode)
-                .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(data));
+                .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(data))
+                .Replace(CodeEnvStatelessPlaceholder, stateless ? CodeEnvStatelessPostfix : "");
 
             CSharpCompilation comp = GenerateCode(conditionCode);
             using (var s = new MemoryStream())
@@ -151,7 +158,7 @@ namespace WSolve
                 Type type = assembly.GetType(CodeEnvClassName);
 
                 return chromosome =>
-                    ((ExtraConditionsBase) Activator.CreateInstance(type, chromosome)).Result;
+                    ((ExtraConditionsBase) Activator.CreateInstance(type, chromosome)).DirectResult;
             }
         }
 
