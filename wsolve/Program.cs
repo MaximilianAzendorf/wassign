@@ -86,7 +86,7 @@ namespace WSolve
 
             try
             {
-                ISolver solver = new GaSolver();
+                ISolver solver = Options.Solver;
 
                 Solution output = solver.Solve(input);
                 output.Verify();

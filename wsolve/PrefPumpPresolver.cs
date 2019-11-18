@@ -15,7 +15,7 @@ namespace WSolve
             {
                 while (init.MoveNext() && !ct.IsCancellationRequested)
                 {
-                    Chromosome c = Chromosome.FromOutput(inputData, init.Current);
+                    Chromosome c = Chromosome.FromSolution(inputData, init.Current);
 
                     if (Options.NoPrefPump)
                     {

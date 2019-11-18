@@ -10,5 +10,7 @@ namespace WSolve.ExtraConditions.StatelessAccess.Constraints
             Owner = owner;
             Value = value;
         }
+
+        protected override Constraint Negation => new ForbidValueConstraint<TOwner, TFieldType>(Owner, Value);
     }
 }

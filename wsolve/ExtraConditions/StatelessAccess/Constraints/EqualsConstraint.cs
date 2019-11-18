@@ -10,5 +10,7 @@ namespace WSolve.ExtraConditions.StatelessAccess.Constraints
             Left = left;
             Right = right;
         }
+
+        protected override Constraint Negation => new EqualsNotConstraint<TOwner, TFieldType>(Left, Right);
     }
 }

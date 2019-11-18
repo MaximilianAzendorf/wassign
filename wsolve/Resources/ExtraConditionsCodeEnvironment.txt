@@ -5,16 +5,17 @@ using System.Collections.Generic;
 
 using WSolve;
 using WSolve.ExtraConditions;
+using WSolve.ExtraConditions.StatelessAccess;
 
 using static System.Math;
 
 namespace WSolve.Generated
 {
-    using Participant = ExtraConditionsBase.ParticipantAccessor##S;
-    using Workshop = ExtraConditionsBase.WorkshopAccessor##S;
-    using Slot = ExtraConditionsBase.SlotAccessor;
+    using Participant = ParticipantAccessor##S;
+    using Workshop = WorkshopAccessor##S;
+    using Slot = SlotAccessor##S;
     
-    public class ExtraConditions : ExtraConditionsBase
+    public class ExtraConditions : CustomExtraConditionsBase##S
     {    
         public ExtraConditions(Chromosome chromosome) : base(chromosome)
         {

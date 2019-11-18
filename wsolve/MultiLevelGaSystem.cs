@@ -210,7 +210,7 @@ namespace WSolve
                 InputData,
                 baseSolver.SolveIndefinitely(InputData, cs, token)
                     .TakeWhile(controller)
-                    .Where(s => Fitness.IsFeasible(Chromosome.FromOutput(InputData, s))),
+                    .Where(s => Fitness.IsFeasible(Chromosome.FromSolution(InputData, s))),
                 Fitness,
                 token,
                 (r, pref) =>

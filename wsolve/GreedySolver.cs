@@ -7,15 +7,38 @@ namespace WSolve
 {
     public class GreedySolver : ISolver
     {
+        private static readonly Random seedSource = new Random(125);
+        
         public Solution Solve(InputData inputData)
         {
-            return SolveIndefinitely(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None).First();
+            return SolveIndefinitely(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None, false).First();
+        }
+
+        public Scheduling SolveSchedulingOnly(InputData inputData)
+        {
+            return SolveIndefinitelySchedulingOnly(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None).First();
         }
 
         public IEnumerable<Solution> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis,
             CancellationToken ctoken)
         {
-            var rootRnd = new Random(Options.Seed ?? 123);
+            return SolveIndefinitely(inputData, csAnalysis, ctoken, false);
+        }
+        
+        public IEnumerable<Scheduling> SolveIndefinitelySchedulingOnly(InputData inputData, CriticalSetAnalysis csAnalysis,
+            CancellationToken ctoken)
+        {
+            return SolveIndefinitely(inputData, csAnalysis, ctoken, true).Select(s => new Scheduling(inputData, s.Scheduling));
+        }
+
+        private IEnumerable<Solution> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis,
+            CancellationToken ctoken, bool schedulingOnly)
+        {
+            Random rootRnd;
+            lock (seedSource)
+            {
+                rootRnd = new Random(Options.Seed ?? seedSource.Next());
+            }
 
             // We try to satisfy all critical sets until the timeout is reached. Then we discard the critical sets of
             // the lowest preference level and try again.
@@ -24,14 +47,14 @@ namespace WSolve
             {
                 int preferenceLimit = csAnalysis.PreferenceBound;
 
-                List<int>[] slots = null;
+                int[][] slots = null;
                 while (slots == null && !ctoken.IsCancellationRequested)
                 {
                     CriticalSet[] sets = csAnalysis.ForPreference(preferenceLimit).ToArray();
 
                     TimeSpan timeout = TimeSpan.FromSeconds(Options.CriticalSetTimeoutSeconds);
 
-                    slots = SolveAssignment(inputData, sets, timeout, rootRnd.Next(), ctoken);
+                    slots = SolveScheduling(inputData, sets, timeout, rootRnd.Next(), ctoken);
 
                     if (slots == null)
                     {
@@ -57,102 +80,110 @@ namespace WSolve
 
                 for (int s = 0; s < slots.Length; s++)
                 {
-                    for (int w = 0; w < slots[s].Count; w++)
+                    for (int w = 0; w < slots[s].Length; w++)
                     {
                         scheduling[slots[s][w]] = s;
                     }
                 }
 
-                var assignment = new int[inputData.Participants.Count, inputData.Slots.Count];
-                var part = new int[inputData.Workshops.Count];
-
-                for (int i = 0; i < assignment.GetLength(0); i++)
-                {
-                    for (int j = 0; j < assignment.GetLength(1); j++)
-                    {
-                        assignment[i, j] = -1;
-                    }
-                }
-
-                // Workshop conductors have to be in their own workshop.
-                //
-                for (int i = 0; i < inputData.Workshops.Count; i++)
-                {
-                    foreach (int conductor in inputData.Workshops[i].conductors)
-                    {
-                        assignment[conductor, scheduling[i]] = i;
-                        part[i]++;
-                    }
-                }
-
-                var rnd = new Random(rootRnd.Next());
-
-                // Just create a shuffled list of all (participant, slot)-pairs.
-                //
-                IOrderedEnumerable<(int p, int s)> indices = Enumerable.Range(0, inputData.Participants.Count)
-                    .SelectMany(p => Enumerable.Range(0, inputData.Slots.Count).Select(s => (p, s)))
-                    .OrderBy(x => rnd.Next());
-
-                foreach ((int p, int s) in indices)
-                {
-                    if (ctoken.IsCancellationRequested)
-                    {
-                        yield break;
-                    }
-
-                    if (assignment[p, s] != -1)
-                    {
-                        continue;
-                    }
-
-                    // When limitIndex = 0, we search for workshops that don't have yet reached ther minimum participant
-                    // number. At limitIndex = 1 we search for all workshops that don't have yet reached their maximum
-                    // participant number.
-                    //
-                    for (int limitIndex = 0; limitIndex < 2; limitIndex++)
-                    {
-                        for (int w = 0; w < inputData.Workshops.Count; w++)
-                        {
-                            if (scheduling[w] != s)
-                            {
-                                continue;
-                            }
-
-                            int limit = limitIndex == 0 ? inputData.Workshops[w].min : inputData.Workshops[w].max;
-
-                            if (part[w] < limit)
-                            {
-                                assignment[p, s] = w;
-                                part[w]++;
-                                goto assigned;
-                            }
-                        }
-                    }
-
-                    assigned: ;
-                }
-
                 var outputScheduling = new List<(int workshop, int slot)>();
-                var outputAssignment = new List<(int participant, int workshop)>();
 
                 for (int i = 0; i < inputData.Workshops.Count; i++)
                 {
                     outputScheduling.Add((i, scheduling[i]));
                 }
 
-                for (int i = 0; i < inputData.Participants.Count; i++)
+                if (schedulingOnly)
                 {
-                    for (int s = 0; s < inputData.Slots.Count; s++)
-                    {
-                        outputAssignment.Add((i, assignment[i, s]));
-                    }
+                    yield return new Solution(inputData, outputScheduling, null);
                 }
+                else
+                {
+                    var assignment = new int[inputData.Participants.Count, inputData.Slots.Count];
+                    var part = new int[inputData.Workshops.Count];
 
-                yield return new Solution(inputData, outputScheduling, outputAssignment);
+                    for (int i = 0; i < assignment.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < assignment.GetLength(1); j++)
+                        {
+                            assignment[i, j] = -1;
+                        }
+                    }
+
+                    // Workshop conductors have to be in their own workshop.
+                    //
+                    for (int i = 0; i < inputData.Workshops.Count; i++)
+                    {
+                        foreach (int conductor in inputData.Workshops[i].conductors)
+                        {
+                            assignment[conductor, scheduling[i]] = i;
+                            part[i]++;
+                        }
+                    }
+
+                    var rnd = new Random(rootRnd.Next());
+
+                    // Just create a shuffled list of all (participant, slot)-pairs.
+                    //
+                    IOrderedEnumerable<(int p, int s)> indices = Enumerable.Range(0, inputData.Participants.Count)
+                        .SelectMany(p => Enumerable.Range(0, inputData.Slots.Count).Select(s => (p, s)))
+                        .OrderBy(x => rnd.Next());
+
+                    foreach ((int p, int s) in indices)
+                    {
+                        if (ctoken.IsCancellationRequested)
+                        {
+                            yield break;
+                        }
+
+                        if (assignment[p, s] != -1)
+                        {
+                            continue;
+                        }
+
+                        // When limitIndex = 0, we search for workshops that don't have yet reached ther minimum participant
+                        // number. At limitIndex = 1 we search for all workshops that don't have yet reached their maximum
+                        // participant number.
+                        //
+                        for (int limitIndex = 0; limitIndex < 2; limitIndex++)
+                        {
+                            for (int w = 0; w < inputData.Workshops.Count; w++)
+                            {
+                                if (scheduling[w] != s)
+                                {
+                                    continue;
+                                }
+
+                                int limit = limitIndex == 0 ? inputData.Workshops[w].min : inputData.Workshops[w].max;
+
+                                if (part[w] < limit)
+                                {
+                                    assignment[p, s] = w;
+                                    part[w]++;
+                                    goto assigned;
+                                }
+                            }
+                        }
+
+                        assigned: ;
+                    }
+
+                    var outputAssignment = new List<(int participant, int workshop)>();
+
+                    for (int i = 0; i < inputData.Participants.Count; i++)
+                    {
+                        for (int s = 0; s < inputData.Slots.Count; s++)
+                        {
+                            outputAssignment.Add((i, assignment[i, s]));
+                        }
+                    }
+
+                    yield return new Solution(inputData, outputScheduling, outputAssignment);
+                }
             }
         }
 
-        private List<int>[] SolveAssignment(InputData inputData, CriticalSet[] criticalSets, TimeSpan timeout, int seed,
+        private int[][] SolveScheduling(InputData inputData, CriticalSet[] criticalSets, TimeSpan timeout, int seed,
             CancellationToken ctoken)
         {
             DateTime startTime = DateTime.Now;
@@ -278,7 +309,7 @@ namespace WSolve
                 slots[decision.slot].Add(decision.ws);
             }
 
-            return slots;
+            return slots.Select(x => x.ToArray()).ToArray();
         }
 
         private bool SatisfiesCriticalSets(InputData inputData, Stack<(int ws, int slot)> decisions,

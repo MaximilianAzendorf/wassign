@@ -33,7 +33,7 @@ namespace WSolve.ExtraConditions
         static ExtraConditionsCompiler()
         {
             using (var reader = new StreamReader(
-                typeof(ExtraConditionsBase).Assembly.GetManifestResourceStream(
+                typeof(CustomExtraConditionsBase).Assembly.GetManifestResourceStream(
                     CodeEnvironmentResourceName) ?? throw new InvalidOperationException()))
             {
                 CodeEnvironment = reader.ReadToEnd();
@@ -126,7 +126,7 @@ namespace WSolve.ExtraConditions
             return extraDefinitions.ToString();
         }
 
-        public static Func<Chromosome, bool> Compile(string conditionCode, InputData data, bool stateless)
+        public static Func<Chromosome, ExtraConditionsBase> Compile(string conditionCode, InputData data, bool stateless)
         {
             conditionCode = CodeEnvironment
                 .Replace(CodeEnvPlaceholder, conditionCode)
@@ -157,8 +157,7 @@ namespace WSolve.ExtraConditions
                 Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(s);
                 Type type = assembly.GetType(CodeEnvClassName);
 
-                return chromosome =>
-                    ((ExtraConditionsBase) Activator.CreateInstance(type, chromosome)).DirectResult;
+                return chromosome => (ExtraConditionsBase) Activator.CreateInstance(type, chromosome);
             }
         }
 
@@ -176,7 +175,7 @@ namespace WSolve.ExtraConditions
                 MetadataReference.CreateFromFile(typeof(Math).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(ExtraConditionsBase).Assembly.Location)
+                MetadataReference.CreateFromFile(typeof(CustomExtraConditionsBase).Assembly.Location)
             };
 
             return CSharpCompilation.Create(

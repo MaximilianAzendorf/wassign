@@ -28,6 +28,8 @@ namespace WSolve
             ["w"] = 60 * 60 * 24 * 7
         };
 
+        public static ISolver Solver { get; private set; } = new MinCostFlowSolver();
+        
         public static int Verbosity { get; private set; } = 3;
 
         public static int? Seed { get; private set; }
@@ -40,7 +42,7 @@ namespace WSolve
 
         public static bool ShowHelp { get; private set; }
 
-        public static int TimeoutSeconds { get; private set; } = 60 * 60;
+        public static int TimeoutSeconds { get; private set; } = 60 * 5;
 
         public static int PreferencePumpTimeoutSeconds { get; private set; } = 10;
 
@@ -94,7 +96,7 @@ namespace WSolve
             },
 
             {
-                "s|shuffle=", "Sets the seed for the random number generator and shuffles the input.",
+                "shuffle=", "Shuffles the input with the given set to avoid bias based on input order.",
                 x => Seed = ParseSeed(x)
             },
 
@@ -105,13 +107,14 @@ namespace WSolve
             },
 
             {
-                "p|pref-exp=", $"The preference exponent. Default is {PreferenceExponent}.",
-                (double v) => PreferenceExponent = v
+                "s|solver=",
+                $"Selects the solving strategy, possible values are 'genetic' (for genetic optimization) and 'mcf' (for min cost flow analysis with hill climbing). Default is {MinCostFlowSolver.PARAM_NAME}.",
+                x => Solver = ParseSolver(x)
             },
 
             {
-                "f|final-phase=", $"The beginning of the final phase. Default is {FinalPhaseStart}.",
-                (double v) => FinalPhaseStart = v
+                "p|pref-exp=", $"The preference exponent. Default is {PreferenceExponent}.",
+                (double v) => PreferenceExponent = v
             },
 
             {
@@ -123,6 +126,74 @@ namespace WSolve
                 "cs-timeout=",
                 $"Sets the timeout for attempting to statisfy critical sets of a certain pereference level. Default is {CriticalSetTimeoutSeconds}s.",
                 x => CriticalSetTimeoutSeconds = ParseTime(x)
+            },
+
+            {
+                "a|any-solution",
+                "Only compute a greedy solution without any optimizations. Same as --no-popt --no-lopt --no-cs --no-prp.",
+                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true
+            },
+
+            {
+                "x|conditions=",
+                "Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression. Note that different solving strategies are more or less restrictive on which conditions are expressable.",
+                x => ExtraConditions = x
+            },
+
+            {
+                "no-popt", "Do not perform propabilistic optimizations.",
+                x => NoGeneticOptimizations = true
+            },
+
+            {
+                "no-cs", "Do not perform critical set anaylsis.",
+                x => NoCriticalSets = true
+            },
+
+            {
+                "no-lopt", "Do not perform local optimizations. This switch is only used when genetic optimization is performed.",
+                x => NoLocalOptimizations = true
+            },
+
+            {
+                "no-prp", "Do not use preference pump heuristics. This switch is only used when genetic optimization is performed.",
+                x => NoPrefPump = true
+            },
+
+            {
+                "no-stats", "Do not print solution statistics.",
+                x => NoStats = true
+            },
+
+            {
+                "ga-mutation=", $"The mutation chance. Default is {MutationChance}. (when using genetic optimization)",
+                x => MutationChance = ParseExpInt(x)
+            },
+
+            {
+                "ga-crossover=", $"The crossover chance. Default is {CrossoverChance}. (when using genetic optimization)",
+                x => CrossoverChance = ParseExpInt(x)
+            },
+
+            {
+                "ga-population=", $"The population size. Default is {PopulationSize}. (when using genetic optimization)",
+                x => PopulationSize = ParseExpInt(x)
+            },
+
+            {
+                "ga-selection=", 
+                $"The selection algorithm. Possible values are 'elite' or 'tournament([size])'. Default is {Selection}. (when using genetic optimization)",
+                x => Selection = ParseSelection(x)
+            },
+
+            {
+                "ga-final-phase=", $"The beginning of the final phase. Default is {FinalPhaseStart}. (when using genetic optimization)",
+                (double v) => FinalPhaseStart = v
+            },
+            
+            {
+                "ga-bucket-size=", $"The bucket size. Default is {BucketSize}. (when using genetic optimization)",
+                (int b) => BucketSize = b
             },
 
             {
@@ -138,69 +209,6 @@ namespace WSolve
             },
 
             {
-                "a|any-solution",
-                "Only compute a greedy solution without any optimizations. Same as --no-ga --no-prp --no-lopt --no-cs.",
-                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true
-            },
-
-            {
-                "no-ga", "Do not perform genetic optimizations.",
-                x => NoGeneticOptimizations = true
-            },
-
-            {
-                "no-lopt", "Do not perform local optimizations.",
-                x => NoLocalOptimizations = true
-            },
-
-            {
-                "no-prp", "Do not use preference pump heuristics.",
-                x => NoPrefPump = true
-            },
-
-            {
-                "no-cs", "Do not perform critical set anaylsis.",
-                x => NoCriticalSets = true
-            },
-
-            {
-                "no-stats", "Do not print solution statistics.",
-                x => NoStats = true
-            },
-
-            {
-                "mutation=", $"The mutation chance. Default is {MutationChance}.",
-                x => MutationChance = ParseExpInt(x)
-            },
-
-            {
-                "crossover=", $"The crossover chance. Default is {CrossoverChance}.",
-                x => CrossoverChance = ParseExpInt(x)
-            },
-
-            {
-                "population=", $"The population size. Default is {PopulationSize}.",
-                x => PopulationSize = ParseExpInt(x)
-            },
-
-            {
-                "selection=",
-                $"The selection algorithm. Possible values are 'elite' or 'tournament([size])'. Default is {Selection}.",
-                x => Selection = ParseSelection(x)
-            },
-
-            {
-                "bucket-size=", $"The bucket size. Default is {BucketSize}.",
-                (int b) => BucketSize = b
-            },
-
-            {
-                "x|conditions=",
-                "Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression.",
-                x => ExtraConditions = x
-            },
-
-            {
                 "h|help", "Show help.",
                 x => ShowHelp = x != null
             },
@@ -211,7 +219,7 @@ namespace WSolve
             }
         };
 
-        private static void ThrowInvalidParameter(string value)
+        private static dynamic ThrowInvalidParameter(string value)
         {
             throw new FormatException($"Could not undestand parameter value \"{value}\".");
         }
@@ -272,6 +280,16 @@ namespace WSolve
             }
 
             return new TournamentSelection(int.Parse(match.Groups["size"].Value));
+        }
+        
+        private static ISolver ParseSolver(string solverString)
+        {
+            return solverString switch
+            {
+                GaSolver.PARAM_NAME => (ISolver) new GaSolver(),
+                MinCostFlowSolver.PARAM_NAME => (ISolver) new MinCostFlowSolver(),
+                _ => ThrowInvalidParameter(solverString)
+            };
         }
 
         private static int ParseSeed(string seedString)

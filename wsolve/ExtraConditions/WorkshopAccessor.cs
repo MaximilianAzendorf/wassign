@@ -6,13 +6,13 @@ namespace WSolve.ExtraConditions
 {
     public class WorkshopAccessor : WorkshopAccessorBase
     {
-        public WorkshopAccessor(int id, ExtraConditionsBase @base, Chromosome chromosome)
+        public WorkshopAccessor(int id, CustomExtraConditionsBase @base, Chromosome chromosome)
             : base(id, @base, chromosome)
         {
         }
 
-        public IReadOnlyCollection<ParticipantAccessor> Conductors => _chromosome.InputData.Workshops[_id].conductors
-            .Select(n => new ParticipantAccessor(n, _base, _chromosome))
+        public IReadOnlyCollection<ParticipantAccessor> Conductors => Chromosome.InputData.Workshops[_id].conductors
+            .Select(n => new ParticipantAccessor(n, (CustomExtraConditionsBase)_base, Chromosome))
             .ToImmutableList();
         
         public IReadOnlyCollection<ParticipantAccessor> Participants
@@ -20,13 +20,13 @@ namespace WSolve.ExtraConditions
             get
             {
                 var list = new List<ParticipantAccessor>();
-                for (int p = 0; p < _chromosome.InputData.Participants.Count; p++)
+                for (int p = 0; p < Chromosome.InputData.Participants.Count; p++)
                 {
-                    for (int n = 0; n < _chromosome.InputData.Slots.Count; n++)
+                    for (int n = 0; n < Chromosome.InputData.Slots.Count; n++)
                     {
-                        if (_chromosome.Workshop(p, n) == _id)
+                        if (Chromosome.Workshop(p, n) == _id)
                         {
-                            list.Add(new ParticipantAccessor(p, _base, _chromosome));
+                            list.Add(new ParticipantAccessor(p, (CustomExtraConditionsBase)_base, Chromosome));
                         }
                     }
                 }
@@ -35,6 +35,6 @@ namespace WSolve.ExtraConditions
             }
         }
 
-        public SlotAccessor Slot => new SlotAccessor(_chromosome.Slot(_id), _base, _chromosome);
+        public SlotAccessor Slot => new SlotAccessor(Chromosome.Slot(_id), (CustomExtraConditionsBase)_base, Chromosome);
     }
 }

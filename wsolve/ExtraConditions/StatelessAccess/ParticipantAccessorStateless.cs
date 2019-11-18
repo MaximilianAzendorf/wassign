@@ -6,7 +6,7 @@ namespace WSolve.ExtraConditions.StatelessAccess
 {
     public class ParticipantAccessorStateless : ParticipantAccessorBase
     {
-        public ParticipantAccessorStateless(int id, ExtraConditionsBase @base, Chromosome chromosome)
+        public ParticipantAccessorStateless(int id, CustomExtraConditionsBaseStateless @base, Chromosome chromosome)
             : base(id, @base, chromosome)
         {
         }

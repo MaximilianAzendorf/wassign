@@ -6,7 +6,7 @@ namespace WSolve
     public class CriticalSet : IEnumerable<int>
     {
         private readonly HashSet<int> _data;
-
+        
         public CriticalSet(int preference, IEnumerable<int> data)
         {
             Preference = preference;

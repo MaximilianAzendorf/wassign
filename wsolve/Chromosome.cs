@@ -54,20 +54,20 @@ namespace WSolve
             return !left.Equals(right);
         }
 
-        public static Chromosome FromOutput(InputData inputData, Solution solution)
+        public static Chromosome FromSolution(InputData inputData, Solution solution)
         {
             var c = new Chromosome(inputData);
 
-            for (int i = 0; i < inputData.Workshops.Count; i++)
+            for (int w = 0; w < inputData.Workshops.Count; w++)
             {
-                c.Slot(i) = solution.Scheduling[i];
+                c.Slot(w) = solution.Scheduling[w];
             }
 
-            for (int i = 0; i < inputData.Participants.Count; i++)
+            for (int p = 0; p < inputData.Participants.Count; p++)
             {
-                for (int j = 0; j < inputData.Slots.Count; j++)
+                for (int i = 0; i < inputData.Slots.Count; i++)
                 {
-                    c.Workshop(i, j) = solution.Assignment[i][j];
+                    c.Workshop(p, i) = solution.Assignment[p][i];
                 }
             }
 

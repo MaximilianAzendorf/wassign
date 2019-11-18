@@ -10,5 +10,7 @@ namespace WSolve.ExtraConditions.StatelessAccess.Constraints
             Owner = owner;
             Element = element;
         }
+
+        protected override Constraint Negation => new ContainsNotConstraint<TOwner, TCollectionElement>(Owner, Element);
     }
 }

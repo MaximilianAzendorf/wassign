@@ -6,21 +6,20 @@ namespace WSolve.ExtraConditions {
     public class WorkshopAccessorBase 
     {
         protected ExtraConditionsBase _base;
-        protected Chromosome _chromosome;
+        protected Chromosome Chromosome;
         protected int _id;
 
         public WorkshopAccessorBase(int id, ExtraConditionsBase @base, Chromosome chromosome)
         {
             _id = id;
             _base = @base;
-            _chromosome = chromosome;
+            Chromosome = chromosome;
         }
 
-        public string Name => _chromosome.InputData.Workshops[_id].name;
-        public int MinParticipants => _chromosome.InputData.Workshops[_id].min;
-        public int MaxParticipants => _chromosome.InputData.Workshops[_id].max;
-
-        public SlotAccessor Slot => new SlotAccessor(_chromosome.Slot(_id), _base, _chromosome);
+        public string Name => Chromosome.InputData.Workshops[_id].name;
+        internal int Id => _id;
+        public int MinParticipants => Chromosome.InputData.Workshops[_id].min;
+        public int MaxParticipants => Chromosome.InputData.Workshops[_id].max;
 
         public static bool operator ==(WorkshopAccessorBase left, WorkshopAccessorBase right)
         {
@@ -30,26 +29,6 @@ namespace WSolve.ExtraConditions {
         public static bool operator !=(WorkshopAccessorBase left, WorkshopAccessorBase right)
         {
             return !Equals(left, right);
-        }
-
-        public static bool operator ==(WorkshopAccessorBase left, string right)
-        {
-            return left == left?._base.Workshop(right);
-        }
-
-        public static bool operator ==(string left, WorkshopAccessorBase right)
-        {
-            return right == right?._base.Workshop(left);
-        }
-
-        public static bool operator !=(WorkshopAccessorBase left, string right)
-        {
-            return !(left == right);
-        }
-
-        public static bool operator !=(string left, WorkshopAccessorBase right)
-        {
-            return !(left == right);
         }
 
         public override bool Equals(object obj)
@@ -62,11 +41,6 @@ namespace WSolve.ExtraConditions {
             if (ReferenceEquals(this, obj))
             {
                 return true;
-            }
-
-            if (obj is string s)
-            {
-                return this == s;
             }
 
             if (obj.GetType() != GetType())

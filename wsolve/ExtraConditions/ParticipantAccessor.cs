@@ -6,24 +6,19 @@ namespace WSolve.ExtraConditions
 {
     public class ParticipantAccessor : ParticipantAccessorBase
     {
-        public ParticipantAccessor(int id, ExtraConditionsBase @base, Chromosome chromosome)
+        public ParticipantAccessor(int id, CustomExtraConditionsBase @base, Chromosome chromosome)
             : base(id, @base, chromosome)
         {
         }
 
-        public IReadOnlyCollection<WorkshopAccessor> Workshops => Enumerable.Range(0, _chromosome.InputData.Slots.Count)
-            .Select(n => _chromosome.Workshop(_id, n))
-            .Select(w => new WorkshopAccessor(w, _base, _chromosome))
+        public IReadOnlyCollection<WorkshopAccessor> Workshops => Enumerable.Range(0, Chromosome.InputData.Slots.Count)
+            .Select(n => Chromosome.Workshop(_id, n))
+            .Select(w => new WorkshopAccessor(w, (CustomExtraConditionsBase)_base, Chromosome))
             .ToImmutableList();
 
         public WorkshopAccessor WorkshopAt(SlotAccessor slot)
         {
             return Workshops.Single(w => w.Slot == slot);
-        }
-
-        public WorkshopAccessor WorkshopAt(string slotNameFragment)
-        {
-            return WorkshopAt(_base.Slot(slotNameFragment));
         }
     }
 }

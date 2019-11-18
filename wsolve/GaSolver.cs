@@ -7,26 +7,15 @@ using WSolve.ExtraConditions;
 
 namespace WSolve
 {
-    public class GaSolver : ISolver
+    public class GaSolver : SolverBase
     {
-        public Solution Solve(InputData inputData)
+        public const string PARAM_NAME = "genetic";
+        
+        public override Solution Solve(InputData inputData)
         {
             IFitness fitness = new GaSolverFitness(inputData, GetExtraConditions(inputData));
 
-            CriticalSetAnalysis criticalSetAnalysis;
-
-            if (!Options.NoCriticalSets)
-            {
-                Status.Info("Performing critical set analysis.");
-                criticalSetAnalysis = new CriticalSetAnalysis(inputData);
-                Status.Info(
-                    $"{criticalSetAnalysis.AllSets.Count()} critical sets found, Preference limit is {criticalSetAnalysis.PreferenceBound}.");
-            }
-            else
-            {
-                Status.Info("Skipping critical set analysis.");
-                criticalSetAnalysis = CriticalSetAnalysis.Empty(inputData);
-            }
+            CriticalSetAnalysis criticalSetAnalysis = GetCsAnalysis(inputData);
 
             Chromosome res;
             if (Options.NoGeneticOptimizations)
@@ -45,7 +34,7 @@ namespace WSolve
                         }
 
                         solutionSource.MoveNext();
-                        res = Chromosome.FromOutput(inputData, solutionSource.Current);
+                        res = Chromosome.FromSolution(inputData, solutionSource.Current);
                         tries++;
                     } while (!fitness.IsFeasible(res));
                 }
@@ -125,21 +114,6 @@ namespace WSolve
 
             Status.Info("Final Fitness: " + fitness.Evaluate(res));
             return res.ToSolution();
-        }
-
-        private Func<Chromosome, bool> GetExtraConditions(InputData inputData)
-        {
-            if (Options.ExtraConditions == null)
-            {
-                return null;
-            }
-
-            string condition = File.Exists(Options.ExtraConditions)
-                ? File.ReadAllText(Options.ExtraConditions)
-                : $"AddCondition({Options.ExtraConditions});";
-
-            Status.Info("Compiling extra conditions.");
-            return ExtraConditionsCompiler.Compile(condition, inputData, false);
         }
 
         private void ApplyStaticPrefPumpHeuristic(Chromosome chromosome)
