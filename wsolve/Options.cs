@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -34,11 +35,12 @@ namespace WSolve
 
         public static int? Seed { get; private set; }
 
-        public static string InputFile { get; private set; }
+        private static readonly List<string> _inputFiles = new List<string>();
+        public static IReadOnlyList<string> InputFiles => _inputFiles.ToImmutableList();
 
         public static string OutputFile { get; private set; }
 
-        public static string CsvOutputFile { get; private set; }
+        public static bool CsvOutput { get; private set; }
 
         public static bool ShowHelp { get; private set; }
 
@@ -64,6 +66,8 @@ namespace WSolve
 
         public static bool NoStats { get; private set; }
 
+        public static bool RankedPreferences { get; private set; }
+        
         public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.5, 0.3, 1.0);
 
         public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.75, 0.5, 1.0);
@@ -74,15 +78,13 @@ namespace WSolve
 
         public static int BucketSize { get; private set; } = 5000;
 
-        public static string ExtraConditions { get; private set; }
-
         public static double PreferenceExponent { get; private set; } = 3;
 
         private static OptionSet OptionSet { get; } = new OptionSet
         {
             {
                 "i|input=", "Specifies an input file.",
-                i => InputFile = i
+                i => _inputFiles.Add(i)
             },
 
             {
@@ -91,8 +93,8 @@ namespace WSolve
             },
 
             {
-                "c|csv-output=", "Specifies a csv output file.",
-                i => CsvOutputFile = i
+                "c|csv", "Besides the output file, two CSV files will be generated, [output].scheduling.csv and [output].assignment.csv.",
+                i => CsvOutput = true
             },
 
             {
@@ -118,6 +120,11 @@ namespace WSolve
             },
 
             {
+                "ranked-pref", "Preferences of every participant will be transformed into a ranking.",
+                v => RankedPreferences = true
+            },
+
+            {
                 "t|timeout=", $"Sets the optimization timeout. Default is {TimeoutSeconds}s.",
                 x => TimeoutSeconds = ParseTime(x)
             },
@@ -132,12 +139,6 @@ namespace WSolve
                 "a|any-solution",
                 "Only compute a greedy solution without any optimizations. Same as --no-popt --no-lopt --no-cs --no-prp.",
                 x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true
-            },
-
-            {
-                "x|conditions=",
-                "Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression. Note that different solving strategies are more or less restrictive on which conditions are expressable.",
-                x => ExtraConditions = x
             },
 
             {
@@ -329,6 +330,12 @@ namespace WSolve
             {
                 PrintHelp();
                 return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(OutputFile) && CsvOutput)
+            {
+                Status.Warning("No output file specified; CSV flag is ignored.");
+                CsvOutput = false;
             }
 
             return true;

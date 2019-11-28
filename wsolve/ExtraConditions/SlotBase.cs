@@ -1,26 +1,25 @@
-namespace WSolve.ExtraConditions {
-    public class ParticipantAccessorBase 
+namespace WSolve.ExtraConditions 
+{
+    public class SlotBase
     {
-        protected readonly ExtraConditionsBase _base;
-        protected readonly Chromosome Chromosome;
         protected readonly int _id;
+        protected readonly InputData _inputData;
 
-        public ParticipantAccessorBase(int id, ExtraConditionsBase @base, Chromosome chromosome)
+        public SlotBase(int id, InputData inputData)
         {
             _id = id;
-            _base = @base;
-            Chromosome = chromosome;
+            _inputData = inputData;
         }
 
-        public string Name => Chromosome.InputData.Participants[_id].name;
+        public string Name => _inputData.Slots[_id];
         internal int Id => _id;
 
-        public static bool operator ==(ParticipantAccessorBase left, ParticipantAccessorBase right)
+        public static bool operator ==(SlotBase left, SlotBase right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(ParticipantAccessorBase left, ParticipantAccessorBase right)
+        public static bool operator !=(SlotBase left, SlotBase right)
         {
             return !Equals(left, right);
         }
@@ -42,7 +41,7 @@ namespace WSolve.ExtraConditions {
                 return false;
             }
 
-            return Equals((ParticipantAccessorBase) obj);
+            return Equals((SlotBase) obj);
         }
 
         public override int GetHashCode()
@@ -50,7 +49,7 @@ namespace WSolve.ExtraConditions {
             return _id;
         }
 
-        protected bool Equals(ParticipantAccessorBase other)
+        private bool Equals(SlotBase other)
         {
             return _id == other._id;
         }

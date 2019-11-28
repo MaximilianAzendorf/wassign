@@ -1,50 +1,117 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using WSolve.ExtraConditions;
+using WSolve.ExtraConditions.Constraints;
 
 namespace WSolve
 {
     public class GaSolverFitness : IFitness
     {
-        public GaSolverFitness(InputData inputData, Func<Chromosome, bool> extraFilter = null)
+        public GaSolverFitness(InputData inputData)
         {
             InputData = inputData;
             Scaling = (float) Math.Pow(InputData.MaxPreference, Options.PreferenceExponent);
-            ExtraFilter = extraFilter;
         }
 
         public float Scaling { get; }
 
         public InputData InputData { get; }
 
-        public Func<Chromosome, bool> ExtraFilter { get; }
+        private bool SatisfiesConstraints(Chromosome chromosome)
+        {
+            foreach (var constraint in chromosome.InputData.SchedulingConstraints)
+            {
+                switch (constraint)
+                {
+                    case SetValueConstraint<WorkshopStateless, SlotStateless> c:
+                    {
+                        if(chromosome.Slot(c.Owner.Id) != c.Value.Id) return false;
+                        break;
+                    }
+                    case ForbidValueConstraint<WorkshopStateless, SlotStateless> c:
+                    {
+                        if(chromosome.Slot(c.Owner.Id) == c.Value.Id) return false;
+                        break;
+                    }
+                    case EqualsConstraint<WorkshopStateless, SlotStateless> c:
+                    {
+                        if(chromosome.Slot(c.Left.Id) != chromosome.Slot(c.Right.Id)) return false;
+                        break;
+                    }
+                    case EqualsNotConstraint<WorkshopStateless, SlotStateless> c:
+                    {
+                        if(chromosome.Slot(c.Left.Id) == chromosome.Slot(c.Right.Id)) return false;
+                        break;
+                    }
+                    case SlotOffsetConstraint c:
+                    {
+                        if (chromosome.Slot(c.Second.Id) - chromosome.Slot(c.First.Id) != c.Offset) return false;
+                        break;
+                    }
+                    default:
+                    {
+                        throw new ArgumentException($"Unknown constraint type {constraint}.");
+                    }
+                }
+            }
 
+            foreach (var constraint in chromosome.InputData.AssignmentConstraints)
+            {
+                switch (constraint)
+                {
+                    case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> c:
+                    {
+                        if (!chromosome.Participants(c.Left.Id).SequenceEqual(chromosome.Participants(c.Right.Id)))
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    case ContainsConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        if (!chromosome.Workshops(c.Owner.Id).Contains(c.Element.Id))
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    case ContainsNotConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        if (chromosome.Workshops(c.Owner.Id).Contains(c.Element.Id))
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    case SequenceEqualsConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        if (!chromosome.Workshops(c.Left.Id).SequenceEqual(chromosome.Workshops(c.Right.Id)))
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            return true;
+        }
+        
         public bool IsFeasible(Chromosome chromosome)
         {
             var partCounts = new int[InputData.Workshops.Count];
             var isInSlot = new bool[InputData.Participants.Count, InputData.Slots.Count];
             var slots = new int[InputData.Workshops.Count];
 
-            for (int i = 0; i < InputData.Workshops.Count; i++)
+            if (!SatisfiesConstraints(chromosome))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < InputData.WorkshopCount; i++)
             {
                 slots[i] = chromosome.Slot(i);
-
-                foreach (int conductor in InputData.Workshops[i].conductors)
-                {
-                    bool foundConductor = false;
-                    for (int sl = 0; sl < InputData.Slots.Count; sl++)
-                    {
-                        if (chromosome.Workshop(conductor, sl) == i)
-                        {
-                            foundConductor = true;
-                            break;
-                        }
-                    }
-
-                    if (!foundConductor)
-                    {
-                        return false;
-                    }
-                }
             }
 
             for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
@@ -73,7 +140,7 @@ namespace WSolve
                 }
             }
 
-            if (!(ExtraFilter?.Invoke(chromosome) ?? true))
+            if (!InputData.Filter(chromosome))
             {
                 return false;
             }

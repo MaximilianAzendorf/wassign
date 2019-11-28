@@ -82,13 +82,13 @@ namespace WSolve
                 "Tried to access empty chromosome.");
             Debug.Assert(
                 workshop < InputData.Workshops.Count && workshop >= 0,
-                "Tried to use out of bounds workshop index.");
+                "Tried to use out of bounds workshopNumber index.");
 
             return ref _data[workshop];
         }
 
         [Pure]
-        public ref int Workshop(int participant, int workshop)
+        public ref int Workshop(int participant, int workshopNumber)
         {
             Debug.Assert(
                 InputData != null,
@@ -97,10 +97,34 @@ namespace WSolve
                 participant >= 0 && participant < InputData.Participants.Count,
                 "Tried to use out of bounds participant index.");
             Debug.Assert(
-                workshop >= 0 && workshop < InputData.Slots.Count,
-                "Tried to use out of bounds workshop index.");
+                workshopNumber >= 0 && workshopNumber < InputData.Slots.Count,
+                "Tried to use out of bounds workshopNumber index.");
 
-            return ref _data[InputData.Workshops.Count + participant * InputData.Slots.Count + workshop];
+            return ref _data[InputData.Workshops.Count + participant * InputData.Slots.Count + workshopNumber];
+        }
+
+        [Pure]
+        public IEnumerable<int> Workshops(int participant)
+        {
+            for (int s = 0; s < InputData.SlotCount; s++)
+            {
+                yield return _data[InputData.Workshops.Count + participant * InputData.Slots.Count + s];
+            }
+        }
+
+        [Pure]
+        public IEnumerable<int> Participants(int workshop)
+        {
+            for (int p = 0; p < InputData.ParticipantCount; p++)
+            {
+                for (int s = 0; s < InputData.SlotCount; s++)
+                {
+                    if (_data[InputData.Workshops.Count + p * InputData.Slots.Count + s] == workshop)
+                    {
+                        yield return p;
+                    }
+                }
+            }
         }
 
         public int CountParticipants(int workshop)

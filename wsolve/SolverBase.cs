@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using WSolve.ExtraConditions;
-using WSolve.ExtraConditions.StatelessAccess;
 
 namespace WSolve
 {
@@ -26,47 +25,6 @@ namespace WSolve
             }
 
             return criticalSetAnalysis;
-        }
-        
-        private Func<Chromosome, ExtraConditionsBase> GetExtraConditions(InputData inputData, bool stateless)
-        {
-            if (Options.ExtraConditions == null)
-            {
-                return null;
-            }
-
-            string condition = File.Exists(Options.ExtraConditions)
-                ? File.ReadAllText(Options.ExtraConditions)
-                : $"AddCondition({Options.ExtraConditions});";
-
-            Status.Info("Compiling extra conditions.");
-            return ExtraConditionsCompiler.Compile(condition, inputData, stateless);
-        }
-
-        protected Func<Chromosome, bool> GetExtraConditions(InputData inputData)
-        {
-            var extraConditions = GetExtraConditions(inputData, false);
-            
-            if (extraConditions == null)
-            {
-                return null;
-            }
-            else
-            {
-                return c => extraConditions(c).DirectResult;
-            }
-        }
-
-        protected Func<Chromosome, CustomExtraConditionsBaseStateless> GetExtraConditionsStateless(InputData inputData)
-        {
-            var extraConditions = GetExtraConditions(inputData, true);
-
-            if (extraConditions == null)
-            {
-                return null;
-            }
-
-            return chromosome => (CustomExtraConditionsBaseStateless)extraConditions(chromosome);
         }
         
         public abstract Solution Solve(InputData inputData);

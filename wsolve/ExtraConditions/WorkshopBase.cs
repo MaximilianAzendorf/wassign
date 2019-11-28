@@ -1,27 +1,31 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+
 namespace WSolve.ExtraConditions 
 {
-    public class SlotAccessorBase 
+    public class WorkshopBase
     {
-        protected ExtraConditionsBase _base;
-        protected Chromosome Chromosome;
-        protected int _id;
+        protected readonly InputData _inputData;
+        protected readonly int _id;
 
-        public SlotAccessorBase(int id, ExtraConditionsBase @base, Chromosome chromosome)
+        public WorkshopBase(int id, InputData inputData)
         {
             _id = id;
-            _base = @base;
-            Chromosome = chromosome;
+            _inputData = inputData;
         }
 
-        public string Name => Chromosome.InputData.Slots[_id];
+        public string Name => _inputData.Workshops[_id].name;
         internal int Id => _id;
+        public int MinParticipants => _inputData.Workshops[_id].min;
+        public int MaxParticipants => _inputData.Workshops[_id].max;
 
-        public static bool operator ==(SlotAccessorBase left, SlotAccessorBase right)
+        public static bool operator ==(WorkshopBase left, WorkshopBase right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(SlotAccessorBase left, SlotAccessorBase right)
+        public static bool operator !=(WorkshopBase left, WorkshopBase right)
         {
             return !Equals(left, right);
         }
@@ -43,7 +47,7 @@ namespace WSolve.ExtraConditions
                 return false;
             }
 
-            return Equals((SlotAccessorBase) obj);
+            return Equals((WorkshopBase) obj);
         }
 
         public override int GetHashCode()
@@ -51,7 +55,7 @@ namespace WSolve.ExtraConditions
             return _id;
         }
 
-        private bool Equals(SlotAccessorBase other)
+        protected bool Equals(WorkshopBase other)
         {
             return _id == other._id;
         }

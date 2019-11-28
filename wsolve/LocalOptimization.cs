@@ -1,4 +1,6 @@
 using System.Linq;
+using WSolve.ExtraConditions;
+using WSolve.ExtraConditions.Constraints;
 
 namespace WSolve
 {
@@ -17,8 +19,7 @@ namespace WSolve
             {
                 if (!quiet)
                 {
-                    Status.Info(
-                        $"Starting local optimization round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
+                    Status.Info($"Starting local optimization round {++round} ({shifts} shift(s) and {swaps} swap(s) so far).");
                 }
 
                 roundAlteration = 0;
@@ -63,6 +64,11 @@ namespace WSolve
                             if (input.Participants[p].preferences[w] <
                                 input.Participants[p].preferences[assignment[p, s]])
                             {
+                                if (!SatisfiesConstraints(p, w, chromosome))
+                                {
+                                    continue;
+                                }
+                                
                                 chromosome.Workshop(p, slotMap[p, s]) = w;
 
                                 if (!fitness.IsFeasible(chromosome))
@@ -98,6 +104,12 @@ namespace WSolve
                                 && input.Participants[p2].preferences[assignment[p1, s]] <
                                 input.Participants[p2].preferences[assignment[p2, s]])
                             {
+                                if (!SatisfiesConstraints(p1, assignment[p2, s], chromosome) ||
+                                    !SatisfiesConstraints(p2, assignment[p1, s], chromosome))
+                                {
+                                    continue;
+                                }
+                                
                                 chromosome.Workshop(p1, slotMap[p1, s]) = assignment[p2, s];
                                 chromosome.Workshop(p2, slotMap[p2, s]) = assignment[p1, s];
 
@@ -127,6 +139,54 @@ namespace WSolve
 
             alterationCount = swaps + shifts;
             return chromosome;
+        }
+        
+        private static bool SatisfiesConstraints(int participant, int newWorkshop, Chromosome chromosome)
+        {
+            foreach (var constraint in chromosome.InputData.GetAssignmentConstraintsForParticipant(participant))
+            {
+                switch (constraint)
+                {
+                    case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> c:
+                    {
+                        if (chromosome.Workshops(participant).Contains(c.Left.Id) || 
+                            chromosome.Workshops(participant).Contains(c.Right.Id) ||
+                            c.Left.Id == newWorkshop ||
+                            c.Right.Id == newWorkshop)
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    
+                    case ContainsConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        if (chromosome.Slot(c.Element.Id) == chromosome.Slot(newWorkshop))
+                        {
+                            return false;
+                        }
+                        
+                        break;
+                    }
+                    case ContainsNotConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        if (c.Element.Id == newWorkshop)
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    case SequenceEqualsConstraint<ParticipantStateless, WorkshopStateless> c:
+                    {
+                        return false;
+                    }
+                    
+                    default:
+                        return false;
+                }
+            }
+            
+            return true;
         }
     }
 }

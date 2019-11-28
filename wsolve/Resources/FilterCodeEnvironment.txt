@@ -1,0 +1,29 @@
+using System;
+using System.Text;
+using System.Linq;
+using System.Collections.Generic;
+
+using WSolve;
+using WSolve.ExtraConditions;
+
+using static System.Math;
+
+namespace WSolve.Generated
+{    
+    public class CustomFilter : CustomFilterBase
+    {
+        public CustomFilter(InputData inputData)
+            : base(inputData)
+        {
+        }
+                
+        protected override bool Evaluate()
+        {
+            // Condition code is inserted here
+            ##C
+        }
+        
+        // Generated extra definitions are placed here
+        ##E
+    }
+}

@@ -41,7 +41,6 @@ namespace WSolve
 
         private static int Main(string[] args)
         {
-
             CultureInfo ci = CultureInfo.InvariantCulture;
             Thread.CurrentThread.CurrentCulture = ci;
             Thread.CurrentThread.CurrentUICulture = ci;

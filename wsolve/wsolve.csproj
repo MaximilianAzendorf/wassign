@@ -26,7 +26,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EmbeddedResource Include="Resources\ExtraConditionsCodeEnvironment.txt" />
+      <EmbeddedResource Include="Resources\ConstraintCodeEnvironment.txt" />
+      <EmbeddedResource Include="Resources\FilterCodeEnvironment.txt" />
     </ItemGroup>
 
     <ItemGroup>

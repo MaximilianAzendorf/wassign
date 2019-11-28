@@ -70,18 +70,6 @@ namespace WSolve
                 }
             }
 
-            void conductorsAreInOwnWorkshop(int w)
-            {
-                foreach (int conductor in InputData.Workshops[w].conductors)
-                {
-                    if (!Assignment[conductor].Contains(w))
-                    {
-                        throw new VerifyException(
-                            $"Participant '{InputData.Participants[conductor]}', conductor of '{InputData.Workshops[w].name}', is not in his own workshop.");
-                    }
-                }
-            }
-
             void oneWorkshopPerSlot(int p, int s)
             {
                 int c = FlatAssignment.Count(kvp => kvp.participant == p && Scheduling[kvp.workshop] == s);
@@ -102,7 +90,6 @@ namespace WSolve
             {
                 workshopMinConstraint(w);
                 workshopMaxConstraint(w);
-                conductorsAreInOwnWorkshop(w);
             }
 
             for (int p = 0; p < InputData.Participants.Count; p++)

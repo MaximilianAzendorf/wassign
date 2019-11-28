@@ -13,7 +13,7 @@ namespace WSolve
         
         public override Solution Solve(InputData inputData)
         {
-            IFitness fitness = new GaSolverFitness(inputData, GetExtraConditions(inputData));
+            IFitness fitness = new GaSolverFitness(inputData);
 
             CriticalSetAnalysis criticalSetAnalysis = GetCsAnalysis(inputData);
 

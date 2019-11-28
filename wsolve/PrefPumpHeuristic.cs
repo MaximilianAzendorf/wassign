@@ -1,8 +1,11 @@
 // ReSharper disable PossiblyImpureMethodCallOnReadonlyVariable
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using WSolve.ExtraConditions;
+using WSolve.ExtraConditions.Constraints;
 
 namespace WSolve
 {
@@ -123,10 +126,6 @@ namespace WSolve
                 }
 
                 int wswitch = state.Chromosome.Workshop(pswitch, slot);
-                if (state.Chromosome.InputData.Workshops[wswitch].conductors.Contains(pswitch))
-                {
-                    continue;
-                }
 
                 int switchPref = state.Chromosome.InputData.Participants[participant].preferences[wswitch];
                 if (switchPref >= state.Preference)
@@ -163,17 +162,23 @@ namespace WSolve
                 return false;
             }
 
-            int currentWorkshop = state.Chromosome.Workshop(participant, slot);
-            if (state.Chromosome.InputData.Workshops[currentWorkshop].conductors.Contains(participant))
+            if (!SatisfiesConstraints(participant, state.Chromosome))
             {
                 return false;
             }
-
+            
+            /*
+            if (state.Chromosome.InputData.Workshops[currentWorkshop].conductors.Contains(changedParticipant))
+            {
+                return false;
+            }
+            */
+            
             // We will look for favorable workshops that aren't full yet and also look for chains of participants
             // that can exchange their workshops with each other in order to eliminate the preference.
             //
             // We also try to equalize the filling degree of all workshops (especially for future preference pumping
-            // attempts) by first searching only for workshops the participant can change to that have a lower filling
+            // attempts) by first searching only for workshops the changedParticipant can change to that have a lower filling
             // degree than his current workshop, then looking for chains, and THEN considering all other workshops.
             //
             if (TryPumpWorkshopChange(state, participant, slot, wsOrig, true))
@@ -192,6 +197,31 @@ namespace WSolve
             }
 
             return false;
+        }
+        
+        private static bool SatisfiesConstraints(int participant, Chromosome chromosome)
+        {
+            // TODO: Implement. For now we just discard all participants that have applicable constraints.
+            foreach (var constraint in chromosome.InputData.GetAssignmentConstraintsForParticipant(participant))
+            {
+                switch (constraint)
+                {
+                    case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> c:
+                    {
+                        if (chromosome.Workshops(participant).Contains(c.Left.Id) || 
+                            chromosome.Workshops(participant).Contains(c.Right.Id))
+                        {
+                            return false;
+                        }
+                        break;
+                    }
+                    
+                    default:
+                        return false;
+                }
+            }
+            
+            return true;
         }
 
         private struct State

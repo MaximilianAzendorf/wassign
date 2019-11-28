@@ -1,21 +1,25 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Google.OrTools.Graph;
+using Google.OrTools.LinearSolver;
 using WSolve.ExtraConditions;
-using WSolve.ExtraConditions.StatelessAccess;
-using WSolve.ExtraConditions.StatelessAccess.Constraints;
+using WSolve.ExtraConditions.Constraints;
+using Constraint = WSolve.ExtraConditions.Constraints.Constraint;
 
 namespace WSolve
 {
     public class MinCostFlowSolver : SolverBase
     {
+        private const int WORKSHOP = -1;
+        private const int SLOT = -2;
+        
         private class StaticData
         {
-            public Dictionary<(int p, int s), int> ParticipantNodes = new Dictionary<(int p, int s), int>();
-            public Dictionary<int, int> WorkshopNodes = new Dictionary<int, int>();
-            public Dictionary<int, int> SlotNodes = new Dictionary<int, int>();
+            public MipFlow<(int, int), (int, int)> BaseFlow = new MipFlow<(int, int), (int, int)>();
             public HashSet<(int from, int to)> BlockedEdges = new HashSet<(int @from, int to)>();
             public List<Constraint> Constraints = new List<Constraint>();
         }
@@ -26,6 +30,8 @@ namespace WSolve
         public const string PARAM_NAME = "mcf";
         
         private volatile int _tries = 0;
+        private readonly List<TimeSpan> _solveTime = new List<TimeSpan>();
+        
         private Chromosome[] _bests;
         private (float major, float minor)[] _bestsFitness;
         private Thread[] _threads;
@@ -40,10 +46,9 @@ namespace WSolve
             }
             
             CriticalSetAnalysis csAnalysis = GetCsAnalysis(inputData);
-            Func<Chromosome, CustomExtraConditionsBaseStateless> extraConditions = GetExtraConditionsStateless(inputData);
             
             Status.Info($"Started min cost flow solver with {ThreadCount} thread(s).");
-            IFitness fitness = new GaSolverFitness(inputData, chromosome => extraConditions?.Invoke(chromosome)?.DirectResult ?? true);
+            IFitness fitness = new GaSolverFitness(inputData);
             
             _bests = new Chromosome[ThreadCount];
             _bestsFitness = new (float major, float minor)[ThreadCount];
@@ -51,8 +56,8 @@ namespace WSolve
 
             Array.Fill(_bestsFitness, (float.PositiveInfinity, float.PositiveInfinity));
 
-            StaticData staticData = GenerateStaticGraphData(inputData, extraConditions);
-            ConcurrentSet<Scheduling> doneSchedulings = new ConcurrentSet<Scheduling>();
+            StaticData staticData = GenerateStaticGraphData(inputData);
+            ConcurrentDictionary<Scheduling, Chromosome> doneSchedulings = new ConcurrentDictionary<Scheduling, Chromosome>();
             
             for (int i = 0; i < _threads.Length; i++)
             {
@@ -70,11 +75,18 @@ namespace WSolve
                 Thread.Sleep(1000);
                 
                 var bestFitness = _bestsFitness.Min();
-                if (!float.IsFinite(bestFitness.major)) continue;
+                //if (!float.IsFinite(bestFitness.major)) continue;
                 string newString = bestFitness != lastFitness ? "NEW" : "   ";
                 lastFitness = bestFitness;
-                
-                Status.Info($"{newString} BEST=({((int) bestFitness.major + ",").PadRight(3)} {bestFitness.minor:0.00000}), ETA={(startTime + timeout - DateTime.Now).ToStringNoMilliseconds()}");
+                lock (_solveTime)
+                {
+                    if (!_solveTime.Any())
+                    {
+                        _solveTime.Add(TimeSpan.Zero);
+                    }
+                    Status.Info($"{newString} BEST=({(bestFitness.major + ",")} {bestFitness.minor:0.00000}), ETA={(startTime + timeout - DateTime.Now).ToStringNoMilliseconds()}, TRIES={_tries} ({doneSchedulings.Count}), STIME={_solveTime.Min().TotalSeconds:0.000}s-{_solveTime.Max().TotalSeconds:0.000}s");
+                    _solveTime.Clear();
+                }
             }
 
             Status.Info("Stopped min cost flow solver. Waiting for workers to finish.");
@@ -92,73 +104,33 @@ namespace WSolve
                 .ToSolution();
         }
         
-        private StaticData GenerateStaticGraphData(InputData inputData, Func<Chromosome, CustomExtraConditionsBaseStateless> extraConditions)
+        private StaticData GenerateStaticGraphData(InputData inputData)
         {
             StaticData sgd = new StaticData();
             
-            // Generate all nodes.
-            //
-            int nodeIndex = 0;
-
             for (int p = 0; p < inputData.ParticipantCount; p++)
             {
                 for (int s = 0; s < inputData.SlotCount; s++)
                 {
-                    int newNode = nodeIndex++;
-                    sgd.ParticipantNodes[(p, s)] = newNode;
+                    sgd.BaseFlow.AddNode((p, s));
                 }
             }
 
             for (int w = 0; w < inputData.WorkshopCount; w++)
             {
-                int newNode = nodeIndex++;
-                sgd.WorkshopNodes[w] = newNode;
+                sgd.BaseFlow.AddNode((WORKSHOP, w));
             }
 
             for (int s = 0; s < inputData.SlotCount; s++)
             {
-                int newNode = nodeIndex++;
-                sgd.SlotNodes[s] = newNode;
+                sgd.BaseFlow.AddNode((SLOT, s));
             }
 
-            if (extraConditions != null)
-            {
-                sgd.Constraints = GetConstraints(inputData, extraConditions);
-            }
-
+            sgd.Constraints = inputData.AssignmentConstraints.ToList();
+            
             return sgd;
         }
-
-        private List<Constraint> GetConstraints(InputData inputData, Func<Chromosome, CustomExtraConditionsBaseStateless> extraConditions)
-        {
-            Chromosome chromosome = Chromosome.FromSolution(inputData, new GreedySolver().Solve(inputData));
-            return extraConditions(chromosome).StaticConstraints.ToList();
-        }
         
-        private HashSet<(int start, int end)> GetBlockedConductorEdges(InputData inputData, Scheduling scheduling, StaticData sgd)
-        {
-            var res = new HashSet<(int start, int end)>();
-            
-            // Then, we have to block all edges neccessary so that conductors always get into their own workshop.
-            //
-            for (int w = 0; w < inputData.WorkshopCount; w++)
-            {
-                int s = scheduling[w];
-                foreach (int p in inputData.Workshops[w].conductors)
-                {
-                    for (int wBlocked = 0; wBlocked < inputData.WorkshopCount; wBlocked++)
-                    {
-                        if(w == wBlocked) continue;
-
-                        res.Add((sgd.ParticipantNodes[(p, s)],
-                            sgd.WorkshopNodes[wBlocked]));
-                    }
-                }
-            }
-            
-            return res;
-        }
-
         private HashSet<(int start, int end)> GetBlockedConstraintEdges(InputData inputData, Scheduling scheduling, StaticData sgd)
         {
             HashSet<(int start, int end)> blockedEdges = new HashSet<(int start, int end)>();
@@ -166,14 +138,14 @@ namespace WSolve
             void fixAssignment(int p, int w)
             {
                 int s = scheduling[w];
-                int from = sgd.ParticipantNodes[(p, s)];
+                int from = sgd.BaseFlow.Nodes[(p, s)];
                 
                 for (int wBlocked = 0; wBlocked < inputData.WorkshopCount; wBlocked++)
                 {
                     if(w == wBlocked) continue;
                     if(scheduling[wBlocked] != s) continue;
                     
-                    int to = sgd.WorkshopNodes[wBlocked];
+                    int to = sgd.BaseFlow.Nodes[(WORKSHOP, wBlocked)];
                     blockedEdges.Add((from, to));
                 }
             }
@@ -182,8 +154,8 @@ namespace WSolve
             {
                 for (int s = 0; s < inputData.SlotCount; s++)
                 {
-                    int from = sgd.ParticipantNodes[(p, s)];
-                    int to = sgd.WorkshopNodes[w];
+                    int from = sgd.BaseFlow.Nodes[(p, s)];
+                    int to = sgd.BaseFlow.Nodes[(WORKSHOP, w)];
                     blockedEdges.Add((from, to));
                 }
             }
@@ -192,29 +164,34 @@ namespace WSolve
             {
                 switch (constraint)
                 {
-                    case ContainsConstraint<ParticipantAccessorStateless, WorkshopAccessorStateless> c:
+                    case ContainsConstraint<ParticipantStateless, WorkshopStateless> c:
                     {
                         fixAssignment(c.Owner.Id, c.Element.Id);
                         break;
                     }
-                    case ContainsConstraint<WorkshopAccessorStateless, ParticipantAccessorStateless> c:
+                    case ContainsConstraint<WorkshopStateless, ParticipantStateless> c:
                     {
                         fixAssignment(c.Element.Id, c.Owner.Id);
                         break;
                     }
-                    case ContainsNotConstraint<ParticipantAccessorStateless, WorkshopAccessorStateless> c:
+                    case ContainsNotConstraint<ParticipantStateless, WorkshopStateless> c:
                     {
                         preventAssignment(c.Owner.Id, c.Element.Id);
                         break;
                     }
-                    case ContainsNotConstraint<WorkshopAccessorStateless, ParticipantAccessorStateless> c:
+                    case ContainsNotConstraint<WorkshopStateless, ParticipantStateless> c:
                     {
                         preventAssignment(c.Element.Id, c.Owner.Id);
                         break;
                     }
+                    case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> _:
+                    {
+                        // This is handled elsewhere.
+                        break;
+                    }
                     default:
                     {
-                        throw new InvalidOperationException("This kind of constraint is not implemented.");
+                        throw new InvalidOperationException("This kind of constraint is not compatible with the min cost flow solver.");
                     }
                 }
             }
@@ -222,72 +199,66 @@ namespace WSolve
             return blockedEdges;
         }
 
-        private void DoShotgunHillClimbing(int tid, InputData inputData, CriticalSetAnalysis csAnalysis, StaticData sgd, IFitness fitness, ConcurrentSet<Scheduling> doneSchedulings, CancellationToken ctoken)
+        private void DoShotgunHillClimbing(int tid, InputData inputData, CriticalSetAnalysis csAnalysis, StaticData sgd, IFitness fitness, ConcurrentDictionary<Scheduling, Chromosome> doneSchedulings, CancellationToken ctoken)
         {
+            using Solver solver = Solver.CreateSolver("Solver", "CBC_MIXED_INTEGER_PROGRAMMING");
+            
             using IEnumerator<Scheduling> primalSolutions = new GreedySolver()
                 .SolveIndefinitelySchedulingOnly(inputData, csAnalysis, ctoken)
                 .GetEnumerator();
             
             while (primalSolutions.MoveNext() && !ctoken.IsCancellationRequested)
             {
-                if (doneSchedulings.Contains(primalSolutions.Current))
-                {
-                    continue;
-                }
+                _tries++;
 
-                doneSchedulings.Add(primalSolutions.Current);
-                
-                var next = HillClimbingIteration(inputData, primalSolutions.Current, csAnalysis, sgd, fitness);
+                Scheduling scheduling = primalSolutions.Current;
+                Chromosome? localBestSolution = null;
 
-                if (next == null)
-                {
-                    continue;
-                }
-
-                var f = fitness.Evaluate(next.Value);
-                if (f.CompareTo(_bestsFitness[tid]) < 0)
-                {
-                    _bests[tid] = next.Value;
-                    _bestsFitness[tid] = f;
-                }
-            }
-        }
-
-        private Chromosome? HillClimbingIteration(InputData inputData, Scheduling scheduling, CriticalSetAnalysis csAnaylsis, StaticData sgd, IFitness fitness)
-        {
-            Chromosome localBestSolution = SolveAssignment(inputData, scheduling, csAnaylsis, sgd);
-
-            if (!fitness.IsFeasible(localBestSolution))
-            {
-                return null;
-            }
-
-            var localBestFitness = fitness.Evaluate(localBestSolution);
+                var localBestFitness = (float.PositiveInfinity, float.PositiveInfinity);
             
-            while (true)
-            {
-                bool foundNeighbor = false;
-                foreach (var n in FeasibleNeighbors(inputData, scheduling).Take(NeighborSampleSize))
+                while (true)
                 {
-                    Chromosome c = SolveAssignment(inputData, scheduling, csAnaylsis, sgd);
-                    (float major, float minor) f = fitness.Evaluate(localBestSolution);
-
-                    if (f.CompareTo(localBestFitness) < 0)
+                    bool foundNeighbor = false;
+                    foreach (var n in 
+                        localBestSolution == null 
+                            ? new[] {scheduling} 
+                            : FeasibleNeighbors(inputData, scheduling)
+                                .Take(NeighborSampleSize))
                     {
-                        foundNeighbor = true;
-                        localBestSolution = c;
-                        localBestFitness = f;
-                        scheduling = n;
+                        if (ctoken.IsCancellationRequested)
+                        {
+                            return;
+                        }
+                        
+                        if (!doneSchedulings.TryGetValue(n, out var c))
+                        {
+                            c = SolveAssignment(inputData, solver, scheduling, csAnalysis, sgd);
+                            doneSchedulings.AddOrUpdate(n, c, (unused0, unused1) => c);
+                        }
+
+                        (float major, float minor) f = fitness.Evaluate(c);
+
+                        if (f.CompareTo(localBestFitness) < 0)
+                        {
+                            foundNeighbor = true;
+                            localBestSolution = c;
+                            localBestFitness = f;
+                            scheduling = n;
+                            
+                            if (f.CompareTo(_bestsFitness[tid]) < 0)
+                            {
+                                _bests[tid] = localBestSolution.Value;
+                                _bestsFitness[tid] = f;
+                            }
+                        }
+                    }
+
+                    if (!foundNeighbor)
+                    {
+                        break;
                     }
                 }
-
-                if (!foundNeighbor)
-                {
-                    break;
-                }
             }
-
-            return localBestSolution;
         }
 
         private IEnumerable<Scheduling> FeasibleNeighbors(InputData inputData, Scheduling scheduling)
@@ -313,36 +284,49 @@ namespace WSolve
             }
         }
 
-        private Chromosome SolveAssignment(InputData inputData, Scheduling scheduling, CriticalSetAnalysis csAnalysis, StaticData sgd)
+        private Chromosome SolveAssignment(InputData inputData, Solver solver, Scheduling scheduling, CriticalSetAnalysis csAnalysis, StaticData sgd)
         {
-            int prefLimit = csAnalysis.PreferenceBound;
+            int prefIdx = inputData.PreferenceLevels.FindIndex(x => x == csAnalysis.PreferenceBound);
+            int minIdx = prefIdx;
+            int maxIdx = inputData.PreferenceLevels.Count;
+            Solution bestSol = null;
             Solution sol;
 
             do
             {
-                sol = SolveAssignment(inputData, scheduling, sgd, prefLimit);
-                prefLimit = inputData.PreferenceLevels.SkipWhile(p => p <= prefLimit)
-                    .Concat(new[] {inputData.MaxPreference}).First();
-            } while (sol == null);
+                int prefLimit = inputData.PreferenceLevels[prefIdx];
+                sol = SolveAssignment(inputData, solver, scheduling, sgd, prefLimit);
+                if (sol == null)
+                {
+                    minIdx = prefIdx + 1;
+                }
+                else
+                {
+                    bestSol = sol;
+                    maxIdx = prefIdx - 1;
+                }
+
+                prefIdx = (maxIdx + minIdx) / 2;
+            } while (maxIdx > minIdx);
             
-            return Chromosome.FromSolution(inputData, sol);
+            return Chromosome.FromSolution(inputData, bestSol);
         }
         
-        private Solution SolveAssignment(InputData inputData, Scheduling scheduling, StaticData sgd, int preferenceLimit)
+        private Solution SolveAssignment(InputData inputData, Solver solver, Scheduling scheduling, StaticData sgd, int preferenceLimit)
         {
-            Dictionary<int, int> supply = new Dictionary<int, int>();
+            var flow = sgd.BaseFlow.Fork();
             
             for (int p = 0; p < inputData.ParticipantCount; p++)
             {
                 for (int s = 0; s < inputData.SlotCount; s++)
                 {
-                    supply[sgd.ParticipantNodes[(p, s)]] = 1;
+                    flow.AddSupply(flow.Nodes[(p, s)], 1);
                 }
             }
 
             for (int w = 0; w < inputData.WorkshopCount; w++)
             {
-                supply[sgd.WorkshopNodes[w]] = -inputData.Workshops[w].min;
+                flow.AddSupply(flow.Nodes[(WORKSHOP, w)], -inputData.Workshops[w].min);
             }
 
             for (int s = 0; s < inputData.SlotCount; s++)
@@ -353,7 +337,7 @@ namespace WSolve
                     .Where(x => x.slot == s)
                     .Sum(x => inputData.Workshops[x.workshop].min);
                 
-                supply[sgd.SlotNodes[s]] = -(inputData.ParticipantCount - coveredParticipants);
+                flow.AddSupply(flow.Nodes[(SLOT, s)], -(inputData.ParticipantCount - coveredParticipants));
             }
             
             // Then, generate all edges
@@ -372,8 +356,8 @@ namespace WSolve
                         
                         checked
                         {
-                            int start = sgd.ParticipantNodes[(p, s)];
-                            int end = sgd.WorkshopNodes[w];
+                            int start = flow.Nodes[(p, s)];
+                            int end = flow.Nodes[(WORKSHOP, w)];
                             long cost = (long) Math.Pow(inputData.Participants[p].preferences[w] + 1,
                                 Options.PreferenceExponent);
                             
@@ -389,8 +373,8 @@ namespace WSolve
                 {
                     if(scheduling[w] != s) continue;
 
-                    int start = sgd.WorkshopNodes[w];
-                    int end = sgd.SlotNodes[s];
+                    int start = flow.Nodes[(WORKSHOP, w)];
+                    int end = flow.Nodes[(SLOT, s)];
                     int cap = inputData.Workshops[w].max - inputData.Workshops[w].min;
 
                     edges.Add((start, end, cap, 0));
@@ -399,8 +383,7 @@ namespace WSolve
             
             // Remove all blocked edges
             //
-            var blockedEdges = GetBlockedConductorEdges(inputData, scheduling, sgd);
-            blockedEdges.UnionWith(GetBlockedConstraintEdges(inputData, scheduling, sgd));
+            var blockedEdges = GetBlockedConstraintEdges(inputData, scheduling, sgd);
             blockedEdges.UnionWith(sgd.BlockedEdges);
             
             foreach (var edge in edges.ToList())
@@ -410,27 +393,46 @@ namespace WSolve
                     edges.Remove(edge);
                 }
             }
-
-            // Create a MinCostFlow instance out of the nodes and edges ...
-            //
-            MinCostFlow minCostFlow = new MinCostFlow();
-            Dictionary<(int start, int end), int> arcMap = new Dictionary<(int start, int end), int>();
-
+            
             foreach (var edge in edges)
             {
-                int arc = minCostFlow.AddArcWithCapacityAndUnitCost(edge.start, edge.end, edge.cap, edge.cost);
-                arcMap.Add((edge.start, edge.end), arc);
-            }
-
-            foreach (var kvp in supply)
-            {
-                minCostFlow.SetNodeSupply(kvp.Key, kvp.Value);
+                flow.AddEdge((edge.start, edge.end), edge.start, edge.end, edge.cap, edge.cost);
             }
             
+            // Create edge groups
+            //
+            foreach (var group in Constraint.GetDependentWorkshops(inputData.AssignmentConstraints, inputData)
+                .Where(g => g.Length > 1))
+            {
+                for (int p = 0; p < inputData.ParticipantCount; p++)
+                {
+                    List<(int, int)> edgeGroup = new List<(int, int)>();
+                    foreach (var w in group)
+                    {
+                        int s = scheduling[w];
+
+                        int from = flow.Nodes[(p, s)];
+                        int to = flow.Nodes[(WORKSHOP, w)];
+
+                        edgeGroup.Add((from, to));
+                    }
+
+                    flow.CreateEdgeGroupConditional(edgeGroup);
+                }
+            }
+
             // ... and solve this instance.
             //
-            var solverStatus = minCostFlow.Solve();
-            if (solverStatus != MinCostFlowBase.Status.OPTIMAL)
+            Stopwatch sw = Stopwatch.StartNew();
+            var solverStatus = flow.Solve(solver);
+            sw.Stop();
+
+            lock (_solveTime)
+            {
+                _solveTime.Add(sw.Elapsed);
+            }
+            
+            if (!solverStatus)
             {
                 return null;
             }
@@ -444,18 +446,17 @@ namespace WSolve
                 {
                     for (int w = 0; w < inputData.WorkshopCount; w++)
                     {
-                        if (!arcMap.TryGetValue((sgd.ParticipantNodes[(p, s)], sgd.WorkshopNodes[w]), out int arc))
-                        {
-                            continue;
-                        }
-                        if (minCostFlow.Flow(arc) == 1)
+                        int from = flow.Nodes[(p, s)];
+                        int to = flow.Nodes[(WORKSHOP, w)];
+                        
+                        if (flow.Edges.ContainsKey((from, to)) && flow.SolutionValue((from, to)) == 1)
                         {
                             assignment.Add((p, w));
                         }
                     }
                 }
             }
-            
+
             return new Solution(inputData, scheduling, assignment);
         }
     }

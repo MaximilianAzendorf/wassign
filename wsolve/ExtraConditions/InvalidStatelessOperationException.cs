@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 
-namespace WSolve.ExtraConditions.StatelessAccess
+namespace WSolve.ExtraConditions
 {
     public class InvalidStatelessOperationException : InvalidOperationException
     {

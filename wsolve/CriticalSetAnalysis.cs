@@ -20,15 +20,17 @@ namespace WSolve
             {
                 Analyze();
             }
+            
+            PreferenceBound = _sets.Any()
+                ? InputData.PreferenceLevels.Where(p => ForPreference(p).First().Size >= InputData.Slots.Count).Min()
+                : InputData.MaxPreference;
         }
 
         public InputData InputData { get; }
 
         public IEnumerable<CriticalSet> AllSets => _sets.AsEnumerable();
 
-        public int PreferenceBound => _sets.Any()
-            ? InputData.PreferenceLevels.Where(p => ForPreference(p).First().Size >= InputData.Slots.Count).Min()
-            : InputData.MaxPreference;
+        public int PreferenceBound { get; }
 
         public static CriticalSetAnalysis Empty(InputData inputData)
         {

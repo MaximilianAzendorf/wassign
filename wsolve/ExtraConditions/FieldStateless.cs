@@ -1,10 +1,11 @@
 using System;
-using WSolve.ExtraConditions.StatelessAccess.Constraints;
+using WSolve.ExtraConditions.Constraints;
+
 // ReSharper disable PossibleNullReferenceException
 
-namespace WSolve.ExtraConditions.StatelessAccess
+namespace WSolve.ExtraConditions
 {
-    public class FieldStateless<TOwner, TFieldType> : StatelessAccess<TOwner>
+    public class FieldStateless<TOwner, TFieldType> : StatelessAccessor<TOwner>
     {
         public FieldStateless(TOwner owner) : base(owner) { }
 
