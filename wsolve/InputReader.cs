@@ -80,11 +80,6 @@ namespace WSolve
                 wsidx++;
             }
 
-            if (Options.Seed != null)
-            {
-                inputData.Shuffle(Options.Seed.Value);
-            }
-
             return inputData.ToImmutableInputData();
         }
 

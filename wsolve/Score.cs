@@ -6,9 +6,9 @@ using WSolve.ExtraConditions.Constraints;
 
 namespace WSolve
 {
-    public class GaSolverFitness : IFitness
+    public class Score : IScore
     {
-        public GaSolverFitness(InputData inputData)
+        public Score(InputData inputData)
         {
             InputData = inputData;
             Scaling = (float) Math.Pow(InputData.MaxPreference, Options.PreferenceExponent);
@@ -18,35 +18,35 @@ namespace WSolve
 
         public InputData InputData { get; }
 
-        private bool SatisfiesConstraints(Chromosome chromosome)
+        private bool SatisfiesConstraints(Candidate candidate)
         {
-            foreach (var constraint in chromosome.InputData.SchedulingConstraints)
+            foreach (var constraint in candidate.InputData.SchedulingConstraints)
             {
                 switch (constraint)
                 {
                     case SetValueConstraint<WorkshopStateless, SlotStateless> c:
                     {
-                        if(chromosome.Slot(c.Owner.Id) != c.Value.Id) return false;
+                        if(candidate.Slot(c.Owner.Id) != c.Value.Id) return false;
                         break;
                     }
                     case ForbidValueConstraint<WorkshopStateless, SlotStateless> c:
                     {
-                        if(chromosome.Slot(c.Owner.Id) == c.Value.Id) return false;
+                        if(candidate.Slot(c.Owner.Id) == c.Value.Id) return false;
                         break;
                     }
                     case EqualsConstraint<WorkshopStateless, SlotStateless> c:
                     {
-                        if(chromosome.Slot(c.Left.Id) != chromosome.Slot(c.Right.Id)) return false;
+                        if(candidate.Slot(c.Left.Id) != candidate.Slot(c.Right.Id)) return false;
                         break;
                     }
                     case EqualsNotConstraint<WorkshopStateless, SlotStateless> c:
                     {
-                        if(chromosome.Slot(c.Left.Id) == chromosome.Slot(c.Right.Id)) return false;
+                        if(candidate.Slot(c.Left.Id) == candidate.Slot(c.Right.Id)) return false;
                         break;
                     }
                     case SlotOffsetConstraint c:
                     {
-                        if (chromosome.Slot(c.Second.Id) - chromosome.Slot(c.First.Id) != c.Offset) return false;
+                        if (candidate.Slot(c.Second.Id) - candidate.Slot(c.First.Id) != c.Offset) return false;
                         break;
                     }
                     default:
@@ -56,13 +56,13 @@ namespace WSolve
                 }
             }
 
-            foreach (var constraint in chromosome.InputData.AssignmentConstraints)
+            foreach (var constraint in candidate.InputData.AssignmentConstraints)
             {
                 switch (constraint)
                 {
                     case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> c:
                     {
-                        if (!chromosome.Participants(c.Left.Id).SequenceEqual(chromosome.Participants(c.Right.Id)))
+                        if (!candidate.Participants(c.Left.Id).SequenceEqual(candidate.Participants(c.Right.Id)))
                         {
                             return false;
                         }
@@ -70,7 +70,7 @@ namespace WSolve
                     }
                     case ContainsConstraint<ParticipantStateless, WorkshopStateless> c:
                     {
-                        if (!chromosome.Workshops(c.Owner.Id).Contains(c.Element.Id))
+                        if (!candidate.Workshops(c.Owner.Id).Contains(c.Element.Id))
                         {
                             return false;
                         }
@@ -78,7 +78,7 @@ namespace WSolve
                     }
                     case ContainsNotConstraint<ParticipantStateless, WorkshopStateless> c:
                     {
-                        if (chromosome.Workshops(c.Owner.Id).Contains(c.Element.Id))
+                        if (candidate.Workshops(c.Owner.Id).Contains(c.Element.Id))
                         {
                             return false;
                         }
@@ -86,7 +86,7 @@ namespace WSolve
                     }
                     case SequenceEqualsConstraint<ParticipantStateless, WorkshopStateless> c:
                     {
-                        if (!chromosome.Workshops(c.Left.Id).SequenceEqual(chromosome.Workshops(c.Right.Id)))
+                        if (!candidate.Workshops(c.Left.Id).SequenceEqual(candidate.Workshops(c.Right.Id)))
                         {
                             return false;
                         }
@@ -98,26 +98,26 @@ namespace WSolve
             return true;
         }
         
-        public bool IsFeasible(Chromosome chromosome)
+        public bool IsFeasible(Candidate candidate)
         {
             var partCounts = new int[InputData.Workshops.Count];
             var isInSlot = new bool[InputData.Participants.Count, InputData.Slots.Count];
             var slots = new int[InputData.Workshops.Count];
 
-            if (!SatisfiesConstraints(chromosome))
+            if (!SatisfiesConstraints(candidate))
             {
                 return false;
             }
 
             for (int i = 0; i < InputData.WorkshopCount; i++)
             {
-                slots[i] = chromosome.Slot(i);
+                slots[i] = candidate.Slot(i);
             }
 
             for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
                 int p = i / InputData.Slots.Count;
-                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                int ws = candidate.Workshop(p, i % InputData.Slots.Count);
                 if (isInSlot[p, slots[ws]])
                 {
                     return false;
@@ -140,23 +140,18 @@ namespace WSolve
                 }
             }
 
-            if (!InputData.Filter(chromosome))
-            {
-                return false;
-            }
-
             return true;
         }
 
-        public (float major, float minor) Evaluate(Chromosome chromosome)
+        public (float major, float minor) Evaluate(Candidate candidate)
         {
-            if (chromosome == Chromosome.Null)
+            if (candidate == Candidate.Null)
             {
                 return (float.PositiveInfinity, float.PositiveInfinity);
             }
 
-            float major = EvaluateMajor(chromosome);
-            float minor = EvaluateMinor(chromosome);
+            float major = EvaluateMajor(candidate);
+            float minor = EvaluateMinor(candidate);
 
             if (!float.IsFinite(major) || !float.IsFinite(minor))
             {
@@ -166,22 +161,22 @@ namespace WSolve
             return (major, minor);
         }
 
-        public int EvaluateMajor(Chromosome chromosome)
+        public int EvaluateMajor(Candidate candidate)
         {
             int m = 0;
             for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
                 int p = i / InputData.Slots.Count;
-                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                int ws = candidate.Workshop(p, i % InputData.Slots.Count);
                 m = Math.Max(m, InputData.Participants[p].preferences[ws]);
             }
 
             return m;
         }
 
-        public float EvaluateMinor(Chromosome chromosome)
+        public float EvaluateMinor(Candidate candidate)
         {
-            if (!IsFeasible(chromosome))
+            if (!IsFeasible(candidate))
             {
                 return float.PositiveInfinity;
             }
@@ -192,7 +187,7 @@ namespace WSolve
             for (int i = 0; i < InputData.Participants.Count * InputData.Slots.Count; i++)
             {
                 int p = i / InputData.Slots.Count;
-                int ws = chromosome.Workshop(p, i % InputData.Slots.Count);
+                int ws = candidate.Workshop(p, i % InputData.Slots.Count);
                 prefCount[InputData.Participants[p].preferences[ws]]++;
             }
 

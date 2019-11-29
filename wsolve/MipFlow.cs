@@ -117,47 +117,55 @@ namespace WSolve
         public int SolutionValue(TEdgeKey key) => _solution?[_edgeMap[key]] 
             ?? throw new InvalidOperationException("The MIP flow instance is not solved.");
 
+        private static readonly object _syncroot = new object();
+        
         public bool Solve(Solver solver)
         {
             solver.Clear();
-            
-            LinearExpr nullExpr = solver.MakeNumVar(0, 0, "_dummy");
-            LinearExpr minTerm = 0 * nullExpr;
-            
-            Variable[] edgeVariables = new Variable[EdgeCount]; 
-            
-            for (int i = 0; i < EdgeCount; i++)
+            Variable[] edgeVariables;
+            LinearExpr minTerm;
+
+            lock (_syncroot)
             {
-                edgeVariables[i] = solver.MakeNumVar(0, _edges[i].max, "v" + i);
+                LinearExpr nullExpr = solver.MakeNumVar(0, 0, "_dummy");
+                minTerm = 0 * nullExpr;
 
-                minTerm += _edges[i].cost * edgeVariables[i];
-            }
+                edgeVariables = new Variable[EdgeCount];
 
-            for (int i = 0; i < _edgeGroups.Count; i++)
-            {
-                Variable switchVar = solver.MakeBoolVar("s" + i);
-
-                foreach (var e in _edgeGroups[i])
+                for (int i = 0; i < EdgeCount; i++)
                 {
-                    Debug.Assert(_edges[e].max == 1);
-                    solver.Add(edgeVariables[e] - switchVar == 0);
+                    edgeVariables[i] = solver.MakeNumVar(0, _edges[i].max, "v" + i);
+
+                    minTerm += _edges[i].cost * edgeVariables[i];
                 }
+
+                for (int i = 0; i < _edgeGroups.Count; i++)
+                {
+                    Variable switchVar = solver.MakeBoolVar("s" + i);
+
+                    foreach (var e in _edgeGroups[i])
+                    {
+                        Debug.Assert(_edges[e].max == 1);
+                        solver.Add(edgeVariables[e] - switchVar == 0);
+                    }
+                }
+
+                foreach (int edge in _blockedEdges)
+                {
+                    solver.Add(edgeVariables[edge] == 0);
+                }
+
+                for (int i = 0; i < NodeCount; i++)
+                {
+                    LinearExpr sum = nullExpr;
+                    sum = _incoming[i].Aggregate(sum, (current, e) => current + edgeVariables[e]);
+                    sum = _outgoing[i].Aggregate(sum, (current, e) => current - edgeVariables[e]);
+
+                    solver.Add(sum == -_supply[i]);
+                }
+
             }
-
-            foreach (int edge in _blockedEdges)
-            {
-                solver.Add(edgeVariables[edge] == 0);
-            }
-
-            for (int i = 0; i < NodeCount; i++)
-            {
-                LinearExpr sum = nullExpr;
-                sum = _incoming[i].Aggregate(sum, (current, e) => current + edgeVariables[e]);
-                sum = _outgoing[i].Aggregate(sum, (current, e) => current - edgeVariables[e]);
-
-                solver.Add(sum == -_supply[i]);
-            }
-
+            
             solver.Minimize(minTerm);
 
             bool success = solver.Solve() == Solver.ResultStatus.OPTIMAL;
@@ -167,7 +175,7 @@ namespace WSolve
                 _solution = edgeVariables.Select(v => (int) v.SolutionValue()).ToArray();
                 Debug.Assert(edgeVariables.All(v => v.SolutionValue() == (int) v.SolutionValue()));
             }
-
+            
             return success;
         }
 

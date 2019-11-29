@@ -45,14 +45,35 @@ namespace WSolve.ExtraConditions
             _staticConstraints.Add(constraint);
         }
 
-        protected void AddConstraint(IEnumerable<Constraint> constraints)
+        protected void AddConstraint(string constraintString, params object[] constraints)
         {
-            _staticConstraints.AddRange(constraints);
-        }
-
-        protected void AddConstraint(params Constraint[] constraints)
-        {
-            _staticConstraints.AddRange(constraints);
+            try
+            {
+                foreach (var obj in constraints)
+                {
+                    switch (obj)
+                    {
+                        case IEnumerable<Constraint> c:
+                        {
+                            _staticConstraints.AddRange(c);
+                            break;
+                        }
+                        case Constraint c:
+                        {
+                            _staticConstraints.Add(c);
+                            break;
+                        }
+                        default:
+                        {
+                            throw new ArgumentException($"Expression is of type {obj.GetType()} and can't be handled.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Status.Error($"Error in constraint \"{constraintString}\": {ex.Message}");
+            }
         }
 
         public ParticipantStateless Participant(string nameFragment)

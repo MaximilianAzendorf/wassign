@@ -8,40 +8,23 @@ using WSolve.ExtraConditions.Constraints;
 
 namespace WSolve
 {
-    public class GreedySolver : ISolver
+    public static class SchedulingSolver
     {
-        private static readonly Random SeedSource = new Random(125);
+        private static readonly Random SeedSource = new Random();
         private const int PREF_RELAXATION = 10;
         
-        public Solution Solve(InputData inputData)
+        public static Scheduling Solve(InputData inputData)
         {
-            return SolveIndefinitely(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None, false).First();
+            return SolveIndefinitely(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None).FirstOrDefault();
         }
 
-        public Scheduling SolveSchedulingOnly(InputData inputData)
-        {
-            return SolveIndefinitelySchedulingOnly(inputData, CriticalSetAnalysis.Empty(inputData), CancellationToken.None).First();
-        }
-
-        public IEnumerable<Solution> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis,
+        public static IEnumerable<Scheduling> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis,
             CancellationToken ctoken)
-        {
-            return SolveIndefinitely(inputData, csAnalysis, ctoken, false);
-        }
-        
-        public IEnumerable<Scheduling> SolveIndefinitelySchedulingOnly(InputData inputData, CriticalSetAnalysis csAnalysis,
-            CancellationToken ctoken)
-        {
-            return SolveIndefinitely(inputData, csAnalysis, ctoken, true).Select(s => new Scheduling(inputData, s.Scheduling));
-        }
-
-        private IEnumerable<Solution> SolveIndefinitely(InputData inputData, CriticalSetAnalysis csAnalysis,
-            CancellationToken ctoken, bool schedulingOnly)
         {
             Random rootRnd;
             lock (SeedSource)
             {
-                rootRnd = new Random(Options.Seed ?? SeedSource.Next());
+                rootRnd = new Random(SeedSource.Next());
             }
 
             while (!ctoken.IsCancellationRequested)
@@ -95,172 +78,13 @@ namespace WSolve
                     outputScheduling.Add((i, scheduling[i]));
                 }
 
-                if (schedulingOnly)
-                {
-                    yield return new Solution(inputData, outputScheduling, null);
-                }
-                else
-                {
-                    var assignment = SolveAssignment(inputData, scheduling, ctoken, rootRnd.Next());
-
-                    // This scheduling seems to have no solution
-                    if (assignment == null)
-                    {
-                        continue;
-                    }
-                    
-                    var outputAssignment = new List<(int participant, int workshop)>();
-
-                    for (int p = 0; p < inputData.Participants.Count; p++)
-                    {
-                        for (int s = 0; s < inputData.Slots.Count; s++)
-                        {
-                            outputAssignment.Add((p, assignment[p][s]));
-                        }
-                    }
-
-                    yield return new Solution(inputData, outputScheduling, outputAssignment);
-                }
+                yield return new Scheduling(inputData, outputScheduling);
             }
         }
 
-        private Dictionary<int, int[]> SolveAssignment(InputData inputData, int[] scheduling, CancellationToken ctoken, int seed)
-        {
-            Dictionary<int, int[]> solution = Enumerable.Range(0, inputData.ParticipantCount)
-                .ToDictionary(p => p, _ => new int[inputData.SlotCount]);
-
-            foreach (var array in solution.Values)
-            {
-                Array.Fill(array, -1);
-            }
-
-            if (!SolveAssignmentForSlot(inputData, scheduling, 0, ctoken, solution, seed))
-            {
-                return null;
-            }
-
-            return solution;
-        }
         
-        private bool SolveAssignmentForSlot(InputData inputData, int[] scheduling, int slot, CancellationToken ctoken, Dictionary<int, int[]> fullDecisions, int seed)
-        {
-            float backtrackChance = (float)Math.Min(0.999f, Math.Pow(2, -2f / inputData.ParticipantCount));
-            
-            var rnd = new Random(seed);
-            
-            Dictionary<int, int> decisions = new Dictionary<int, int>();
-            Stack<List<int>> backtracking = new Stack<List<int>>();
-            int[] partCount = new int[inputData.WorkshopCount];
-
-            int[] participantScramble = Enumerable.Range(0, inputData.ParticipantCount)
-                .OrderBy(x => -inputData.GetAssignmentConstraintsForParticipant(x).Count())
-                .ThenBy(x => rnd.Next())
-                .ToArray();
-
-            int[] workshops = Enumerable.Range(0, inputData.WorkshopCount).Where(w => scheduling[w] == slot).ToArray();
-            
-            for (int depth = 0; depth <= participantScramble.Length;)
-            {
-                int participant = depth < participantScramble.Length ? participantScramble[depth] : -1;
-                
-                if (depth < participantScramble.Length)
-                {
-                    if (ctoken.IsCancellationRequested)
-                    {
-                        return false;
-                    }
-
-                    if (backtracking.Count <= depth)
-                    {
-                        List<int> feasibleWorkshops = new List<int>();
-                        Dictionary<int, int> deficits = new Dictionary<int, int>();
-
-                        foreach (var workshop in workshops.OrderBy(_ => RNG.NextInt()))
-                        {
-                            if (partCount[workshop] >= inputData.Workshops[workshop].max)
-                            {
-                                continue;
-                            }
-
-                            int deficit = inputData.Workshops[workshop].min - partCount[workshop];
-
-                            if (deficit > 0)
-                            {
-                                deficits.Add(workshop, deficit);
-                            }
-
-                            feasibleWorkshops.Add(workshop);
-                        }
-
-                        if (deficits.Values.Sum() == (inputData.ParticipantCount - depth))
-                        {
-                            feasibleWorkshops = feasibleWorkshops.Intersect(deficits.Keys).ToList();
-                        }
-
-                        feasibleWorkshops.RemoveAll(w =>
-                            !SatisfiesAssignmentConstraints(participant, w, slot, scheduling, fullDecisions,
-                                inputData));
-
-                        backtracking.Push(feasibleWorkshops);
-                    }
-                }
-                else
-                {
-                    if (slot == inputData.SlotCount - 1)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        if (SolveAssignmentForSlot(inputData, scheduling, slot + 1, ctoken, fullDecisions,
-                            rnd.Next()))
-                        {
-                            return true;
-                        }
-                        else
-                        {
-                            backtracking.Push(new List<int>());
-                        }
-                    }
-                }
-
-                if (!backtracking.Peek().Any())
-                {
-                    // we go multiple levels up so we can find a solution faster.
-                    //
-                    while (RNG.NextFloat() < backtrackChance)
-                    {
-                        // no solution
-                        //
-                        if (depth == 0)
-                        {
-                            return false;
-                        }
-
-                        backtracking.Pop();
-                        int ws = fullDecisions[participantScramble[depth - 1]][slot];
-                        fullDecisions[participantScramble[depth - 1]][slot] = -1;
-                        decisions.Remove(participantScramble[depth - 1]);
-                        partCount[ws]--;
-                        depth--; // backtrack
-                    }
-
-                    continue;
-                }
-
-                int nextWorkshop = backtracking.Peek().First();
-                backtracking.Peek().Remove(nextWorkshop);
-                decisions.Add(participant, nextWorkshop);
-                fullDecisions[participant][slot] = nextWorkshop;
-                partCount[nextWorkshop]++;
-                depth++;
-            }
-            
-            return true;
-        }
-
-        private int[][] SolveScheduling(InputData inputData, CriticalSet[] criticalSets, DateTime timeLimit, int seed,
-            CancellationToken ctoken)
+        private static int[][] SolveScheduling(InputData inputData, CriticalSet[] criticalSets, DateTime timeLimit, 
+            int seed, CancellationToken ctoken)
         {
             DateTime startTime = DateTime.Now;
             var rnd = new Random(seed);
@@ -421,7 +245,8 @@ namespace WSolve
             return slots.Select(x => x.ToArray()).ToArray();
         }
         
-        private bool SatisfiesSchedulingConstraints(int workshop, int slot, Dictionary<int, int> decisions, InputData inputData)
+        private static bool SatisfiesSchedulingConstraints(int workshop, int slot, Dictionary<int, int> decisions, 
+            InputData inputData)
         {
             foreach (var constraint in inputData.GetSchedulingConstraintsForWorkshop(workshop))
             {
@@ -471,107 +296,13 @@ namespace WSolve
             return true;
         }
 
-        private bool SatisfiesAssignmentConstraints(int participant, int workshop, int slot, int[] scheduling, Dictionary<int, int[]> fullDecisions, InputData inputData)
-        {
-            // There can be a situation where a participant is assigned to a dependent workshop (e.g. W1, which is
-            // dependent on W2), but in the slot of W2 there is already a workshop of which the participant is a
-            // conductor of. To prevent this from happening (because then we have to backtrack really far), we track
-            // all slots in which the participant has a fixed workshop and do not allow collisions.
-            //
-            int[] fixedWorkshop = new int[inputData.SlotCount];
-            Array.Fill(fixedWorkshop, -1);
-            
-            foreach (var constraint in inputData.GetAssignmentConstraintsForParticipant(participant))
-            {
-                switch (constraint)
-                {
-                    case SequenceEqualsConstraint<WorkshopStateless, ParticipantStateless> c:
-                    {
-                        if (scheduling[c.Left.Id] != slot && scheduling[c.Right.Id] != slot)
-                        {
-                            // This decision is not affected by this constraint.
-                            //
-                            break;
-                        }
-                        
-                        int thisSlot = scheduling[c.Left.Id] == slot ? c.Left.Id : c.Right.Id;
-                        int otherSlot = c.Left.Id == thisSlot ? c.Right.Id : c.Left.Id;
-
-                        if (c.Left.Id != workshop && c.Right.Id != workshop &&
-                            !fullDecisions[participant].Contains(otherSlot))
-                        {
-                            // This decision is not affected by this constraint.
-                            //
-                            break;
-                        }
-                        
-                        if (scheduling[otherSlot] <= slot)
-                        {
-                            bool committed = fullDecisions[participant].Contains(otherSlot);
-
-                            if (committed && workshop != thisSlot || !committed && workshop == thisSlot)
-                            {
-                                return false;
-                            }
-                        }
-                        else
-                        {
-                            if (fixedWorkshop[scheduling[otherSlot]] != otherSlot && fixedWorkshop[scheduling[otherSlot]] != -1)
-                            {
-                                return false;
-                            }
-                            fixedWorkshop[scheduling[otherSlot]] = otherSlot;
-                        }
-
-                        break;
-                    }
-                    case ContainsConstraint<ParticipantStateless, WorkshopStateless> c:
-                    {
-                        if (scheduling[c.Element.Id] == slot && c.Element.Id != workshop)
-                        {
-                            return false;
-                        }
-
-                        if (fixedWorkshop[scheduling[c.Element.Id]] != c.Element.Id && fixedWorkshop[scheduling[c.Element.Id]] != -1)
-                        {
-                            return false;
-                        }
-                        
-                        fixedWorkshop[scheduling[c.Element.Id]] = c.Element.Id;
-                        break;
-                    }
-                    case ContainsNotConstraint<ParticipantStateless, WorkshopStateless> c:
-                    {
-                        if (c.Element.Id == workshop)
-                        {
-                            return false;
-                        }
-                        break;
-                    }
-                    case SequenceEqualsConstraint<ParticipantStateless, WorkshopStateless> c:
-                    {
-                        HashSet<int> distinctWorkshops = new HashSet<int>(
-                            fullDecisions[c.Left.Id].Concat(fullDecisions[c.Right.Id]));
-                        distinctWorkshops.Add(workshop);
-
-                        if (distinctWorkshops.Count > inputData.SlotCount)
-                        {
-                            return false;
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            return true;
-        }
-
-        private bool SatisfiesCriticalSets(InputData inputData, Dictionary<int, int> decisions,
+        private static bool SatisfiesCriticalSets(InputData inputData, Dictionary<int, int> decisions,
             IEnumerable<CriticalSet> criticalSets)
         {
+            var coveredSlots = new HashSet<int>();
             foreach (CriticalSet set in criticalSets)
             {
-                var coveredSlots = new HashSet<int>();
+                coveredSlots.Clear();
                 int missing = 0;
 
                 foreach (int element in set)

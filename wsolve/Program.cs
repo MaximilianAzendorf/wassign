@@ -88,9 +88,17 @@ namespace WSolve
                 ISolver solver = Options.Solver;
 
                 Solution output = solver.Solve(input);
-                output.Verify();
 
-                OutputWriter.WriteSolution(output);
+                if (output == null)
+                {
+                    Status.Warning("No solution found.");
+                }
+                else
+                {
+                    output.Verify();
+                    Status.Info($"Solution score: " + new Score(input).Evaluate(Candidate.FromSolution(input, output)));
+                    OutputWriter.WriteSolution(output);
+                }
             }
             catch (WSolveException ex)
             {

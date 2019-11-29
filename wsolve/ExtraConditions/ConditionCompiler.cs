@@ -18,23 +18,13 @@ namespace WSolve.ExtraConditions
     {
         private static readonly string CodeEnvPlaceholder = "##C";
         private static readonly string CodeEnvExtraPlaceholder = "##E";
-
-        private static readonly string CodeEnvStatelessPostfix =
-            nameof(WorkshopStateless).Substring(nameof(Workshop).Length);
         
         private static readonly string ConstraintCodeEnvClassName = "WSolve.Generated.CustomConstraints";
-        private static readonly string FilterCodeEnvClassName = "WSolve.Generated.CustomFilter";
         
         private static readonly int ConstraintCodeEnvLineOffset;
-        private static readonly int FilterCodeEnvLineOffset;
-
         private static readonly string ConstraintCodeEnvironment;
-        private static readonly string FilterCodeEnvironment;
-
         private static readonly string ConstraintCodeEnvResName =
             "WSolve.Resources.ConstraintCodeEnvironment.txt";
-        private static readonly string FilterCodeEnvResName =
-            "WSolve.Resources.FilterCodeEnvironment.txt";
 
         static (string content, int lineOffset) LoadCodeEnvironment(string resourceName)
         {
@@ -52,7 +42,6 @@ namespace WSolve.ExtraConditions
         static ConditionCompiler()
         {
             (ConstraintCodeEnvironment, ConstraintCodeEnvLineOffset) = LoadCodeEnvironment(ConstraintCodeEnvResName);
-            (FilterCodeEnvironment, FilterCodeEnvLineOffset) = LoadCodeEnvironment(FilterCodeEnvResName);
         }
 
         private static string GenerateExtraDefinitions(MutableInputData data)
@@ -139,25 +128,12 @@ namespace WSolve.ExtraConditions
                 return Enumerable.Empty<Constraint>();
             }
             
-            string code = string.Join('\n', inputData.Constraints.Select(c => $"AddConstraint({c});"));
+            string code = string.Join('\n', inputData.Constraints.Select(c => $"AddConstraint(@\"{c.Replace("\"", "\"\"")}\", {c});"));
             
             CustomConstraintsBase constraints = CompileObject<CustomConstraintsBase>(code, inputData,
                 ConstraintCodeEnvironment, ConstraintCodeEnvLineOffset, ConstraintCodeEnvClassName);
 
             return constraints.GetStaticConstraints();
-        }
-
-        public static Func<Chromosome, bool> CompileFilter(this MutableInputData inputData)
-        {
-            if (string.IsNullOrEmpty(inputData.Filter))
-            {
-                return _ => true;
-            }
-
-            CustomFilterBase filter = CompileObject<CustomFilterBase>(inputData.Filter, inputData,
-                FilterCodeEnvironment, FilterCodeEnvLineOffset, FilterCodeEnvClassName);
-
-            return filter.GetFilterResult;
         }
         
         public static T CompileObject<T>(string conditionCode, MutableInputData inputData, string codeEnvironment, int lineOffset, string className)

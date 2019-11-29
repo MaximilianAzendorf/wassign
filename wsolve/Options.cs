@@ -33,10 +33,8 @@ namespace WSolve
         
         public static int Verbosity { get; private set; } = 3;
 
-        public static int? Seed { get; private set; }
-
-        private static readonly List<string> _inputFiles = new List<string>();
-        public static IReadOnlyList<string> InputFiles => _inputFiles.ToImmutableList();
+        private static readonly List<string> InputFilesList = new List<string>();
+        public static IReadOnlyList<string> InputFiles => InputFilesList.ToImmutableList();
 
         public static string OutputFile { get; private set; }
 
@@ -46,21 +44,9 @@ namespace WSolve
 
         public static int TimeoutSeconds { get; private set; } = 60 * 5;
 
-        public static int PreferencePumpTimeoutSeconds { get; private set; } = 10;
-
         public static int CriticalSetTimeoutSeconds { get; private set; } = 1;
 
         public static int CriticalSetProbingRetries { get; } = 120;
-
-        public static int PreferencePumpMaxDepth { get; private set; } = -1;
-
-        public static double FinalPhaseStart { get; private set; } = 0.8;
-
-        public static bool NoGeneticOptimizations { get; private set; }
-
-        public static bool NoLocalOptimizations { get; private set; }
-
-        public static bool NoPrefPump { get; private set; }
 
         public static bool NoCriticalSets { get; private set; }
 
@@ -68,23 +54,14 @@ namespace WSolve
 
         public static bool RankedPreferences { get; private set; }
         
-        public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.5, 0.3, 1.0);
-
-        public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.75, 0.5, 1.0);
-
-        public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 30, 1.8);
-
-        public static ISelection Selection { get; private set; } = new TournamentSelection(1.65f);
-
-        public static int BucketSize { get; private set; } = 5000;
-
         public static double PreferenceExponent { get; private set; } = 3;
+        public static bool Any { get; private set; }
 
         private static OptionSet OptionSet { get; } = new OptionSet
         {
             {
                 "i|input=", "Specifies an input file.",
-                i => _inputFiles.Add(i)
+                i => InputFilesList.Add(i)
             },
 
             {
@@ -98,11 +75,6 @@ namespace WSolve
             },
 
             {
-                "shuffle=", "Shuffles the input with the given set to avoid bias based on input order.",
-                x => Seed = ParseSeed(x)
-            },
-
-            {
                 "v|verbosity=",
                 "A number between 0 and 3 (default 3) indicating how much status information should be given.",
                 (int v) => Verbosity = v
@@ -110,8 +82,14 @@ namespace WSolve
 
             {
                 "s|solver=",
-                $"Selects the solving strategy, possible values are 'genetic' (for genetic optimization) and 'mcf' (for min cost flow analysis with hill climbing). Default is {MinCostFlowSolver.PARAM_NAME}.",
+                $"Selects the solving strategy, the only possible values is '{MinCostFlowSolver.PARAM_NAME}' (for min cost flow analysis with hill climbing). Default is {MinCostFlowSolver.PARAM_NAME}.",
                 x => Solver = ParseSolver(x)
+            },
+
+            {
+                "a|any",
+                "Stop after the first found solution.",
+                x => Any = true
             },
 
             {
@@ -120,7 +98,7 @@ namespace WSolve
             },
 
             {
-                "ranked-pref", "Preferences of every participant will be transformed into a ranking.",
+                "r|ranked-pref", "Preferences of every participant will be transformed into a ranking.",
                 v => RankedPreferences = true
             },
 
@@ -136,77 +114,13 @@ namespace WSolve
             },
 
             {
-                "a|any-solution",
-                "Only compute a greedy solution without any optimizations. Same as --no-popt --no-lopt --no-cs --no-prp.",
-                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true
-            },
-
-            {
-                "no-popt", "Do not perform propabilistic optimizations.",
-                x => NoGeneticOptimizations = true
-            },
-
-            {
                 "no-cs", "Do not perform critical set anaylsis.",
                 x => NoCriticalSets = true
             },
 
             {
-                "no-lopt", "Do not perform local optimizations. This switch is only used when genetic optimization is performed.",
-                x => NoLocalOptimizations = true
-            },
-
-            {
-                "no-prp", "Do not use preference pump heuristics. This switch is only used when genetic optimization is performed.",
-                x => NoPrefPump = true
-            },
-
-            {
                 "no-stats", "Do not print solution statistics.",
                 x => NoStats = true
-            },
-
-            {
-                "ga-mutation=", $"The mutation chance. Default is {MutationChance}. (when using genetic optimization)",
-                x => MutationChance = ParseExpInt(x)
-            },
-
-            {
-                "ga-crossover=", $"The crossover chance. Default is {CrossoverChance}. (when using genetic optimization)",
-                x => CrossoverChance = ParseExpInt(x)
-            },
-
-            {
-                "ga-population=", $"The population size. Default is {PopulationSize}. (when using genetic optimization)",
-                x => PopulationSize = ParseExpInt(x)
-            },
-
-            {
-                "ga-selection=", 
-                $"The selection algorithm. Possible values are 'elite' or 'tournament([size])'. Default is {Selection}. (when using genetic optimization)",
-                x => Selection = ParseSelection(x)
-            },
-
-            {
-                "ga-final-phase=", $"The beginning of the final phase. Default is {FinalPhaseStart}. (when using genetic optimization)",
-                (double v) => FinalPhaseStart = v
-            },
-            
-            {
-                "ga-bucket-size=", $"The bucket size. Default is {BucketSize}. (when using genetic optimization)",
-                (int b) => BucketSize = b
-            },
-
-            {
-                "prp-timeout=",
-                $"Sets the timeout for the preference pump heuristic. Default is {PreferencePumpTimeoutSeconds}s.",
-                x => PreferencePumpTimeoutSeconds = ParseTime(x)
-            },
-
-            {
-                "prp-depth=",
-                $"Sets the maximum search depth for the preference pump heuristic. Specify -1 for unbounded depth. Default is {PreferencePumpTimeoutSeconds}.",
-                (int x) => PreferencePumpMaxDepth = x
             },
 
             {
@@ -243,51 +157,10 @@ namespace WSolve
             return time;
         }
 
-        private static ExpInterpolation ParseExpInt(string expIntString)
-        {
-            Match match = ExpIntRegex.Match(expIntString);
-            if (!match.Success)
-            {
-                ThrowInvalidParameter(expIntString);
-            }
-
-            double from = double.NaN, to = double.NaN, exp = double.NaN;
-
-            try
-            {
-                from = double.Parse(match.Groups["from"].Value);
-                to = match.Groups["to"].Success ? double.Parse(match.Groups["to"].Value) : from;
-                exp = match.Groups["exp"].Success ? double.Parse(match.Groups["exp"].Value) : 1.0;
-            }
-            catch (FormatException)
-            {
-                ThrowInvalidParameter(expIntString);
-            }
-
-            return new ExpInterpolation(from, to, exp);
-        }
-
-        private static ISelection ParseSelection(string selectionString)
-        {
-            if (selectionString == "elite")
-            {
-                return new EliteSelection();
-            }
-
-            Match match = TournamentRegex.Match(selectionString);
-            if (!match.Success)
-            {
-                ThrowInvalidParameter(selectionString);
-            }
-
-            return new TournamentSelection(int.Parse(match.Groups["size"].Value));
-        }
-        
         private static ISolver ParseSolver(string solverString)
         {
             return solverString switch
             {
-                GaSolver.PARAM_NAME => (ISolver) new GaSolver(),
                 MinCostFlowSolver.PARAM_NAME => (ISolver) new MinCostFlowSolver(),
                 _ => ThrowInvalidParameter(solverString)
             };

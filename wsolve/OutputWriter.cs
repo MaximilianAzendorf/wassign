@@ -10,7 +10,11 @@ namespace WSolve
     {
         public static void WriteSolution(Solution solution)
         {
-            WriteSchedulingSolution(solution);
+            if (solution.InputData.SlotCount > 1)
+            {
+                WriteSchedulingSolution(solution);
+            }
+
             WriteAssignmentSolution(solution);
         }
 

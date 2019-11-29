@@ -25,5 +25,12 @@ namespace WSolve
 
             return index;
         }
+
+        public static T Median<T>(this IEnumerable<T> enumerable)
+            where T : IComparable<T>
+        {
+            T[] sorted = enumerable.OrderBy(x => x).ToArray();
+            return sorted[sorted.Length / 2];
+        }
     }
 }

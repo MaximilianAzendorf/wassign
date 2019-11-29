@@ -7,16 +7,16 @@ using System.Linq;
 
 namespace WSolve
 {
-    public struct Chromosome : IEnumerable<int>
+    public struct Candidate
     {
-        public static readonly Chromosome Null = default;
+        public static readonly Candidate Null = default;
 
         private readonly int[] _data;
 
-        public Chromosome(Chromosome chromosome)
-            : this(chromosome.InputData, chromosome._data) { }
+        public Candidate(Candidate candidate)
+            : this(candidate.InputData, candidate._data) { }
 
-        private Chromosome(InputData inputData, int[] data = null)
+        private Candidate(InputData inputData, int[] data = null)
         {
             InputData = inputData;
             _data = data?.ToArray() ??
@@ -44,19 +44,19 @@ namespace WSolve
             }
         }
 
-        public static bool operator ==(Chromosome left, Chromosome right)
+        public static bool operator ==(Candidate left, Candidate right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(Chromosome left, Chromosome right)
+        public static bool operator !=(Candidate left, Candidate right)
         {
             return !left.Equals(right);
         }
 
-        public static Chromosome FromSolution(InputData inputData, Solution solution)
+        public static Candidate FromSolution(InputData inputData, Solution solution)
         {
-            var c = new Chromosome(inputData);
+            var c = new Candidate(inputData);
 
             for (int w = 0; w < inputData.Workshops.Count; w++)
             {
@@ -79,7 +79,7 @@ namespace WSolve
         {
             Debug.Assert(
                 InputData != null,
-                "Tried to access empty chromosome.");
+                "Tried to access empty candidate.");
             Debug.Assert(
                 workshop < InputData.Workshops.Count && workshop >= 0,
                 "Tried to use out of bounds workshopNumber index.");
@@ -92,7 +92,7 @@ namespace WSolve
         {
             Debug.Assert(
                 InputData != null,
-                "Tried to access empty chromosome.");
+                "Tried to access empty candidate.");
             Debug.Assert(
                 participant >= 0 && participant < InputData.Participants.Count,
                 "Tried to use out of bounds participant index.");
@@ -132,24 +132,14 @@ namespace WSolve
             return _data.Skip(InputData.Workshops.Count).Count(w => w == workshop);
         }
 
-        public IEnumerator<int> GetEnumerator()
+        public Candidate Clone()
         {
-            return _data.AsEnumerable().GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public Chromosome Clone()
-        {
-            return new Chromosome(this);
+            return new Candidate(this);
         }
 
         public Solution ToSolution()
         {
-            Chromosome @this = this;
+            Candidate @this = this;
             return new Solution(
                 InputData,
                 Enumerable.Range(0, InputData.Workshops.Count).Select(w => (w, @this.Slot(w))),
@@ -162,7 +152,7 @@ namespace WSolve
             return base.Equals(obj);
         }
 
-        public bool Equals(Chromosome other)
+        public bool Equals(Candidate other)
         {
             if (_data == null)
             {

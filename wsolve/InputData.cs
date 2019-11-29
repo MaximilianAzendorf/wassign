@@ -15,11 +15,15 @@ namespace WSolve
             Participants = data.Participants.Select(p => (p.name, (IReadOnlyList<int>)p.preferences.ToImmutableList())).ToImmutableList();
             Slots = data.Slots.ToImmutableList();
 
+            if (!Slots.Any())
+            {
+                Slots = new[] {"Generated slot"}.ToImmutableList();
+            }
+
             var constraints = new List<Constraint>();
             if (buildConstraints)
             {
                 constraints.AddRange(data.CompileConstraints());
-                Filter = data.CompileFilter();
                 
                 constraints.AddRange(GetConductorConstraints(data));
 
@@ -80,8 +84,6 @@ namespace WSolve
         
         public IReadOnlyList<IReadOnlyCollection<int>> DependentWorkshopGroups { get; }
         
-        public Func<Chromosome, bool> Filter { get; }
-
         public int MaxPreference => Participants.Any() ? Participants.Max(p => p.preferences.Max()) : 0;
 
         public IReadOnlyList<int> PreferenceLevels;

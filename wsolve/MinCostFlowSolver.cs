@@ -32,7 +32,7 @@ namespace WSolve
         private volatile int _tries = 0;
         private readonly List<TimeSpan> _solveTime = new List<TimeSpan>();
         
-        private Chromosome[] _bests;
+        private Candidate[] _bests;
         private (float major, float minor)[] _bestsFitness;
         private Thread[] _threads;
         
@@ -46,62 +46,80 @@ namespace WSolve
             }
             
             CriticalSetAnalysis csAnalysis = GetCsAnalysis(inputData);
-            
-            Status.Info($"Started min cost flow solver with {ThreadCount} thread(s).");
-            IFitness fitness = new GaSolverFitness(inputData);
-            
-            _bests = new Chromosome[ThreadCount];
-            _bestsFitness = new (float major, float minor)[ThreadCount];
-            _threads = new Thread[ThreadCount];
-
-            Array.Fill(_bestsFitness, (float.PositiveInfinity, float.PositiveInfinity));
-
             StaticData staticData = GenerateStaticGraphData(inputData);
-            ConcurrentDictionary<Scheduling, Chromosome> doneSchedulings = new ConcurrentDictionary<Scheduling, Chromosome>();
-            
-            for (int i = 0; i < _threads.Length; i++)
-            {
-                int tid = i;
-                _threads[i] = new Thread(() => DoShotgunHillClimbing(tid, inputData, csAnalysis, staticData, fitness, doneSchedulings, _cts.Token));
-                _threads[i].Start();
-            }
 
-            DateTime startTime = DateTime.Now;
-            TimeSpan timeout = TimeSpan.FromSeconds(Options.TimeoutSeconds);
-            var lastFitness = (float.PositiveInfinity, float.PositiveInfinity);
+            Solution solution;
             
-            while (DateTime.Now < startTime + timeout)
+            if (Options.Any || inputData.SlotCount == 1)
             {
-                Thread.Sleep(1000);
-                
-                var bestFitness = _bestsFitness.Min();
-                //if (!float.IsFinite(bestFitness.major)) continue;
-                string newString = bestFitness != lastFitness ? "NEW" : "   ";
-                lastFitness = bestFitness;
-                lock (_solveTime)
+                Status.Info("Computing solution.");
+                solution = SolveAssignment(inputData, NewSolver(), SchedulingSolver.Solve(inputData), csAnalysis,
+                    staticData)?.ToSolution();
+            }
+            else
+            {
+                Status.Info($"Started min cost flow solver with {ThreadCount} thread(s).");
+                IScore score = new Score(inputData);
+
+                _bests = new Candidate[ThreadCount];
+                _bestsFitness = new (float major, float minor)[ThreadCount];
+                _threads = new Thread[ThreadCount];
+
+                Array.Fill(_bestsFitness, (float.PositiveInfinity, float.PositiveInfinity));
+
+                ConcurrentDictionary<Scheduling, Candidate> doneSchedulings =
+                    new ConcurrentDictionary<Scheduling, Candidate>();
+
+                for (int i = 0; i < _threads.Length; i++)
                 {
-                    if (!_solveTime.Any())
-                    {
-                        _solveTime.Add(TimeSpan.Zero);
-                    }
-                    Status.Info($"{newString} BEST=({(bestFitness.major + ",")} {bestFitness.minor:0.00000}), ETA={(startTime + timeout - DateTime.Now).ToStringNoMilliseconds()}, TRIES={_tries} ({doneSchedulings.Count}), STIME={_solveTime.Min().TotalSeconds:0.000}s-{_solveTime.Max().TotalSeconds:0.000}s");
-                    _solveTime.Clear();
+                    int tid = i;
+                    _threads[i] = new Thread(() =>
+                        DoShotgunHillClimbing(tid, inputData, csAnalysis, staticData, score, doneSchedulings,
+                            _cts.Token));
+                    _threads[i].Start();
                 }
+
+                DateTime startTime = DateTime.Now;
+                TimeSpan timeout = TimeSpan.FromSeconds(Options.TimeoutSeconds);
+                var lastFitness = (float.PositiveInfinity, float.PositiveInfinity);
+
+                while (DateTime.Now < startTime + timeout)
+                {
+                    Thread.Sleep(1000);
+
+                    var bestFitness = _bestsFitness.Min();
+                    //if (!float.IsFinite(bestFitness.major)) continue;
+                    string newString = bestFitness != lastFitness ? "NEW" : "   ";
+                    lastFitness = bestFitness;
+                    lock (_solveTime)
+                    {
+                        if (!_solveTime.Any())
+                        {
+                            _solveTime.Add(TimeSpan.Zero);
+                        }
+
+                        Status.Info(
+                            $"{newString} BEST=({(bestFitness.major + ",")} {bestFitness.minor:0.00000}), ETA={(startTime + timeout - DateTime.Now).ToStringNoMilliseconds()}, TRIES={_tries} ({doneSchedulings.Count}), STIME={_solveTime.Min().TotalSeconds:0.000}s-{_solveTime.Max().TotalSeconds:0.000}s (m={_solveTime.Median().TotalSeconds:0.000}s)");
+                        _solveTime.Clear();
+                    }
+                }
+
+                Status.Info("Stopped min cost flow solver. Waiting for workers to finish.");
+                _cts.Cancel();
+
+                foreach (var t in _threads)
+                {
+                    t.Join();
+                }
+
+                solution = _bests
+                    .Zip(_bestsFitness, (c, f) => (c, f))
+                    .OrderBy(x => x.f)
+                    .First().c
+                    .ToSolution();
             }
 
-            Status.Info("Stopped min cost flow solver. Waiting for workers to finish.");
-            _cts.Cancel();
-
-            foreach (var t in _threads)
-            {
-                t.Join();
-            }
-
-            return _bests
-                .Zip(_bestsFitness, (c, f) => (c, f))
-                .OrderBy(x => x.f)
-                .First().c
-                .ToSolution();
+            return solution;
         }
         
         private StaticData GenerateStaticGraphData(InputData inputData)
@@ -199,12 +217,15 @@ namespace WSolve
             return blockedEdges;
         }
 
-        private void DoShotgunHillClimbing(int tid, InputData inputData, CriticalSetAnalysis csAnalysis, StaticData sgd, IFitness fitness, ConcurrentDictionary<Scheduling, Chromosome> doneSchedulings, CancellationToken ctoken)
+        private Solver NewSolver(int tid = 0) => Solver.CreateSolver("Solver" + tid, "CBC_MIXED_INTEGER_PROGRAMMING");
+
+        private void DoShotgunHillClimbing(int tid, InputData inputData, CriticalSetAnalysis csAnalysis, StaticData sgd, 
+            IScore score, ConcurrentDictionary<Scheduling, Candidate> doneSchedulings, CancellationToken ctoken)
         {
-            using Solver solver = Solver.CreateSolver("Solver", "CBC_MIXED_INTEGER_PROGRAMMING");
+            using Solver solver = NewSolver(tid);
             
-            using IEnumerator<Scheduling> primalSolutions = new GreedySolver()
-                .SolveIndefinitelySchedulingOnly(inputData, csAnalysis, ctoken)
+            using IEnumerator<Scheduling> primalSolutions = SchedulingSolver
+                .SolveIndefinitely(inputData, csAnalysis, ctoken)
                 .GetEnumerator();
             
             while (primalSolutions.MoveNext() && !ctoken.IsCancellationRequested)
@@ -212,7 +233,7 @@ namespace WSolve
                 _tries++;
 
                 Scheduling scheduling = primalSolutions.Current;
-                Chromosome? localBestSolution = null;
+                Candidate? localBestSolution = null;
 
                 var localBestFitness = (float.PositiveInfinity, float.PositiveInfinity);
             
@@ -232,11 +253,18 @@ namespace WSolve
                         
                         if (!doneSchedulings.TryGetValue(n, out var c))
                         {
-                            c = SolveAssignment(inputData, solver, scheduling, csAnalysis, sgd);
+                            var newc = SolveAssignment(inputData, solver, scheduling, csAnalysis, sgd);
+                            if (newc == null)
+                            {
+                                continue;
+                            }
+                            
+                            c = newc.Value;
+                            
                             doneSchedulings.AddOrUpdate(n, c, (unused0, unused1) => c);
                         }
 
-                        (float major, float minor) f = fitness.Evaluate(c);
+                        (float major, float minor) f = score.Evaluate(c);
 
                         if (f.CompareTo(localBestFitness) < 0)
                         {
@@ -284,7 +312,7 @@ namespace WSolve
             }
         }
 
-        private Chromosome SolveAssignment(InputData inputData, Solver solver, Scheduling scheduling, CriticalSetAnalysis csAnalysis, StaticData sgd)
+        private Candidate? SolveAssignment(InputData inputData, Solver solver, Scheduling scheduling, CriticalSetAnalysis csAnalysis, StaticData sgd)
         {
             int prefIdx = inputData.PreferenceLevels.FindIndex(x => x == csAnalysis.PreferenceBound);
             int minIdx = prefIdx;
@@ -308,12 +336,22 @@ namespace WSolve
 
                 prefIdx = (maxIdx + minIdx) / 2;
             } while (maxIdx > minIdx);
+
+            if (bestSol == null)
+            {
+                return null;
+            }
             
-            return Chromosome.FromSolution(inputData, bestSol);
+            return Candidate.FromSolution(inputData, bestSol);
         }
         
         private Solution SolveAssignment(InputData inputData, Solver solver, Scheduling scheduling, StaticData sgd, int preferenceLimit)
         {
+            if (scheduling == null)
+            {
+                return null;
+            }
+            
             var flow = sgd.BaseFlow.Fork();
             
             for (int p = 0; p < inputData.ParticipantCount; p++)
