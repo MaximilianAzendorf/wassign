@@ -6,7 +6,7 @@ namespace WSolve
     {
         [ThreadStatic] private static Random _rnd;
 
-        private static Random Rnd => _rnd ?? (_rnd = new Random());
+        private static Random Rnd => _rnd ??= new Random();
 
         public static float NextFloat()
         {

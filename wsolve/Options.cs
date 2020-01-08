@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -28,59 +29,39 @@ namespace WSolve
             ["w"] = 60 * 60 * 24 * 7
         };
 
+        public static ISolver Solver { get; private set; } = new MinCostFlowSolver();
+        
         public static int Verbosity { get; private set; } = 3;
 
-        public static int? Seed { get; private set; }
-
-        public static string InputFile { get; private set; }
+        private static readonly List<string> InputFilesList = new List<string>();
+        public static IReadOnlyList<string> InputFiles => InputFilesList.ToImmutableList();
 
         public static string OutputFile { get; private set; }
 
-        public static string CsvOutputFile { get; private set; }
+        public static bool CsvOutput { get; private set; }
 
         public static bool ShowHelp { get; private set; }
 
-        public static int TimeoutSeconds { get; private set; } = 60 * 60;
-
-        public static int PreferencePumpTimeoutSeconds { get; private set; } = 10;
+        public static int TimeoutSeconds { get; private set; } = 60 * 5;
 
         public static int CriticalSetTimeoutSeconds { get; private set; } = 1;
 
         public static int CriticalSetProbingRetries { get; } = 120;
 
-        public static int PreferencePumpMaxDepth { get; private set; } = -1;
-
-        public static double FinalPhaseStart { get; private set; } = 0.8;
-
-        public static bool NoGeneticOptimizations { get; private set; }
-
-        public static bool NoLocalOptimizations { get; private set; }
-
-        public static bool NoPrefPump { get; private set; }
-
         public static bool NoCriticalSets { get; private set; }
 
         public static bool NoStats { get; private set; }
 
-        public static ExpInterpolation MutationChance { get; private set; } = new ExpInterpolation(0.5, 0.3, 1.0);
-
-        public static ExpInterpolation CrossoverChance { get; private set; } = new ExpInterpolation(0.75, 0.5, 1.0);
-
-        public static ExpInterpolation PopulationSize { get; private set; } = new ExpInterpolation(5000, 30, 1.8);
-
-        public static ISelection Selection { get; private set; } = new TournamentSelection(1.65f);
-
-        public static int BucketSize { get; private set; } = 5000;
-
-        public static string ExtraConditions { get; private set; }
-
+        public static bool RankedPreferences { get; private set; }
+        
         public static double PreferenceExponent { get; private set; } = 3;
+        public static bool Any { get; private set; }
 
         private static OptionSet OptionSet { get; } = new OptionSet
         {
             {
                 "i|input=", "Specifies an input file.",
-                i => InputFile = i
+                i => InputFilesList.Add(i)
             },
 
             {
@@ -89,13 +70,8 @@ namespace WSolve
             },
 
             {
-                "c|csv-output=", "Specifies a csv output file.",
-                i => CsvOutputFile = i
-            },
-
-            {
-                "s|shuffle=", "Sets the seed for the random number generator and shuffles the input.",
-                x => Seed = ParseSeed(x)
+                "c|csv", "Besides the output file, two CSV files will be generated, [output].scheduling.csv and [output].assignment.csv.",
+                i => CsvOutput = true
             },
 
             {
@@ -105,13 +81,25 @@ namespace WSolve
             },
 
             {
+                "s|solver=",
+                $"Selects the solving strategy, the only possible values is '{MinCostFlowSolver.PARAM_NAME}' (for min cost flow analysis with hill climbing). Default is {MinCostFlowSolver.PARAM_NAME}.",
+                x => Solver = ParseSolver(x)
+            },
+
+            {
+                "a|any",
+                "Stop after the first found solution.",
+                x => Any = true
+            },
+
+            {
                 "p|pref-exp=", $"The preference exponent. Default is {PreferenceExponent}.",
                 (double v) => PreferenceExponent = v
             },
 
             {
-                "f|final-phase=", $"The beginning of the final phase. Default is {FinalPhaseStart}.",
-                (double v) => FinalPhaseStart = v
+                "r|ranked-pref", "Preferences of every participant will be transformed into a ranking.",
+                v => RankedPreferences = true
             },
 
             {
@@ -126,39 +114,6 @@ namespace WSolve
             },
 
             {
-                "prp-timeout=",
-                $"Sets the timeout for the preference pump heuristic. Default is {PreferencePumpTimeoutSeconds}s.",
-                x => PreferencePumpTimeoutSeconds = ParseTime(x)
-            },
-
-            {
-                "prp-depth=",
-                $"Sets the maximum search depth for the preference pump heuristic. Specify -1 for unbounded depth. Default is {PreferencePumpTimeoutSeconds}.",
-                (int x) => PreferencePumpMaxDepth = x
-            },
-
-            {
-                "a|any-solution",
-                "Only compute a greedy solution without any optimizations. Same as --no-ga --no-prp --no-lopt --no-cs.",
-                x => NoLocalOptimizations = NoGeneticOptimizations = NoPrefPump = NoCriticalSets = true
-            },
-
-            {
-                "no-ga", "Do not perform genetic optimizations.",
-                x => NoGeneticOptimizations = true
-            },
-
-            {
-                "no-lopt", "Do not perform local optimizations.",
-                x => NoLocalOptimizations = true
-            },
-
-            {
-                "no-prp", "Do not use preference pump heuristics.",
-                x => NoPrefPump = true
-            },
-
-            {
                 "no-cs", "Do not perform critical set anaylsis.",
                 x => NoCriticalSets = true
             },
@@ -166,38 +121,6 @@ namespace WSolve
             {
                 "no-stats", "Do not print solution statistics.",
                 x => NoStats = true
-            },
-
-            {
-                "mutation=", $"The mutation chance. Default is {MutationChance}.",
-                x => MutationChance = ParseExpInt(x)
-            },
-
-            {
-                "crossover=", $"The crossover chance. Default is {CrossoverChance}.",
-                x => CrossoverChance = ParseExpInt(x)
-            },
-
-            {
-                "population=", $"The population size. Default is {PopulationSize}.",
-                x => PopulationSize = ParseExpInt(x)
-            },
-
-            {
-                "selection=",
-                $"The selection algorithm. Possible values are 'elite' or 'tournament([size])'. Default is {Selection}.",
-                x => Selection = ParseSelection(x)
-            },
-
-            {
-                "bucket-size=", $"The bucket size. Default is {BucketSize}.",
-                (int b) => BucketSize = b
-            },
-
-            {
-                "x|conditions=",
-                "Specify extra conditions. See the Readme file for more information. This value will first get interpreted as file name (to a file containing extra conditions). If the file does not exist, it will be interpreted as condition expression.",
-                x => ExtraConditions = x
             },
 
             {
@@ -211,7 +134,7 @@ namespace WSolve
             }
         };
 
-        private static void ThrowInvalidParameter(string value)
+        private static dynamic ThrowInvalidParameter(string value)
         {
             throw new FormatException($"Could not undestand parameter value \"{value}\".");
         }
@@ -234,44 +157,13 @@ namespace WSolve
             return time;
         }
 
-        private static ExpInterpolation ParseExpInt(string expIntString)
+        private static ISolver ParseSolver(string solverString)
         {
-            Match match = ExpIntRegex.Match(expIntString);
-            if (!match.Success)
+            return solverString switch
             {
-                ThrowInvalidParameter(expIntString);
-            }
-
-            double from = double.NaN, to = double.NaN, exp = double.NaN;
-
-            try
-            {
-                from = double.Parse(match.Groups["from"].Value);
-                to = match.Groups["to"].Success ? double.Parse(match.Groups["to"].Value) : from;
-                exp = match.Groups["exp"].Success ? double.Parse(match.Groups["exp"].Value) : 1.0;
-            }
-            catch (FormatException)
-            {
-                ThrowInvalidParameter(expIntString);
-            }
-
-            return new ExpInterpolation(from, to, exp);
-        }
-
-        private static ISelection ParseSelection(string selectionString)
-        {
-            if (selectionString == "elite")
-            {
-                return new EliteSelection();
-            }
-
-            Match match = TournamentRegex.Match(selectionString);
-            if (!match.Success)
-            {
-                ThrowInvalidParameter(selectionString);
-            }
-
-            return new TournamentSelection(int.Parse(match.Groups["size"].Value));
+                MinCostFlowSolver.PARAM_NAME => (ISolver) new MinCostFlowSolver(),
+                _ => ThrowInvalidParameter(solverString)
+            };
         }
 
         private static int ParseSeed(string seedString)
@@ -311,6 +203,12 @@ namespace WSolve
             {
                 PrintHelp();
                 return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(OutputFile) && CsvOutput)
+            {
+                Status.Warning("No output file specified; CSV flag is ignored.");
+                CsvOutput = false;
             }
 
             return true;

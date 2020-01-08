@@ -7,16 +7,16 @@ using System.Linq;
 
 namespace WSolve
 {
-    public struct Chromosome : IEnumerable<int>
+    public struct Candidate
     {
-        public static readonly Chromosome Null = default;
+        public static readonly Candidate Null = default;
 
         private readonly int[] _data;
 
-        public Chromosome(Chromosome chromosome)
-            : this(chromosome.InputData, chromosome._data) { }
+        public Candidate(Candidate candidate)
+            : this(candidate.InputData, candidate._data) { }
 
-        private Chromosome(InputData inputData, int[] data = null)
+        private Candidate(InputData inputData, int[] data = null)
         {
             InputData = inputData;
             _data = data?.ToArray() ??
@@ -44,30 +44,30 @@ namespace WSolve
             }
         }
 
-        public static bool operator ==(Chromosome left, Chromosome right)
+        public static bool operator ==(Candidate left, Candidate right)
         {
             return left.Equals(right);
         }
 
-        public static bool operator !=(Chromosome left, Chromosome right)
+        public static bool operator !=(Candidate left, Candidate right)
         {
             return !left.Equals(right);
         }
 
-        public static Chromosome FromOutput(InputData inputData, Solution solution)
+        public static Candidate FromSolution(InputData inputData, Solution solution)
         {
-            var c = new Chromosome(inputData);
+            var c = new Candidate(inputData);
 
-            for (int i = 0; i < inputData.Workshops.Count; i++)
+            for (int w = 0; w < inputData.Workshops.Count; w++)
             {
-                c.Slot(i) = solution.Scheduling[i];
+                c.Slot(w) = solution.Scheduling[w];
             }
 
-            for (int i = 0; i < inputData.Participants.Count; i++)
+            for (int p = 0; p < inputData.Participants.Count; p++)
             {
-                for (int j = 0; j < inputData.Slots.Count; j++)
+                for (int i = 0; i < inputData.Slots.Count; i++)
                 {
-                    c.Workshop(i, j) = solution.Assignment[i][j];
+                    c.Workshop(p, i) = solution.Assignment[p][i];
                 }
             }
 
@@ -79,28 +79,52 @@ namespace WSolve
         {
             Debug.Assert(
                 InputData != null,
-                "Tried to access empty chromosome.");
+                "Tried to access empty candidate.");
             Debug.Assert(
                 workshop < InputData.Workshops.Count && workshop >= 0,
-                "Tried to use out of bounds workshop index.");
+                "Tried to use out of bounds workshopNumber index.");
 
             return ref _data[workshop];
         }
 
         [Pure]
-        public ref int Workshop(int participant, int workshop)
+        public ref int Workshop(int participant, int workshopNumber)
         {
             Debug.Assert(
                 InputData != null,
-                "Tried to access empty chromosome.");
+                "Tried to access empty candidate.");
             Debug.Assert(
                 participant >= 0 && participant < InputData.Participants.Count,
                 "Tried to use out of bounds participant index.");
             Debug.Assert(
-                workshop >= 0 && workshop < InputData.Slots.Count,
-                "Tried to use out of bounds workshop index.");
+                workshopNumber >= 0 && workshopNumber < InputData.Slots.Count,
+                "Tried to use out of bounds workshopNumber index.");
 
-            return ref _data[InputData.Workshops.Count + participant * InputData.Slots.Count + workshop];
+            return ref _data[InputData.Workshops.Count + participant * InputData.Slots.Count + workshopNumber];
+        }
+
+        [Pure]
+        public IEnumerable<int> Workshops(int participant)
+        {
+            for (int s = 0; s < InputData.SlotCount; s++)
+            {
+                yield return _data[InputData.Workshops.Count + participant * InputData.Slots.Count + s];
+            }
+        }
+
+        [Pure]
+        public IEnumerable<int> Participants(int workshop)
+        {
+            for (int p = 0; p < InputData.ParticipantCount; p++)
+            {
+                for (int s = 0; s < InputData.SlotCount; s++)
+                {
+                    if (_data[InputData.Workshops.Count + p * InputData.Slots.Count + s] == workshop)
+                    {
+                        yield return p;
+                    }
+                }
+            }
         }
 
         public int CountParticipants(int workshop)
@@ -108,24 +132,14 @@ namespace WSolve
             return _data.Skip(InputData.Workshops.Count).Count(w => w == workshop);
         }
 
-        public IEnumerator<int> GetEnumerator()
+        public Candidate Clone()
         {
-            return _data.AsEnumerable().GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public Chromosome Clone()
-        {
-            return new Chromosome(this);
+            return new Candidate(this);
         }
 
         public Solution ToSolution()
         {
-            Chromosome @this = this;
+            Candidate @this = this;
             return new Solution(
                 InputData,
                 Enumerable.Range(0, InputData.Workshops.Count).Select(w => (w, @this.Slot(w))),
@@ -138,7 +152,7 @@ namespace WSolve
             return base.Equals(obj);
         }
 
-        public bool Equals(Chromosome other)
+        public bool Equals(Candidate other)
         {
             if (_data == null)
             {

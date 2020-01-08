@@ -61,7 +61,7 @@ namespace WSolve.Debugging
                 min += workshopOff;
                 max += workshopOff;
 
-                Console.Error.WriteLine($"(workshop) {ws(i)}: {hn(cond)}, {min}-{max}");
+                Console.Error.WriteLine($"(event) {ws(i)}: {hn(cond)}, {min}-{max}");
             }
 
             for (int i = 0; i < humanCount; i++)

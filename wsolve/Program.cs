@@ -41,7 +41,6 @@ namespace WSolve
 
         private static int Main(string[] args)
         {
-
             CultureInfo ci = CultureInfo.InvariantCulture;
             Thread.CurrentThread.CurrentCulture = ci;
             Thread.CurrentThread.CurrentUICulture = ci;
@@ -86,12 +85,20 @@ namespace WSolve
 
             try
             {
-                ISolver solver = new GaSolver();
+                ISolver solver = Options.Solver;
 
                 Solution output = solver.Solve(input);
-                output.Verify();
 
-                OutputWriter.WriteSolution(output);
+                if (output == null)
+                {
+                    Status.Warning("No solution found.");
+                }
+                else
+                {
+                    output.Verify();
+                    Status.Info($"Solution score: " + new Score(input).Evaluate(Candidate.FromSolution(input, output)));
+                    OutputWriter.WriteSolution(output);
+                }
             }
             catch (WSolveException ex)
             {

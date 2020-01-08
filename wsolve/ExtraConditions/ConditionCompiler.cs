@@ -9,34 +9,42 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
+using WSolve.ExtraConditions;
+using WSolve.ExtraConditions.Constraints;
 
-namespace WSolve
+namespace WSolve.ExtraConditions
 {
-    public static class ExtraConditionsCompiler
+    public static class ConditionCompiler
     {
         private static readonly string CodeEnvPlaceholder = "##C";
         private static readonly string CodeEnvExtraPlaceholder = "##E";
-        private static readonly string CodeEnvClassName = "WSolve.Generated.ExtraConditions";
-        private static readonly int CodeEnvPlaceholderLineOffset;
+        
+        private static readonly string ConstraintCodeEnvClassName = "WSolve.Generated.CustomConstraints";
+        
+        private static readonly int ConstraintCodeEnvLineOffset;
+        private static readonly string ConstraintCodeEnvironment;
+        private static readonly string ConstraintCodeEnvResName =
+            "WSolve.Resources.ConstraintCodeEnvironment.txt";
 
-        private static readonly string CodeEnvironment;
-
-        private static readonly string CodeEnvironmentResourceName =
-            "WSolve.Resources.ExtraConditionsCodeEnvironment.txt";
-
-        static ExtraConditionsCompiler()
+        static (string content, int lineOffset) LoadCodeEnvironment(string resourceName)
         {
             using (var reader = new StreamReader(
-                typeof(ExtraConditionsBase).Assembly.GetManifestResourceStream(
-                    CodeEnvironmentResourceName) ?? throw new InvalidOperationException()))
+                typeof(CustomConstraintsBase).Assembly.GetManifestResourceStream(
+                    resourceName) ?? throw new InvalidOperationException()))
             {
-                CodeEnvironment = reader.ReadToEnd();
-                CodeEnvPlaceholderLineOffset =
-                    CodeEnvironment.Split('\n').ToList().FindIndex(l => l.Contains(CodeEnvPlaceholder));
+                string codeEnv = reader.ReadToEnd();
+                int lineOffset = codeEnv.Split('\n').ToList().FindIndex(l => l.Contains(CodeEnvPlaceholder));
+
+                return (codeEnv, lineOffset);
             }
         }
+        
+        static ConditionCompiler()
+        {
+            (ConstraintCodeEnvironment, ConstraintCodeEnvLineOffset) = LoadCodeEnvironment(ConstraintCodeEnvResName);
+        }
 
-        public static string GenerateExtraDefinitions(InputData data)
+        private static string GenerateExtraDefinitions(MutableInputData data)
         {
             var extraDefinitions = new StringBuilder();
 
@@ -49,6 +57,8 @@ namespace WSolve
             foreach (string s in data.Slots)
             {
                 string name = s.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.s++;
@@ -68,6 +78,9 @@ namespace WSolve
             foreach (string w in data.Workshops.Select(ws => ws.name))
             {
                 string name = w.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                if (name.StartsWith('~')) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.p++;
@@ -87,6 +100,8 @@ namespace WSolve
             foreach (string p in data.Participants.Select(p => p.name))
             {
                 string name = p.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.w++;
@@ -103,56 +118,66 @@ namespace WSolve
                 }
             }
 
-            if (ignored != (0, 0, 0))
+            (int s, int w, int p) sum = (conflicts.s + ignored.s, conflicts.w + ignored.w, conflicts.p + ignored.p);
+            if (sum != (0, 0, 0))
             {
                 Status.Warning(
-                    $"{ignored.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were ignored.");
+                    $"{sum.s} slot, {sum.w} workshop and {sum.p} participant identifier(s) are not available to constraints due to name conflics.");
             }
-
-            if (conflicts != (0, 0, 0))
-            {
-                Status.Warning(
-                    $"{conflicts.s} slot, {ignored.w} workshop and {ignored.p} participant identifier(s) were omitted due to name conflics.");
-            }
-
-            Status.Info($"{total} identifier(s) were generated.");
 
             return extraDefinitions.ToString();
         }
 
-        public static Func<Chromosome, bool> Compile(string conditionCode, InputData data)
+        public static IEnumerable<Constraint> CompileConstraints(this MutableInputData inputData)
         {
-            conditionCode = CodeEnvironment
+            if (!inputData.Constraints.Any())
+            {
+                return Enumerable.Empty<Constraint>();
+            }
+            
+            string code = string.Join('\n', inputData.Constraints.Select(c => $"AddConstraint(@\"{c.Replace("\"", "\"\"")}\", {c});"));
+            
+            CustomConstraintsBase constraints = CompileObject<CustomConstraintsBase>(code, inputData,
+                ConstraintCodeEnvironment, ConstraintCodeEnvLineOffset, ConstraintCodeEnvClassName);
+
+            return constraints.GetStaticConstraints();
+        }
+        
+        public static T CompileObject<T>(string conditionCode, MutableInputData inputData, string codeEnvironment, int lineOffset, string className)
+        {
+            conditionCode = codeEnvironment
                 .Replace(CodeEnvPlaceholder, conditionCode)
-                .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(data));
+                .Replace(CodeEnvExtraPlaceholder, GenerateExtraDefinitions(inputData));
 
             CSharpCompilation comp = GenerateCode(conditionCode);
-            using (var s = new MemoryStream())
+            using var s = new MemoryStream();
+            
+            EmitResult compRes = comp.Emit(s);
+            if (!compRes.Success)
             {
-                EmitResult compRes = comp.Emit(s);
-                if (!compRes.Success)
-                {
-                    List<Diagnostic> compilationErrors = compRes.Diagnostics.Where(diagnostic =>
-                            diagnostic.IsWarningAsError ||
-                            diagnostic.Severity == DiagnosticSeverity.Error)
-                        .ToList();
+                List<Diagnostic> compilationErrors = compRes.Diagnostics.Where(diagnostic =>
+                        diagnostic.IsWarningAsError ||
+                        diagnostic.Severity == DiagnosticSeverity.Error)
+                    .ToList();
 
-                    Diagnostic firstError = compilationErrors.First();
-                    string errorDescription = firstError.GetMessage();
-                    int errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line -
-                                    CodeEnvPlaceholderLineOffset + 1;
-                    string firstErrorMessage = $"{errorDescription} (Line {errorLine})";
+                Diagnostic firstError = compilationErrors.First();
+                string errorDescription = firstError.GetMessage();
+                int errorLine = firstError.Location.GetLineSpan().StartLinePosition.Line - lineOffset + 1;
+                string firstErrorMessage = $"{errorDescription} (Line {errorLine})";
 
-                    throw new WSolveException("Could not compile extra conditions: " + firstErrorMessage);
-                }
-
-                s.Seek(0, SeekOrigin.Begin);
-                Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(s);
-                Type type = assembly.GetType(CodeEnvClassName);
-
-                return chromosome =>
-                    ((ExtraConditionsBase) Activator.CreateInstance(type, chromosome)).Result;
+                throw new WSolveException("Could not compile extra conditions: " + firstErrorMessage);
             }
+
+            s.Seek(0, SeekOrigin.Begin);
+            Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(s);
+            Type type = assembly.GetType(className);
+
+            if (!typeof(T).IsAssignableFrom(type))
+            {
+                throw new InvalidOperationException($"The compiled object is not assignable to type {typeof(T)}");
+            }
+
+            return (T)Activator.CreateInstance(type, inputData.ToImmutableInputDataDontCompile());
         }
 
         private static CSharpCompilation GenerateCode(string sourceCode)
@@ -169,11 +194,11 @@ namespace WSolve
                 MetadataReference.CreateFromFile(typeof(Math).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(ExtraConditionsBase).Assembly.Location)
+                MetadataReference.CreateFromFile(typeof(CustomConstraintsBase).Assembly.Location)
             };
 
             return CSharpCompilation.Create(
-                "Generated.dll",
+                $"Generated_{DateTime.Now.Ticks}.dll",
                 new[] {parsedSyntaxTree},
                 references,
                 new CSharpCompilationOptions(
