@@ -6,19 +6,18 @@ namespace WSolve.ExtraConditions
 {
     public class WorkshopBase
     {
-        protected readonly InputData _inputData;
-        protected readonly int _id;
+        internal readonly InputData InputData;
+        internal readonly int Id;
 
         public WorkshopBase(int id, InputData inputData)
         {
-            _id = id;
-            _inputData = inputData;
+            Id = id;
+            InputData = inputData;
         }
 
-        public string Name => _inputData.Workshops[_id].name;
-        internal int Id => _id;
-        public int MinParticipants => _inputData.Workshops[_id].min;
-        public int MaxParticipants => _inputData.Workshops[_id].max;
+        public string Name => InputData.Workshops[Id].name;
+        public int MinParticipants => InputData.Workshops[Id].min;
+        public int MaxParticipants => InputData.Workshops[Id].max;
 
         public static bool operator ==(WorkshopBase left, WorkshopBase right)
         {
@@ -52,12 +51,12 @@ namespace WSolve.ExtraConditions
 
         public override int GetHashCode()
         {
-            return _id;
+            return Id;
         }
 
         protected bool Equals(WorkshopBase other)
         {
-            return _id == other._id;
+            return Id == other.Id;
         }
     }
 }

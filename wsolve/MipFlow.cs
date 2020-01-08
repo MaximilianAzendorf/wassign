@@ -75,7 +75,7 @@ namespace WSolve
             return edge;
         }
         
-        public int AddEdge(TEdgeKey key, int fromNode, int toNode, int max, long unitCost, bool allOrNothing = false)
+        public int AddEdge(TEdgeKey key, int fromNode, int toNode, int max, long unitCost)
         {
             int edge = AddEdge(fromNode, toNode, max, unitCost);
             _edgeMap.Add(key, edge);

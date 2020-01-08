@@ -9,6 +9,10 @@ namespace WSolve
 {
     public class InputData
     {
+        public static readonly string GeneratedPrefix = "~";
+        public static readonly string NotScheduledSlotPrefix = GeneratedPrefix + "not_scheduled_";
+        public static readonly string HiddenWorkshopPrefix = GeneratedPrefix + "hidden_";
+        
         public InputData(MutableInputData data, bool buildConstraints = true)
         {
             Workshops = data.Workshops.ToImmutableList();
@@ -27,6 +31,8 @@ namespace WSolve
                 
                 constraints.AddRange(GetConductorConstraints(data));
 
+                constraints.AddRange(GetPartConstraints());
+
                 constraints = Constraint.ReduceAndOptimize(constraints, this, out bool isInfeasible).ToList();
 
                 if (isInfeasible)
@@ -38,7 +44,7 @@ namespace WSolve
                 var newPrefs = GetDependentPreferences(constraints);
 
                 Workshops = Enumerable.Range(0, WorkshopCount)
-                    .Select(w => (Workshops[w].name, newLimits[w].min, newLimits[w].max))
+                    .Select(w => (Workshops[w].name, newLimits[w].min, newLimits[w].max, Workshops[w].continuation))
                     .ToImmutableList();
 
                 Participants = Enumerable.Range(0, ParticipantCount)
@@ -73,7 +79,7 @@ namespace WSolve
             return participantConstraintMap[participantId];
         }
 
-        public IReadOnlyList<(string name, int min, int max)> Workshops { get; }
+        public IReadOnlyList<(string name, int min, int max, int? continuation)> Workshops { get; }
 
         public IReadOnlyList<(string name, IReadOnlyList<int> preferences)> Participants { get; }
 
@@ -206,6 +212,27 @@ namespace WSolve
                     {
                         yield return new WorkshopStateless(list[i], this).Slot != new WorkshopStateless(list[j], this).Slot;
                     }
+                }
+            }
+        }
+
+        private IEnumerable<Constraint> GetPartConstraints()
+        {
+            UnionFind<int> workshopGroups = new UnionFind<int>(Enumerable.Range(0, WorkshopCount));
+
+            for (int w = 0; w < WorkshopCount; w++)
+            {
+                if (Workshops[w].continuation != null)
+                {
+                    workshopGroups.Union(w, Workshops[w].continuation.Value);
+                }
+            }
+
+            foreach (var group in Enumerable.Range(0, WorkshopCount).GroupBy(w => workshopGroups.Find(w)))
+            {
+                foreach (var c in Constraint.EventSeries(this, group))
+                {
+                    yield return c;
                 }
             }
         }

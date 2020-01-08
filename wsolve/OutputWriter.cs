@@ -30,11 +30,22 @@ namespace WSolve
 
             foreach ((int ws, int slot) x in scheduling)
             {
-                (string name, int min, int max) ws = solution.InputData.Workshops[x.ws];
+                (string name, int min, int max, int? continuation) ws = solution.InputData.Workshops[x.ws];
                 string slot = solution.InputData.Slots[x.slot];
 
+                if (slot.StartsWith(InputData.NotScheduledSlotPrefix))
+                {
+                    slot = "not scheduled";
+                }
+                
                 slotMin[x.slot] += ws.min;
                 slotMax[x.slot] += ws.max;
+
+                if (ws.name.StartsWith(InputData.HiddenWorkshopPrefix))
+                {
+                    continue;
+                }
+                
                 slotCnt[x.slot]++;
 
                 Console.WriteLine($"'{ws.name}' -> '{slot}'.");
@@ -49,8 +60,20 @@ namespace WSolve
 
                 foreach ((int ws, int slot) x in scheduling)
                 {
+                    string workshop = solution.InputData.Workshops[x.ws].name;
+                    if (workshop.StartsWith(InputData.HiddenWorkshopPrefix))
+                    {
+                        continue;
+                    }
+                    
+                    string slot = solution.InputData.Slots[x.slot];
+                    if (slot.StartsWith(InputData.NotScheduledSlotPrefix))
+                    {
+                        slot = "not scheduled";
+                    }
+                    
                     str.AppendLine(
-                        $"\"{solution.InputData.Workshops[x.ws].name}\",\"{solution.InputData.Slots[x.slot]}\"");
+                        $"\"{workshop}\",\"{slot}\"");
                 }
 
                 File.WriteAllText(Options.OutputFile + ".scheduling.csv", str.ToString());
@@ -63,11 +86,7 @@ namespace WSolve
                 {
                     int maxSpan = slotMax[i] - slotMin[i];
                     int realSpan = solution.InputData.Participants.Count - slotMin[i];
-                    if (solution.InputData.Slots[i] == "NULL")
-                    {
-                        Status.Info($"    Not scheduled: {slotCnt[i]} workshop(s)");
-                    }
-                    else
+                    if (!solution.InputData.Slots[i].StartsWith(InputData.NotScheduledSlotPrefix))
                     {
                         Status.Info(
                             $"    Slot '{solution.InputData.Slots[i]}': {slotCnt[i]} workshop(s), is {(float) realSpan / maxSpan * 100:0.0}% between min-max.");
@@ -76,6 +95,20 @@ namespace WSolve
                             Status.Info($"        {solution.InputData.Workshops[ws].name}");
                         }
                     }
+                }
+
+                int[] notScheduledSlots = Enumerable.Range(0, solution.InputData.SlotCount)
+                    .Where(s => solution.InputData.Slots[s].StartsWith(InputData.NotScheduledSlotPrefix))
+                    .ToArray();
+                
+                Status.Info($"    Not scheduled: {notScheduledSlots.Sum(s => slotCnt[s])} workshop(s)");                        
+                foreach (int ws in scheduling.Where(x => notScheduledSlots.Contains(x.slot)).Select(x => x.ws))
+                {
+                    if (solution.InputData.Workshops[ws].name.StartsWith(InputData.HiddenWorkshopPrefix))
+                    {
+                        continue;
+                    }
+                    Status.Info($"        {solution.InputData.Workshops[ws].name}");
                 }
             }
         }
@@ -92,8 +125,11 @@ namespace WSolve
 
             foreach ((int p, int ws) x in assignment)
             {
+                if(solution.InputData.Slots[solution.Scheduling[x.ws]].StartsWith(InputData.NotScheduledSlotPrefix))
+                    continue;
+                
                 (string name, IReadOnlyList<int> preferences) p = solution.InputData.Participants[x.p];
-                (string name, int min, int max) ws = solution.InputData.Workshops[x.ws];
+                (string name, int min, int max, int? continuation) ws = solution.InputData.Workshops[x.ws];
 
                 wsParts[x.ws]++;
                 partCnt[p.preferences[x.ws]]++;
@@ -107,6 +143,9 @@ namespace WSolve
 
                 foreach (string s in solution.InputData.Slots)
                 {
+                    if(s.StartsWith(InputData.NotScheduledSlotPrefix))
+                        continue;
+                    
                     str.Append($",\"{s}\"");
                 }
 
@@ -126,6 +165,10 @@ namespace WSolve
 
                     for (int s = 0; s < solution.InputData.Slots.Count; s++)
                     {
+                        if (solution.InputData.Slots[s].StartsWith(InputData.NotScheduledSlotPrefix))
+                        {
+                            continue;
+                        }
                         str.Append($",{solution.InputData.Workshops[workshops[s]].name}");
                     }
                 }
@@ -148,6 +191,11 @@ namespace WSolve
 
                 for (int i = 0; i < wsParts.Length; i++)
                 {
+                    if (solution.InputData.Workshops[i].name.StartsWith(InputData.HiddenWorkshopPrefix))
+                    {
+                        continue;
+                    }
+                    
                     Status.Info(
                         $"    Workshop '{solution.InputData.Workshops[i].name}': {wsParts[i]} participant(s) (of {solution.InputData.Workshops[i].max}).");
                 }

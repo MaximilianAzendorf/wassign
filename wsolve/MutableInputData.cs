@@ -6,9 +6,9 @@ namespace WSolve
 {
     public class MutableInputData
     {
-        public List<(string name, int min, int max)> Workshops { get; private set; } =
-            new List<(string name, int min, int max)>();
-
+        public List<(string name, int min, int max, int? continuation)> Workshops { get; private set; } =
+            new List<(string name, int min, int max, int? continuation)>();
+        
         public List<(string name, int[] preferences)> Participants { get; private set; } =
             new List<(string name, int[] preferences)>();
 

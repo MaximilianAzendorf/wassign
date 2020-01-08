@@ -11,7 +11,7 @@ namespace WSolve.ExtraConditions
         {
         }
 
-        public CollectionStateless<ParticipantStateless, WorkshopStateless> Workshops
+        public CollectionStateless<ParticipantStateless, WorkshopStateless> Events
             => new CollectionStateless<ParticipantStateless, WorkshopStateless>(this);
     }
 }

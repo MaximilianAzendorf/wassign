@@ -30,6 +30,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Include="..\Algorithm.md">
+        <Link>Algorithm.md</Link>
+      </Content>
       <Content Include="..\Readme.md">
         <Link>Readme.md</Link>
       </Content>

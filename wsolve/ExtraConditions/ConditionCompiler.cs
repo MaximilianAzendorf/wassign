@@ -57,6 +57,8 @@ namespace WSolve.ExtraConditions
             foreach (string s in data.Slots)
             {
                 string name = s.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.s++;
@@ -76,6 +78,9 @@ namespace WSolve.ExtraConditions
             foreach (string w in data.Workshops.Select(ws => ws.name))
             {
                 string name = w.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                if (name.StartsWith('~')) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.p++;
@@ -95,6 +100,8 @@ namespace WSolve.ExtraConditions
             foreach (string p in data.Participants.Select(p => p.name))
             {
                 string name = p.Split(' ')[0];
+                if (name.StartsWith(InputData.GeneratedPrefix)) continue;
+                
                 if (!IsValidIdentifier(name))
                 {
                     ignored.w++;
@@ -115,7 +122,7 @@ namespace WSolve.ExtraConditions
             if (sum != (0, 0, 0))
             {
                 Status.Warning(
-                    $"{sum.s} slot, {sum.w} workshop and {sum.p} participant identifier(s) are not available to constraints and filters due to name conflics.");
+                    $"{sum.s} slot, {sum.w} workshop and {sum.p} participant identifier(s) are not available to constraints due to name conflics.");
             }
 
             return extraDefinitions.ToString();

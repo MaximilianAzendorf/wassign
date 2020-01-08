@@ -145,16 +145,10 @@ namespace WSolve.ExtraConditions
             throw new ArgumentException($"Could not find slot with name fragment '{nameFragment}'.");
         }
 
-        protected IEnumerable<Constraint> EventSeries(params WorkshopStateless[] workshops)
+        public static IEnumerable<Constraint> EventSeries(params WorkshopStateless[] workshops)
         {
-            for (int i = 0; i < workshops.Length; i++)
-            {
-                for (int j = i + 1; j < workshops.Length; j++)
-                {
-                    yield return workshops[i].Participants == workshops[j].Participants;
-                    yield return new SlotOffsetConstraint(workshops[i], workshops[j], j - i);
-                }
-            }
+            return Constraint.EventSeries(workshops.Select(x => x.InputData).Distinct().Single(),
+                workshops.Select(x => x.Id).ToArray());
         }
     }
 }

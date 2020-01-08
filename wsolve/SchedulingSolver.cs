@@ -93,6 +93,9 @@ namespace WSolve
                 .OrderBy(x => -inputData.GetSchedulingConstraintsForWorkshop(x).Count())
                 .ThenBy(x => rnd.Next())
                 .ToArray();
+
+            bool[] lowPrioritySlot = Enumerable.Range(0, inputData.SlotCount)
+                .Select(s => inputData.Slots[s].StartsWith(InputData.NotScheduledSlotPrefix)).ToArray();
             
             Dictionary<int, int> decisions = new Dictionary<int, int>();
 
@@ -100,7 +103,6 @@ namespace WSolve
 
             for (int depth = 0; depth < workshopScramble.Length;)
             {
-                //Status.Info(string.Join(" ", workshopScramble.Select(w => decisions.TryGetValue(w, out var s) ? s.ToString() : "")));
                 if (ctoken.IsCancellationRequested)
                 {
                     return null;
@@ -162,6 +164,7 @@ namespace WSolve
                             // to fulfill the participant count.
                             //
                             var criticalSlots = Enumerable.Range(0, inputData.Slots.Count)
+                                .OrderBy(x => RNG.NextInt())
                                 .Where(s =>
                                     decisions
                                         .Where(w => w.Value == s)
@@ -197,14 +200,22 @@ namespace WSolve
                                         inputData.Workshops[workshop].min <=
                                         inputData.Participants.Count)
                                     .Where(s => SatisfiesSchedulingConstraints(workshop, s, decisions, inputData))
+                                    .ToList();
+
+                                var orderedSlots = feasibleSlots
+                                    .Where(s => !lowPrioritySlot[s])
                                     .OrderBy(s =>
                                         decisions
                                             .Where(w => w.Value == s)
                                             .Sum(w => inputData.Workshops[w.Key].max))
                                     .ToList();
+                                
+                                foreach(var low in feasibleSlots.Where(s => lowPrioritySlot[s]))
+                                {
+                                    orderedSlots.Insert(RNG.NextInt(0, orderedSlots.Count + 1), low);
+                                }
 
-
-                                backtracking.Push(feasibleSlots);
+                                backtracking.Push(orderedSlots);
                             }
                         }
                     }

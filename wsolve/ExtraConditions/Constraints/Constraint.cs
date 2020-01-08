@@ -98,7 +98,7 @@ namespace WSolve.ExtraConditions.Constraints
                 {
                     if(w == constraint.Element.Id) continue;
 
-                    yield return constraint.Owner.Workshops.Contains(new WorkshopStateless(w, inputData));
+                    yield return constraint.Owner.Events.Contains(new WorkshopStateless(w, inputData));
                 }
             }
             
@@ -113,7 +113,7 @@ namespace WSolve.ExtraConditions.Constraints
                 {
                     if(w == constraint.Element.Id) continue;
 
-                    yield return !constraint.Owner.Workshops.Contains(new WorkshopStateless(w, inputData));
+                    yield return !constraint.Owner.Events.Contains(new WorkshopStateless(w, inputData));
                 }
             }
 
@@ -172,6 +172,20 @@ namespace WSolve.ExtraConditions.Constraints
             }
             
             return ExpandDependentConstraints(res, inputData).Distinct();
+        }
+        
+        public static IEnumerable<Constraint> EventSeries(InputData inputData, IEnumerable<int> workshops)
+        {
+            var workshopsArray = workshops.ToArray();
+            var accessors = workshopsArray.Select(w => new WorkshopStateless(w, inputData)).ToArray();
+            for (int i = 0; i < workshopsArray.Length; i++)
+            {
+                for (int j = i + 1; j < workshopsArray.Length; j++)
+                {
+                    yield return accessors[i].Participants == accessors[j].Participants;
+                    yield return new SlotOffsetConstraint(accessors[i], accessors[j], j - i);
+                }
+            }
         }
     }
 }

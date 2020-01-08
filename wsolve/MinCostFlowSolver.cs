@@ -75,7 +75,7 @@ namespace WSolve
                     int tid = i;
                     _threads[i] = new Thread(() =>
                         DoShotgunHillClimbing(tid, inputData, csAnalysis, staticData, score, doneSchedulings,
-                            _cts.Token));
+                            _cts.Token), 1024 * 1024 * Math.Max(1, (inputData.ParticipantCount * inputData.WorkshopCount / 5000)));
                     _threads[i].Start();
                 }
 
