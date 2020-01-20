@@ -66,11 +66,26 @@ namespace WSolve
                 }
             }
 
+            if (!inputData.Slots.Any())
+            {
+                inputData.Slots.Add("Single Slot");
+            }
+
+            int minPref = inputData.Participants.Min(p => p.preferences.Min());
+
+            foreach(var p in inputData.Participants)
+            {
+                for (int i = 0; i < p.preferences.Length; i++)
+                {
+                    p.preferences[i] -= minPref;
+                }
+            }
+
             int wsidx = 0;
             
             foreach ((string name, string cond, int min, int max, int parts, bool optional) in preWorkshops)
             {
-                string[] conductorNames = cond.Split('+');
+                string[] conductorNames = cond.Split('+', StringSplitOptions.RemoveEmptyEntries);
                 int[] conductors = conductorNames.Select(c => inputData.Participants.FindIndex(0, x => x.name == c))
                     .ToArray();
 
@@ -164,7 +179,7 @@ namespace WSolve
                 else if ((m = ParticipantRegex.Match(lines[index])).Success)
                 {
                     canContinueFilter = false;
-                    int[] pref = m.Groups["pref"].Captures.Select(x => 100 - int.Parse(x.Value)).ToArray();
+                    int[] pref = m.Groups["pref"].Captures.Select(x => -int.Parse(x.Value)).ToArray();
                     if (Options.RankedPreferences)
                     {
                         pref = pref
