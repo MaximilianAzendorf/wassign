@@ -1,0 +1,32 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/max/git/wsolve/cpp/Types.h
+string
+-
+optional
+-
+vector
+-
+unordered_map
+-
+unordered_set
+-
+set
+-
+
+/home/max/git/wsolve/cpp/UnionFind.h
+Types.h
+/home/max/git/wsolve/cpp/Types.h
+
+/home/max/git/wsolve/cpp/main.cpp
+iostream
+-
+UnionFind.h
+/home/max/git/wsolve/cpp/UnionFind.h
+
