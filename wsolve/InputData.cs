@@ -19,11 +19,6 @@ namespace WSolve
             Participants = data.Participants.Select(p => (p.name, (IReadOnlyList<int>)p.preferences.ToImmutableList())).ToImmutableList();
             Slots = data.Slots.ToImmutableList();
 
-            if (!Slots.Any())
-            {
-                Slots = new[] {"Generated slot"}.ToImmutableList();
-            }
-
             var constraints = new List<Constraint>();
             if (buildConstraints)
             {

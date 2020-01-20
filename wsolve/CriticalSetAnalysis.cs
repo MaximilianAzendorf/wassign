@@ -22,9 +22,15 @@ namespace WSolve
             {
                 Analyze();
             }
+
+            var eligiblePrefLevels = InputData.PreferenceLevels
+                .Where(p => ForPreference(p).FirstOrDefault()?.Size >= InputData.Slots.Count)
+                .ToList();
+
+            int prefLevelMin = eligiblePrefLevels.Any() ? eligiblePrefLevels.Min() : 0;
             
             PreferenceBound = _sets.Any()
-                ? InputData.PreferenceLevels.Where(p => ForPreference(p).First().Size >= InputData.Slots.Count).Min()
+                ? prefLevelMin
                 : InputData.MaxPreference;
         }
 

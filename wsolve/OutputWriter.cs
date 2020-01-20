@@ -22,7 +22,7 @@ namespace WSolve
         {
             (int ws, int slot)[] scheduling = solution.Scheduling.Select(kvp => (kvp.Key, kvp.Value)).ToArray();
 
-            Console.WriteLine("Workshop Schedule:");
+            Console.WriteLine("Event Schedule:");
 
             var slotMin = new int[solution.InputData.Slots.Count];
             var slotMax = new int[solution.InputData.Slots.Count];
@@ -56,7 +56,7 @@ namespace WSolve
             if (Options.CsvOutput)
             {
                 var str = new StringBuilder();
-                str.AppendLine("\"Workshop\",\"Slot\"");
+                str.AppendLine("\"Event\",\"Slot\"");
 
                 foreach ((int ws, int slot) x in scheduling)
                 {
@@ -89,7 +89,7 @@ namespace WSolve
                     if (!solution.InputData.Slots[i].StartsWith(InputData.NotScheduledSlotPrefix))
                     {
                         Status.Info(
-                            $"    Slot '{solution.InputData.Slots[i]}': {slotCnt[i]} workshop(s), is {(float) realSpan / maxSpan * 100:0.0}% between min-max.");
+                            $"    Slot '{solution.InputData.Slots[i]}': {slotCnt[i]} event(s), is {(float) realSpan / maxSpan * 100:0.0}% between min-max.");
                         foreach (int ws in scheduling.Where(x => x.slot == i).Select(x => x.ws))
                         {
                             Status.Info($"        {solution.InputData.Workshops[ws].name}");
@@ -101,7 +101,7 @@ namespace WSolve
                     .Where(s => solution.InputData.Slots[s].StartsWith(InputData.NotScheduledSlotPrefix))
                     .ToArray();
                 
-                Status.Info($"    Not scheduled: {notScheduledSlots.Sum(s => slotCnt[s])} workshop(s)");                        
+                Status.Info($"    Not scheduled: {notScheduledSlots.Sum(s => slotCnt[s])} event(s)");                        
                 foreach (int ws in scheduling.Where(x => notScheduledSlots.Contains(x.slot)).Select(x => x.ws))
                 {
                     if (solution.InputData.Workshops[ws].name.StartsWith(InputData.HiddenWorkshopPrefix))
@@ -139,7 +139,7 @@ namespace WSolve
             if (Options.CsvOutput)
             {
                 var str = new StringBuilder();
-                str.Append("\"Workshop\"");
+                str.Append("\"Event\"");
 
                 foreach (string s in solution.InputData.Slots)
                 {
@@ -169,7 +169,7 @@ namespace WSolve
                         {
                             continue;
                         }
-                        str.Append($",{solution.InputData.Workshops[workshops[s]].name}");
+                        str.Append($",\"{solution.InputData.Workshops[workshops[s]].name}\"");
                     }
                 }
 
@@ -197,7 +197,7 @@ namespace WSolve
                     }
                     
                     Status.Info(
-                        $"    Workshop '{solution.InputData.Workshops[i].name}': {wsParts[i]} participant(s) (of {solution.InputData.Workshops[i].max}).");
+                        $"    Event '{solution.InputData.Workshops[i].name}': {wsParts[i]} participant(s) (of {solution.InputData.Workshops[i].max}).");
                 }
             }
         }
