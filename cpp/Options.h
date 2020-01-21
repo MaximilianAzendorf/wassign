@@ -22,6 +22,7 @@ public:
     static bool ranked_preferences();
     static double preference_exponent();
     static bool any();
+    static int thread_count();
 };
 
 

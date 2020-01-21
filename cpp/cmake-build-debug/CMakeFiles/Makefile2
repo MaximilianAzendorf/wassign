@@ -53,12 +53,12 @@ CMAKE_BINARY_DIR = /home/max/git/wsolve/cpp/cmake-build-debug
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/cpp.dir/all
+all: CMakeFiles/wsolve.dir/all
 
 .PHONY : all
 
 # The main recursive "clean" target.
-clean: CMakeFiles/cpp.dir/clean
+clean: CMakeFiles/wsolve.dir/clean
 
 .PHONY : clean
 
@@ -68,31 +68,31 @@ preinstall:
 .PHONY : preinstall
 
 #=============================================================================
-# Target rules for target CMakeFiles/cpp.dir
+# Target rules for target CMakeFiles/wsolve.dir
 
 # All Build rule for target.
-CMakeFiles/cpp.dir/all:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/depend
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles --progress-num=1,2 "Built target cpp"
-.PHONY : CMakeFiles/cpp.dir/all
+CMakeFiles/wsolve.dir/all:
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/depend
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles --progress-num=1,2 "Built target wsolve"
+.PHONY : CMakeFiles/wsolve.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/cpp.dir/rule: cmake_check_build_system
+CMakeFiles/wsolve.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles 2
-	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/cpp.dir/all
+	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/wsolve.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles 0
-.PHONY : CMakeFiles/cpp.dir/rule
+.PHONY : CMakeFiles/wsolve.dir/rule
 
 # Convenience name for target.
-cpp: CMakeFiles/cpp.dir/rule
+wsolve: CMakeFiles/wsolve.dir/rule
 
-.PHONY : cpp
+.PHONY : wsolve
 
 # clean rule for target.
-CMakeFiles/cpp.dir/clean:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/clean
-.PHONY : CMakeFiles/cpp.dir/clean
+CMakeFiles/wsolve.dir/clean:
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/clean
+.PHONY : CMakeFiles/wsolve.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

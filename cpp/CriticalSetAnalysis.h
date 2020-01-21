@@ -172,6 +172,11 @@ public:
     [[nodiscard]] vector<CriticalSet> const& sets() const { return _sets; }
 
     [[nodiscard]] int preference_bound() const { return preferenceBound; }
+
+    [[nodiscard]] static CriticalSetAnalysis empty(InputData const& inputData)
+    {
+        return CriticalSetAnalysis(inputData, false);
+    }
 };
 
 

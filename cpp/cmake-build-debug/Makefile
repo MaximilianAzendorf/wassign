@@ -111,17 +111,17 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named cpp
+# Target rules for targets named wsolve
 
 # Build rule for target.
-cpp: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 cpp
-.PHONY : cpp
+wsolve: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 wsolve
+.PHONY : wsolve
 
 # fast build rule for target.
-cpp/fast:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/build
-.PHONY : cpp/fast
+wsolve/fast:
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/build
+.PHONY : wsolve/fast
 
 main.o: main.cpp.o
 
@@ -129,7 +129,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/main.cpp.o
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -138,7 +138,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/main.cpp.i
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -147,7 +147,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) -f CMakeFiles/cpp.dir/build.make CMakeFiles/cpp.dir/main.cpp.s
+	$(MAKE) -f CMakeFiles/wsolve.dir/build.make CMakeFiles/wsolve.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -157,7 +157,7 @@ help:
 	@echo "... clean"
 	@echo "... depend"
 	@echo "... rebuild_cache"
-	@echo "... cpp"
+	@echo "... wsolve"
 	@echo "... edit_cache"
 	@echo "... main.o"
 	@echo "... main.i"

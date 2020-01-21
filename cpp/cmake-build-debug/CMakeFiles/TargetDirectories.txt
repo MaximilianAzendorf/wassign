@@ -1,3 +1,3 @@
 /home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles/cpp.dir
+/home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles/wsolve.dir
 /home/max/git/wsolve/cpp/cmake-build-debug/CMakeFiles/edit_cache.dir

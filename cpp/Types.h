@@ -11,6 +11,9 @@
 #include <set>
 #include <regex>
 #include <chrono>
+#include <atomic>
+
+#include <boost/thread.hpp>
 
 using string = std::string;
 
@@ -46,3 +49,11 @@ using datetime = std::chrono::time_point<std::chrono::system_clock, nanoseconds>
 
 template<typename T>
 using shared_ptr = std::shared_ptr<T>;
+
+template<typename T>
+using unique_ptr = std::unique_ptr<T>;
+
+template<typename T>
+using atomic = std::atomic<T>;
+
+using thread = boost::thread;
