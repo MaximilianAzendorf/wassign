@@ -66,7 +66,6 @@ int main(int argc, char** argv)
     try
     {
         Rng::seed(time_now().time_since_epoch().count());
-        Rng::seed(123);
 
         const string header = "wsolve [Version " WSOLVE_VERSION "]\n(c) 2019 Maximilian Azendorf\n";
         switch (Options::parse(argc, argv, header))

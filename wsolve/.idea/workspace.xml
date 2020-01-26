@@ -12,7 +12,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="11ddf8d2-70c2-46d4-b8e5-db45508d36b0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/Version.h" beforeDir="false" afterPath="$PROJECT_DIR$/Version.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
