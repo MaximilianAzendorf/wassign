@@ -12,7 +12,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="11ddf8d2-70c2-46d4-b8e5-db45508d36b0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/Version.h" beforeDir="false" afterPath="$PROJECT_DIR$/Version.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -128,38 +129,38 @@
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
     <state x="2988" y="504" key="FileChooserDialogImpl/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000737021" />
-    <state width="2514" height="400" key="GridCell.Tab.0.bottom" timestamp="1580000561270">
+    <state width="2514" height="490" key="GridCell.Tab.0.bottom" timestamp="1580002219079">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="400" key="GridCell.Tab.0.bottom/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000561270" />
-    <state width="2514" height="400" key="GridCell.Tab.0.center" timestamp="1580000561269">
+    <state width="2514" height="490" key="GridCell.Tab.0.bottom/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002219079" />
+    <state width="2514" height="490" key="GridCell.Tab.0.center" timestamp="1580002219078">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="400" key="GridCell.Tab.0.center/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000561269" />
-    <state width="2514" height="400" key="GridCell.Tab.0.left" timestamp="1580000561269">
+    <state width="2514" height="490" key="GridCell.Tab.0.center/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002219078" />
+    <state width="2514" height="490" key="GridCell.Tab.0.left" timestamp="1580002219078">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="400" key="GridCell.Tab.0.left/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000561269" />
-    <state width="2514" height="400" key="GridCell.Tab.0.right" timestamp="1580000561270">
+    <state width="2514" height="490" key="GridCell.Tab.0.left/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002219078" />
+    <state width="2514" height="490" key="GridCell.Tab.0.right" timestamp="1580002219079">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="400" key="GridCell.Tab.0.right/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000561270" />
-    <state width="2514" height="490" key="GridCell.Tab.1.bottom" timestamp="1580000549378">
+    <state width="2514" height="490" key="GridCell.Tab.0.right/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002219079" />
+    <state width="2514" height="490" key="GridCell.Tab.1.bottom" timestamp="1580002220217">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="490" key="GridCell.Tab.1.bottom/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000549378" />
-    <state width="2514" height="490" key="GridCell.Tab.1.center" timestamp="1580000549377">
+    <state width="2514" height="490" key="GridCell.Tab.1.bottom/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002220217" />
+    <state width="2514" height="490" key="GridCell.Tab.1.center" timestamp="1580002220216">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="490" key="GridCell.Tab.1.center/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000549377" />
-    <state width="2514" height="490" key="GridCell.Tab.1.left" timestamp="1580000549377">
+    <state width="2514" height="490" key="GridCell.Tab.1.center/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002220216" />
+    <state width="2514" height="490" key="GridCell.Tab.1.left" timestamp="1580002220216">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="490" key="GridCell.Tab.1.left/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000549377" />
-    <state width="2514" height="490" key="GridCell.Tab.1.right" timestamp="1580000549378">
+    <state width="2514" height="490" key="GridCell.Tab.1.left/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002220216" />
+    <state width="2514" height="490" key="GridCell.Tab.1.right" timestamp="1580002220216">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
-    <state width="2514" height="490" key="GridCell.Tab.1.right/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580000549378" />
+    <state width="2514" height="490" key="GridCell.Tab.1.right/240.324.1680.1050/1920.0.2560.1440/4480.294.1920.1080@1920.0.2560.1440" timestamp="1580002220216" />
     <state x="2360" y="381" width="1679" height="700" key="SettingsEditor" timestamp="1579997984313">
       <screen x="1920" y="0" width="2560" height="1440" />
     </state>
@@ -187,6 +188,15 @@
     <state x="2863" y="363" width="672" height="678" key="search.everywhere.popup/240.324.1680.1050/4480.294.1920.1080/1920.0.2560.1440@1920.0.2560.1440" timestamp="1579567712239" />
   </component>
   <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
+          <url>file://$PROJECT_DIR$/ConstraintParser.h</url>
+          <line>95</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
     <watches-manager>
       <configuration name="CMakeRunConfiguration">
         <watch expression="p" />
