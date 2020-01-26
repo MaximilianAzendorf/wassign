@@ -12,56 +12,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="11ddf8d2-70c2-46d4-b8e5-db45508d36b0" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/encodings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/indexLayout.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/markdown-navigator-enh.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/markdown-navigator.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/projectSettingsUpdater.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../.idea/.idea.wsolve/riderModule.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/codeStyles/codeStyleConfig.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/cpp.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Assignment.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Constraint.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ConstraintParser.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Constraints.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CriticalSet.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CriticalSetAnalysis.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FuzzyMatch.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/InputData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/InputException.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/InputReader.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MipFlow.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MipFlowStaticData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MipSolver.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/MutableInputData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Options.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/OutputWriter.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ParticipantData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Rng.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Scheduling.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/SchedulingSolver.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Scoring.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/SlotData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Solution.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/SpiritUtil.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Status.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Types.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/UnionFind.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Util.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Version.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/WorkshopData.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/../.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Version.h" beforeDir="false" afterPath="$PROJECT_DIR$/Version.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -134,7 +85,7 @@
       <workItem from="1579823331159" duration="6327000" />
       <workItem from="1579887716335" duration="13051000" />
       <workItem from="1579963714189" duration="29604000" />
-      <workItem from="1580000667546" duration="631000" />
+      <workItem from="1580000667546" duration="959000" />
     </task>
     <servers />
   </component>
