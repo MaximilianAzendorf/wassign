@@ -1,0 +1,3 @@
+[submodule "cpp/or-tools"]
+	path = cpp/or-tools
+	url = https://github.com/google/or-tools.git
