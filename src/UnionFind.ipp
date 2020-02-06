@@ -1,10 +1,16 @@
 #pragma once
 
 #include "UnionFind.h"
+#include "Util.h"
 
 template<typename T>
 UnionFind<T>::UnionFind(T max)
 {
+    if(max < 0)
+    {
+        throw std::logic_error("Invalid max value " + str(max) + ".");
+    }
+
     int count = 0;
     for(T i = 0; i < max; i++)
     {
@@ -25,6 +31,12 @@ int UnionFind<T>::find(T element) const
     }
 
     return idx;
+}
+
+template<typename T>
+int UnionFind<T>::size() const
+{
+    return _elements.size();
 }
 
 template<typename T>

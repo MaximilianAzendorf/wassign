@@ -13,9 +13,11 @@ private:
 public:
     explicit UnionFind(T max);
 
+    int join(T element1, T element2);
+
     [[nodiscard]] int find(T element) const;
 
-    int join(T element1, T element2);
+    [[nodiscard]] int size() const;
 
     [[nodiscard]] vector<vector<T>> groups() const;
 };

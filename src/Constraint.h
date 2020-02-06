@@ -29,11 +29,11 @@ enum ConstraintType
 enum SlotSizeLimitOp
 {
     Eq = 1,
-    Neq = -1,
     Gt = 2,
-    Leq = -2,
     Geq = 3,
-    Lt = -3
+    Neq = -Eq,
+    Leq = -Gt,
+    Lt = -Geq,
 };
 
 class Constraint

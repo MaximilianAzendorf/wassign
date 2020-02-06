@@ -102,6 +102,9 @@ void InputData::compute_part_constraints(vector<Constraint>& constraints)
 
     for(vector<int> group : workshopGroups.groups())
     {
+        // TODO: Implement proper event order support for event series.
+        //
+        std::sort(group.begin(), group.end());
         for(int i = 0; i < group.size(); i++)
         {
             for(int j = i + 1; j < group.size(); j++)
@@ -183,6 +186,10 @@ InputData::InputData(MutableInputData& data)
     _maxPreference = INT_MIN;
     for(int p = 0; p < data.participants.size(); p++)
     {
+        if(data.participants[p].preferences().size() != data.workshops.size())
+        {
+            throw InputException("Wrong number of preferences given for person \"" + data.participants[p].name() + "\".");
+        }
         for(int w = 0; w < data.workshops.size(); w++)
         {
             int pref = -data.participants[p].preference(w);
@@ -208,6 +215,7 @@ InputData::InputData(MutableInputData& data)
             _preferenceLevels.push_back(data.participants[p].preference(w));
         }
     }
+    _preferenceLevels.push_back(_maxPreference);
 
     std::sort(_preferenceLevels.begin(), _preferenceLevels.end());
     _preferenceLevels.erase(std::unique(_preferenceLevels.begin(), _preferenceLevels.end()), _preferenceLevels.end());

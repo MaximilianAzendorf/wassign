@@ -130,7 +130,7 @@ Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int work
 
         if(add)
         {
-            res.push_back(Constraint(newType, switchSides ? c.right() : c.left(), switchSides ? c.left() : c.right()));
+            res.push_back(Constraint(newType, switchSides ? c.right() : c.left(), switchSides ? c.left() : c.right(), c.extra()));
         }
     }
 

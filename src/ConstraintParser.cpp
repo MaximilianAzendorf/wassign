@@ -45,8 +45,22 @@ int ConstraintParser::resolve_accessor(InputData const& data, string const& cons
     switch(accessor.type)
     {
         case Slot: return find_name(constraint, accessor.name, data.slots());
-        case Workshop: return find_name(constraint, accessor.name, data.workshops());
         case Participant: return find_name(constraint, accessor.name, data.participants());
+        case Workshop:
+        {
+            int w = find_name(constraint, accessor.name, data.workshops());
+            int part = accessor.part;
+            while(part-- > 0)
+            {
+                if(!data.workshop(w).has_continuation())
+                {
+                    throw InputException("The given workshop doesn't have a part " + str(accessor.part)
+                                         + " given in constraint \"" + constraint + "\".");
+                }
+                w = data.workshop(w).continuation();
+            }
+            return w;
+        }
 
         default: throw std::logic_error("Unexpected accessor type.");
     }
