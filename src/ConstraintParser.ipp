@@ -58,27 +58,36 @@ template<typename Iterator>
 ConstraintParser::Relation ConstraintParser::parse_relation(string const& constraint, Iterator& begin, Iterator end)
 {
     Relation r{};
+    bool negated = false;
+    bool canBeNegated = true;
 
     auto relation =
             lit("=")[pset(r.type, REq)]
             | lit("==")[pset(r.type, REq)]
             | lit("is")[pset(r.type, REq)]
             | lit("!=")[pset(r.type, RNeq)]
-            | lit("is not")[pset(r.type, RNeq)]
             | lit("<>")[pset(r.type, RNeq)]
             | lit(">")[pset(r.type, RGt)]
             | lit("<")[pset(r.type, RLt)]
             | lit(">=")[pset(r.type, RGeq)]
             | lit("<=")[pset(r.type, RLeq)]
             | lit("contains")[pset(r.type, RContains)]
-            | lit("contains not")[pset(r.type, RNotContains)]
-            | lit("subset of")[pset(r.type, RSubset)]
-            | lit("superset of")[pset(r.type, RSuperset)];
+            | lit("subset")[pand(pset(r.type, RSubset), pset(canBeNegated, false))]
+            | lit("superset")[pand(pset(r.type, RSuperset), pset(canBeNegated, false))];
 
-    if(!parse_partial(begin, end, relation))
+    auto negRelation =
+            relation
+            >> -(lit("not")[pset(negated, true)]);
+
+    if(!parse_partial(begin, end, negRelation) || (negated && !canBeNegated))
     {
         throw InputException("Could not parse relation at position " + str(begin - constraint.begin())
                              + " in constraint \"" + constraint + "\".");
+    }
+
+    if(negated)
+    {
+        r.type = (RelationType)-r.type;
     }
 
     return r;

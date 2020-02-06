@@ -329,10 +329,17 @@ Solution MipSolver::solve_assignment(InputData const& inputData, op::MPSolver& s
 shared_ptr<Scheduling const>
 MipSolver::feasible_neighbor(InputData const& inputData, shared_ptr<Scheduling const> const& scheduling)
 {
+    const int MAX_TRIES = 1000;
     vector<int> data(scheduling->raw_data());
 
+    int tries = 0;
     while(true)
     {
+        if(tries++ > MAX_TRIES)
+        {
+            return nullptr;
+        }
+
         int w = Rng::next(0, inputData.workshop_count());
         int s = Rng::next(0, inputData.slot_count());
 
@@ -381,6 +388,11 @@ void MipSolver::do_shotgun_hill_climbing(int tid, InputData const& inputData, Cr
                 else
                 {
                     nextSchedulingPtr = feasible_neighbor(inputData, schedulingPtr);
+                }
+
+                if(nextSchedulingPtr == nullptr)
+                {
+                    break;
                 }
 
                 interruption_point();
@@ -459,7 +471,11 @@ Solution MipSolver::solve(InputData const& inputData)
     {
         Status::info("Computing solution.");
         SchedulingSolver schedulingSolver(inputData, csAnalysis);
-        schedulingSolver.next_scheduling();
+
+        if(!schedulingSolver.next_scheduling())
+        {
+            return Solution::invalid();
+        }
 
         auto solver = new_solver();
         return solve_assignment(inputData, solver, schedulingSolver.scheduling(), csAnalysis, staticData);

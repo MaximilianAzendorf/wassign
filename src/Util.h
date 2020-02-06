@@ -32,7 +32,7 @@ inline string str(secondsf const& x)
     total -= minutes;
     total *= 60;
 
-    int seconds = (int)total;
+    int seconds = (int)round(total);
 
     return pad(str(hours), 2, '0')
         + ":" + pad(str(minutes), 2, '0')

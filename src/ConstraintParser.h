@@ -39,10 +39,11 @@ private:
         RGeq = Geq,
         RLeq = Leq,
 
-        RContains = 1 << 16,
-        RNotContains,
+        RContains = 1U << 16,
         RSubset,
         RSuperset,
+
+        RNotContains = -RContains,
     };
 
     struct Accessor

@@ -12,7 +12,11 @@ private:
 
     static string color_reset();
 
+    static bool _output;
+
 public:
+    static void enable_output();
+
     static void info(string const& text);
 
     static void info_important(string const& text);

@@ -10,8 +10,7 @@ CriticalSet::CriticalSet(int preference, vector<int> const& data)
 
 bool CriticalSet::is_covered_by(CriticalSet const& other) const
 {
-    return _preference <= other._preference
-           && is_superset_of(other);
+    return _preference <= other._preference && is_superset_of(other);
 }
 
 bool CriticalSet::is_superset_of(CriticalSet const& other) const

@@ -112,7 +112,8 @@ CriticalSetAnalysis::CriticalSetAnalysis(InputData const& inputData, bool analyz
     preferenceBound = _inputData.max_preference();
     for(int prefLevel : _inputData.preference_levels())
     {
-        if(for_preference(prefLevel).front().size() >= _inputData.slot_count())
+        auto subset = for_preference(prefLevel);
+        if(!subset.empty() && subset.front().size() >= _inputData.slot_count())
         {
             preferenceBound = std::min(preferenceBound, prefLevel);
         }
@@ -121,7 +122,7 @@ CriticalSetAnalysis::CriticalSetAnalysis(InputData const& inputData, bool analyz
 
 vector<CriticalSet> CriticalSetAnalysis::for_preference(int preference) const
 {
-    list<CriticalSet> relevantSets;
+    list<CriticalSet> relevantSets{};
     for(CriticalSet set : _sets)
     {
         if(set.preference() >= preference)

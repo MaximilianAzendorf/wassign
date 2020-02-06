@@ -66,8 +66,9 @@ int main(int argc, char** argv)
     try
     {
         Rng::seed(time_now().time_since_epoch().count());
+        Status::enable_output();
 
-        const string header = "wsolve [Version " WSOLVE_VERSION "]\n(c) 2019 Maximilian Azendorf\n";
+        const string header = "wsolve [Version " WSOLVE_VERSION "]\n(c) 2020 Maximilian Azendorf\n";
         switch (Options::parse(argc, argv, header))
         {
             case OK:
@@ -93,10 +94,11 @@ int main(int argc, char** argv)
 
         if (solution.is_invalid())
         {
-            Status::warning("No solution found.");
+            Status::info_important("No solution found.");
         }
         else
         {
+            Status::info_important("Solution found.");
             Status::info("Solution score: " + Scoring(inputData).evaluate(solution).to_str());
             if (inputData.slot_count() > 1)
             {

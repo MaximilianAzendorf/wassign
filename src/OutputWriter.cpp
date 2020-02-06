@@ -22,6 +22,11 @@ string OutputWriter::write_scheduling_solution(Solution const& solution)
             sName = "not scheduled";
         }
 
+        if(wName.rfind(InputData::GeneratedPrefix, 0) == 0)
+        {
+            wName = wName.substr(InputData::GeneratedPrefix.length());
+        }
+
         str << '"' << wName << '"' << ", " << '"' << sName << '"' << endl;
     }
 
@@ -47,7 +52,7 @@ string OutputWriter::write_assignment_solution(Solution const& solution)
 
     for(int p = 0; p < solution.input_data().participant_count(); p++)
     {
-        vector<int> workshops(solution.input_data().slot_count());
+vector<int> workshops(solution.input_data().slot_count());
         for(int s = 0; s < solution.input_data().slot_count(); s++)
         {
             int ws = solution.assignment().workshop_of(p, s);
@@ -63,7 +68,12 @@ string OutputWriter::write_assignment_solution(Solution const& solution)
                 continue;
             }
 
-            str << ", " << solution.input_data().workshop(workshops[s]).name();
+            string wName = solution.input_data().workshop(workshops[s]).name();
+            if(wName.rfind(InputData::GeneratedPrefix, 0) == 0)
+            {
+                wName = wName.substr(InputData::GeneratedPrefix.length());
+            }
+            str << ", \"" << wName << "\"";
         }
     }
 
