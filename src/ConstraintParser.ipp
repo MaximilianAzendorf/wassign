@@ -71,13 +71,14 @@ ConstraintParser::Relation ConstraintParser::parse_relation(string const& constr
             | lit("<")[pset(r.type, RLt)]
             | lit(">=")[pset(r.type, RGeq)]
             | lit("<=")[pset(r.type, RLeq)]
+            | lit("contain")[pset(r.type, RContains)]
             | lit("contains")[pset(r.type, RContains)]
             | lit("subset")[pand(pset(r.type, RSubset), pset(canBeNegated, false))]
             | lit("superset")[pand(pset(r.type, RSuperset), pset(canBeNegated, false))];
 
     auto negRelation =
-            relation
-            >> -(lit("not")[pset(negated, true)]);
+            (relation >> -(lit("not")[pset(negated, true)]))
+            | (lit("not")[pset(negated, true)] >> relation);
 
     if(!parse_partial(begin, end, negRelation) || (negated && !canBeNegated))
     {

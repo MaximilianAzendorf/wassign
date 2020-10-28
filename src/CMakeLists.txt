@@ -4,7 +4,7 @@ set(GFLAGS_USE_TARGET_NAMESPACE ON)
 set(Boost_USE_STATIC_LIBS ON)
 
 find_package(Boost COMPONENTS program_options thread REQUIRED)
-find_package(TBB REQUIRED)
+#find_package(TBB REQUIRED)
 find_package(ortools CONFIG REQUIRED)
 
 file(GLOB SOURCE_CPP *.cpp)

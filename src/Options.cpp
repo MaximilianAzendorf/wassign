@@ -50,14 +50,11 @@ OptionsParseResult Options::parse(int argc, char **argv, string const& header)
                 ("verbosity,v", po::value(&_verbosity),
                  "A number between 0 and 3 indicating how much status information should be given.")
                 ("any,a", po::bool_switch(&_any), "Stop after the first found solution.")
-                ("pref-exp,p", po::value(&_prefExp), "The preference exponent.]")
-                ("ranked-pref,r", po::bool_switch(&_rankedPref),
-                 "Preferences of every participant will be transformed into a ranking.")
+                ("pref-exp,p", po::value(&_prefExp), "The preference exponent.")
                 ("timeout,t", po::value(&_timeoutStr)->notifier(parse_time(_timeout)), "Sets the optimization timeout.")
                 ("cs-timeout,m", po::value(&_csTimeoutStr)->notifier(parse_time(_csTimeout)),
                  "Sets the timeout for attempting to satisfy critical sets of a certain preference level.")
                 ("no-cs", po::bool_switch(&_noCs), "Do not perform critical set analysis.")
-                ("no-stats", po::bool_switch(&_noStats), "Do not print solution statistics.")
                 ("threads,j", po::value(&_threadCount), "Number of threads to use for computation.");
 
         po::variables_map vm;
@@ -114,16 +111,6 @@ int Options::critical_set_timeout_seconds()
 bool Options::no_critical_sets()
 {
     return _noCs;
-}
-
-bool Options::no_stats()
-{
-    return _noStats;
-}
-
-bool Options::ranked_preferences()
-{
-    return _rankedPref;
 }
 
 double Options::preference_exponent()

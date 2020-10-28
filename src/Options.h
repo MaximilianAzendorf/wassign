@@ -19,14 +19,12 @@ private:
 
     inline static vector<string> _inputFiles;
     inline static string _outputFile;
-    inline static int _verbosity = 3;
+    inline static int _verbosity = 1;
     inline static bool _any;
     inline static double _prefExp = 3.0;
-    inline static bool _rankedPref;
     inline static int _timeout = 60;
-    inline static int _csTimeout = 1;
+    inline static int _csTimeout = 3;
     inline static bool _noCs;
-    inline static bool _noStats;
     inline static int _threadCount = (int)std::thread::hardware_concurrency();
 
     inline static string _timeoutStr;
@@ -56,10 +54,6 @@ public:
     static int critical_set_timeout_seconds();
 
     static bool no_critical_sets();
-
-    static bool no_stats();
-
-    static bool ranked_preferences();
 
     static double preference_exponent();
 
