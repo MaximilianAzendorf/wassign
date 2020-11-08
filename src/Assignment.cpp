@@ -50,11 +50,11 @@ vector<int> Assignment::workshops_ordered(int participant) const
     return workshops;
 }
 
-bool Assignment::is_in_workshop(int p, int w) const
+bool Assignment::is_in_workshop(int participant, int workshop) const
 {
     for(int s = 0; s < _inputData->slot_count(); s++)
     {
-        if(workshop_of(p, s) == w) return true;
+        if(workshop_of(participant, s) == workshop) return true;
     }
 
     return false;

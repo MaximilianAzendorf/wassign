@@ -133,7 +133,6 @@ bool MipFlow<NodeKey, EdgeKey>::solve(op::MPSolver& solver)
 
     minTerm->SetMinimization();
 
-    //solver.EnableOutput();
     bool success = solver.Solve() == op::MPSolver::OPTIMAL;
 
     if(success)
@@ -143,11 +142,11 @@ bool MipFlow<NodeKey, EdgeKey>::solve(op::MPSolver& solver)
 
         for(int i = 0; i < edgeVariables.size(); i++)
         {
-            _solution[i] = edgeVariables[i]->solution_value();
+            _solution[i] = (int)round(edgeVariables[i]->solution_value());
         }
     }
 
-    return success;
+     return success;
 }
 
 template<typename NodeKey, typename EdgeKey>

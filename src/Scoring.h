@@ -10,6 +10,7 @@ class Scoring
 {
 private:
     InputData const* _inputData;
+    Options const& _options;
     float _scaling;
 
     [[nodiscard]] bool satisfies_constraints_scheduling(Solution const& solution) const;
@@ -23,7 +24,7 @@ private:
     [[nodiscard]] float evaluate_minor(Solution const& solution) const;
 
 public:
-    explicit Scoring(InputData const& inputData);
+    Scoring(InputData const& inputData, Options const& options);
 
     [[nodiscard]] bool is_feasible(Solution const& solution) const;
 

@@ -14,8 +14,10 @@ private:
 
     static bool _output;
 
+    static Options const* _options;
+
 public:
-    static void enable_output();
+    static void enable_output(Options const& options);
 
     static void info(string const& text);
 

@@ -10,9 +10,10 @@
 
 #include <iostream>
 #include <fstream>
+#include <signal.h>
 
 template<typename Stream>
-string readInputString(Stream& stream)
+string readInputStringFromStream(Stream& stream)
 {
     std::stringstream res;
     string line;
@@ -24,34 +25,34 @@ string readInputString(Stream& stream)
     return res.str();
 }
 
-string readInputString()
+string readInputString(Options const& options)
 {
-    if(Options::input_files().empty())
+    if(options.input_files().empty())
     {
-        return readInputString(std::cin);
+        return readInputStringFromStream(std::cin);
     }
     else
     {
         std::stringstream res;
-        for(string const& file : Options::input_files())
+        for(string const& file : options.input_files())
         {
             std::ifstream stream(file);
             if(!stream.is_open())
             {
                 throw InputException("File \"" + file + "\" could not be opened.");
             }
-            res << readInputString(stream) << std::endl;
+            res << readInputStringFromStream(stream) << std::endl;
         }
 
         return res.str();
     }
 }
 
-void output_string(string const& text, string const& fileSuffix)
+void output_string(string const& text, string const& fileSuffix, Options const& options)
 {
-    if(!Options::output_file().empty())
+    if(!options.output_file().empty())
     {
-        std::ofstream stream(Options::output_file() + fileSuffix);
+        std::ofstream stream(options.output_file() + fileSuffix);
         stream << text;
         stream.close();
     }
@@ -61,15 +62,39 @@ void output_string(string const& text, string const& fileSuffix)
     }
 }
 
+void signal_handler(int signal)
+{
+    (void)signal;
+    Status::error("Abort on user request (signal " + str(signal) + ").");
+    exit(signal);
+}
+
+struct sigaction old_action;
+void set_signal_handler(int signal, __sighandler_t handler)
+{
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_handler = handler;
+    sigaction(signal, &action, &old_action);
+}
+
 int main(int argc, char** argv)
 {
+    set_signal_handler(SIGINT, signal_handler);
+    set_signal_handler(SIGTERM, signal_handler);
+
     try
     {
         Rng::seed(time_now().time_since_epoch().count());
-        Status::enable_output();
 
         const string header = "wsolve [Version " WSOLVE_VERSION "]\n(c) 2020 Maximilian Azendorf\n";
-        switch (Options::parse(argc, argv, header))
+        Options options;
+
+        auto optionsStatus = Options::parse(argc, argv, header, options);
+
+        Status::enable_output(options);
+
+        switch (optionsStatus)
         {
             case OK:
                 break;
@@ -82,14 +107,14 @@ int main(int argc, char** argv)
             }
         }
 
-        string inputString = readInputString();
+        string inputString = readInputString(options);
         InputData inputData = InputReader::read_input(inputString);
         inputData.build_constraints(ConstraintParser::parse);
 
         Status::info("Found " + str(inputData.scheduling_constraints().size()) + " scheduling and "
             + str(inputData.assignment_constraints().size()) + " assignment constraints.");
 
-        MipSolver solver;
+        MipSolver solver(options);
         Solution solution = solver.solve(inputData);
 
         if (solution.is_invalid())
@@ -99,15 +124,15 @@ int main(int argc, char** argv)
         else
         {
             Status::info_important("Solution found.");
-            Status::info("Solution score: " + Scoring(inputData).evaluate(solution).to_str());
+            Status::info("Solution score: " + Scoring(inputData, options).evaluate(solution).to_str());
             if (inputData.slot_count() > 1)
             {
                 string schedulingSolutionString = OutputWriter::write_scheduling_solution(solution);
-                output_string(schedulingSolutionString, ".scheduling.csv");
+                output_string(schedulingSolutionString, ".scheduling.csv", options);
             }
 
             string assignmentSolutionString = OutputWriter::write_assignment_solution(solution);
-            output_string(assignmentSolutionString, ".assignment.csv");
+            output_string(assignmentSolutionString, ".assignment.csv", options);
         }
     }
     catch(InputException const& ex)

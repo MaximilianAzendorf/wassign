@@ -366,11 +366,12 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
     return convert_decisions(decisions);
 }
 
-SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis)
+SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options)
         : _inputData(&inputData),
           _csAnalysis(std::move(csAnalysis)),
           _currentSolution(new Scheduling(inputData)),
-          _hasSolution(false)
+          _hasSolution(false),
+          _options(options)
 {
 }
 
@@ -388,7 +389,7 @@ bool SchedulingSolver::next_scheduling()
 
         datetime timeLimit =  preferenceLimit == _inputData->max_preference()
                               ? time_never()
-                              : time_now() + seconds(Options::critical_set_timeout_seconds());
+                              : time_now() + seconds(_options.critical_set_timeout_seconds());
 
         slots = solve_scheduling(csSets, timeLimit);
 

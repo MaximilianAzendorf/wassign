@@ -35,7 +35,7 @@ void MipSolver::interruption_point()
 
 void MipSolver::check_for_possible_overflow(InputData const& inputData)
 {
-    if(std::pow((double)inputData.max_preference(), Options::preference_exponent()) * inputData.participant_count() >= LONG_MAX)
+    if(std::pow((double)inputData.max_preference(), _options.preference_exponent()) * inputData.participant_count() >= LONG_MAX)
     {
         Status::warning("The preference exponent is too large; computations may cause an integer overflow");
     }
@@ -44,7 +44,7 @@ void MipSolver::check_for_possible_overflow(InputData const& inputData)
 
 CriticalSetAnalysis MipSolver::get_cs_analysis(InputData const& inputData)
 {
-    if(!Options::no_critical_sets() && inputData.slot_count() > 1)
+    if(!_options.no_critical_sets() && inputData.slot_count() > 1)
     {
         Status::info("Performing critical set analysis.");
         CriticalSetAnalysis cs(inputData);
@@ -53,7 +53,14 @@ CriticalSetAnalysis MipSolver::get_cs_analysis(InputData const& inputData)
     }
     else
     {
-        Status::info("Skipping critical set analysis.");
+        if(inputData.slot_count() > 1)
+        {
+            Status::info("Skipping critical set analysis.");
+        }
+        else
+        {
+            Status::info("No critical set analysis needed for single slot.");
+        }
         return CriticalSetAnalysis::empty(inputData);
     }
 }
@@ -209,7 +216,7 @@ Solution MipSolver::solve_assignment(InputData const& inputData, op::MPSolver& s
             coveredParticipants += inputData.workshop(w).min();
         }
 
-        flow.add_supply(flow.nodes().at(node_slot(s)), -(inputData.participant_count() - coveredParticipants));
+         flow.add_supply(flow.nodes().at(node_slot(s)), -(inputData.participant_count() - coveredParticipants));
     }
 
     vector<int> edgesCap;
@@ -227,7 +234,7 @@ Solution MipSolver::solve_assignment(InputData const& inputData, op::MPSolver& s
                     continue;
 
                 edgesCap.push_back(1);
-                edgesCost.push_back((long)pow(inputData.participant(p).preference(w) + 1.0, Options::preference_exponent()));
+                edgesCost.push_back((long)pow(inputData.participant(p).preference(w) + 1.0, _options.preference_exponent()));
 
                 edgesIdx[std::make_pair(flow.nodes().at(node_participant(p, s)), flow.nodes().at(node_workshop(w)))] = nextEdgeIdx++;
             }
@@ -305,7 +312,7 @@ Solution MipSolver::solve_assignment(InputData const& inputData, op::MPSolver& s
 
     // Now we have to extract the assignment solution from the min cost flow solution
     //
-    vector<vector<int>> data(inputData.participant_count(), vector<int>(inputData.slot_count()));
+    vector<vector<int>> data(inputData.participant_count(), vector<int>(inputData.slot_count(), -1));
     for(int p = 0; p < inputData.participant_count(); p++)
     {
         for(int s = 0; s < inputData.slot_count(); s++)
@@ -365,7 +372,7 @@ void MipSolver::do_shotgun_hill_climbing(int tid, InputData const& inputData, Cr
     {
         auto solver = new_solver(tid);
 
-        SchedulingSolver schedulingSolver(inputData, csAnalysis);
+        SchedulingSolver schedulingSolver(inputData, csAnalysis, _options);
 
         while (schedulingSolver.next_scheduling())
         {
@@ -460,6 +467,11 @@ Solution MipSolver::best_solution_found()
     return _bests[bestIdx];
 }
 
+MipSolver::MipSolver(Options const& options)
+    : _options(options)
+{
+}
+
 Solution MipSolver::solve(InputData const& inputData)
 {
     check_for_possible_overflow(inputData);
@@ -467,10 +479,10 @@ Solution MipSolver::solve(InputData const& inputData)
     CriticalSetAnalysis csAnalysis = get_cs_analysis(inputData);
     MipFlowStaticData staticData = get_static_graph_data(inputData);
 
-    if(Options::any() || inputData.slot_count() == 1)
+    if(_options.any() || inputData.slot_count() == 1)
     {
         Status::info("Computing solution.");
-        SchedulingSolver schedulingSolver(inputData, csAnalysis);
+        SchedulingSolver schedulingSolver(inputData, csAnalysis, _options);
 
         if(!schedulingSolver.next_scheduling())
         {
@@ -482,16 +494,16 @@ Solution MipSolver::solve(InputData const& inputData)
     }
     else
     {
-        Status::info("Started min cost flow solver with " + str(Options::thread_count()) + " thread(s).");
-        Scoring scoring(inputData);
+        Status::info("Started min cost flow solver with " + str(_options.thread_count()) + " thread(s).");
+        Scoring scoring(inputData, _options);
 
         _bests.clear();
         _bestsScore.clear();
         _threads.clear();
 
-        _bests.resize(Options::thread_count());
-        _bestsScore.resize(Options::thread_count());
-        _threads.resize(Options::thread_count());
+        _bests.resize(_options.thread_count());
+        _bestsScore.resize(_options.thread_count());
+        _threads.resize(_options.thread_count());
 
         std::fill(_bestsScore.begin(), _bestsScore.end(), Score{.major = INFINITY, .minor = INFINITY});
 
@@ -514,7 +526,7 @@ Solution MipSolver::solve(InputData const& inputData)
         }
 
         datetime startTime = time_now();
-        seconds timeout(Options::timeout_seconds());
+        seconds timeout(_options.timeout_seconds());
 
         Score lastScore{.major = INFINITY, .minor = INFINITY};
 

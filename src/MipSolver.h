@@ -20,6 +20,8 @@ private:
     static flowid node_workshop(int w);
     static flowid edge_id(int from, int to);
 
+    Options const& _options;
+
     atomic<int> _tries {};
     vector<double> _solveTime;
     vector<Solution> _bests;
@@ -28,17 +30,17 @@ private:
 
     std::shared_mutex _solveTimeMutex;
 
-    static void interruption_point();
+    void interruption_point();
 
-    static void check_for_possible_overflow(InputData const& inputData);
+    void check_for_possible_overflow(InputData const& inputData);
 
-    static CriticalSetAnalysis get_cs_analysis(InputData const& inputData);
+    CriticalSetAnalysis get_cs_analysis(InputData const& inputData);
 
-    static MipFlowStaticData get_static_graph_data(InputData const& inputData);
+    MipFlowStaticData get_static_graph_data(InputData const& inputData);
 
-    static op::MPSolver new_solver(int tid = 0);
+    op::MPSolver new_solver(int tid = 0);
 
-    static set<pair<int, int>> get_blocked_constraint_edges(
+    set<pair<int, int>> get_blocked_constraint_edges(
             InputData const& inputData,
             Scheduling const& scheduling,
             MipFlowStaticData const& staticData);
@@ -71,6 +73,8 @@ private:
     Solution best_solution_found();
 
 public:
+    MipSolver(Options const& options);
+
     Solution solve(InputData const& inputData);
 };
 

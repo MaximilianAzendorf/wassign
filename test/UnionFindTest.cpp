@@ -2,7 +2,9 @@
 
 #include "../src/UnionFind.h"
 
-TEST_CASE("Union find constructor works", UNIT)
+#define PREFIX "[Union-Find] "
+
+TEST_CASE(PREFIX "Union find constructor works")
 {
     REQUIRE(UnionFind<int>(0).size() == 0);
     REQUIRE(UnionFind<int>(1).size() == 1);
@@ -11,7 +13,7 @@ TEST_CASE("Union find constructor works", UNIT)
     REQUIRE_THROWS(UnionFind<int>(-1).size() == 5);
 }
 
-TEST_CASE("Union find works", UNIT)
+TEST_CASE(PREFIX "Union find works")
 {
     const int MAX = 4;
     UnionFind<int> uf(MAX);

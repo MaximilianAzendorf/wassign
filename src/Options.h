@@ -5,7 +5,7 @@
 
 #include <thread>
 
-enum OptionsParseResult
+enum OptionsParseStatus
 {
     OK,
     EXIT,
@@ -15,20 +15,18 @@ enum OptionsParseResult
 class Options
 {
 private:
-    Options() = default;
+    vector<string> _inputFiles;
+    string _outputFile;
+    int _verbosity = 1;
+    bool _any = false;
+    double _prefExp = 3.0;
+    int _timeout = 60;
+    int _csTimeout = 3;
+    bool _noCs = false;
+    int _threadCount = (int)std::thread::hardware_concurrency();
 
-    inline static vector<string> _inputFiles;
-    inline static string _outputFile;
-    inline static int _verbosity = 1;
-    inline static bool _any;
-    inline static double _prefExp = 3.0;
-    inline static int _timeout = 60;
-    inline static int _csTimeout = 3;
-    inline static bool _noCs;
-    inline static int _threadCount = (int)std::thread::hardware_concurrency();
-
-    inline static string _timeoutStr;
-    inline static string _csTimeoutStr;
+    string _timeoutStr;
+    string _csTimeoutStr;
 
     inline static const map<char, int> _timeMultiplier = {
             {'s', 1},
@@ -41,25 +39,47 @@ private:
     static auto parse_time(int& output);
 
 public:
-    static OptionsParseResult parse(int argc, char** argv, string const& header);
+    Options() = default;
 
-    static int verbosity();
+    static OptionsParseStatus parse(int argc, char** argv, string const& header, Options& result);
 
-    static vector<string> input_files();
+    static Options default_options();
 
-    static string output_file();
+    [[nodiscard]] int verbosity() const;
 
-    static int timeout_seconds();
+    [[nodiscard]] vector<string> input_files() const;
 
-    static int critical_set_timeout_seconds();
+    [[nodiscard]] string output_file() const;
 
-    static bool no_critical_sets();
+    [[nodiscard]] int timeout_seconds() const;
 
-    static double preference_exponent();
+    [[nodiscard]] int critical_set_timeout_seconds() const;
 
-    static bool any();
+    [[nodiscard]] bool no_critical_sets() const;
 
-    static int thread_count();
+    [[nodiscard]] double preference_exponent() const;
+
+    [[nodiscard]] bool any() const;
+
+    [[nodiscard]] int thread_count() const;
+
+    void set_verbosity(int verbosity);
+
+    void set_input_files(vector<string> inputFiles);
+
+    void set_output_file(string outputFile);
+
+    void set_timeout_seconds(int timeoutSeconds);
+
+    void set_critical_set_timeout_seconds( int csTimeoutSeconds);
+
+    void set_no_critical_sets(bool noCriticalSets);
+
+    void set_preference_exponent(double prefExponent);
+
+    void set_any(bool any);
+
+    void set_thread_count(int threadCount);
 };
 
 

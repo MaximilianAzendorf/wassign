@@ -47,6 +47,11 @@ bool InputReader::parse_line_workshop(string const& line, vector<InputReader::Pr
         throw InputException("Optional events with multiple parts are not supported.");
     }
 
+    if(!ws.optional && ws.min < 1)
+    {
+        throw InputException("Events with no minimum number of participants are not supported. Make them optional instead.");
+    }
+
     boost::algorithm::trim(ws.name);
 
     preWorkshops.push_back(ws);

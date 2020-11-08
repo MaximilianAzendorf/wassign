@@ -76,6 +76,11 @@ bool Constraint::operator==(Constraint const& other) const
     return _type == other._type && _left == other._left && _right == other._right && _extra == other._extra;
 }
 
+bool Constraint::operator!=(Constraint const& other) const
+{
+    return !(*this == other);
+}
+
 size_t hash_value(Constraint const& c)
 {
     int hash = 0;

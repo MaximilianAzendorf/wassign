@@ -4,6 +4,8 @@
 
 bool Status::_output = false;
 
+Options const* Status::_options;
+
 string Status::color(int foregroundColor)
 {
     std::stringstream s;
@@ -21,7 +23,7 @@ string Status::color_reset()
 
 void Status::info(string const& text)
 {
-    if(_output && Options::verbosity() >= 3)
+    if(_output && _options->verbosity() >= 3)
     {
         std::cerr << "INFO:    " << text << std::endl;
     }
@@ -29,7 +31,7 @@ void Status::info(string const& text)
 
 void Status::info_important(string const& text)
 {
-    if(_output && Options::verbosity() >= 1)
+    if(_output && _options->verbosity() >= 1)
     {
         std::cerr << "INFO:    " << text << std::endl;
     }
@@ -37,7 +39,7 @@ void Status::info_important(string const& text)
 
 void Status::warning(string const& text)
 {
-    if(_output && Options::verbosity() >= 2)
+    if(_output && _options->verbosity() >= 2)
     {
         std::cerr << color(33) << "WARNING: " << text << color_reset() << std::endl;
     }
@@ -45,13 +47,14 @@ void Status::warning(string const& text)
 
 void Status::error(string const& text)
 {
-    if(_output && Options::verbosity() >= 1)
+    if(_output && _options->verbosity() >= 1)
     {
         std::cerr << color(31) << "ERROR:   " << text << color_reset() << std::endl;
     }
 }
 
-void Status::enable_output()
+void Status::enable_output(Options const& options)
 {
+    _options = &options;
     _output = true;
 }

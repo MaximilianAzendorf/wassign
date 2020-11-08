@@ -3,7 +3,9 @@
 #include "../src/Types.h"
 #include "../src/Util.h"
 
-TEST_CASE("str should work")
+#define PREFIX "[Util] "
+
+TEST_CASE(PREFIX "str should work")
 {
     REQUIRE(str((int)5) == "5");
     REQUIRE(str((unsigned)5) == "5");
@@ -16,7 +18,7 @@ TEST_CASE("str should work")
     REQUIRE(str(nanoseconds(123000000000L)) == "00:02:03");
 }
 
-TEST_CASE("rifle shuffle should work")
+TEST_CASE(PREFIX "Riffle shuffle should work")
 {
     const int SIZE = 10;
 
