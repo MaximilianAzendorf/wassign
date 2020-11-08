@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             case ERROR:
             {
                 Status::error("Invalid arguments.");
-                break;
+                return 1;
             }
         }
 

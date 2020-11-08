@@ -67,12 +67,12 @@ ConstraintParser::Relation ConstraintParser::parse_relation(string const& constr
             | lit("is")[pset(r.type, REq)]
             | lit("!=")[pset(r.type, RNeq)]
             | lit("<>")[pset(r.type, RNeq)]
-            | lit(">")[pset(r.type, RGt)]
-            | lit("<")[pset(r.type, RLt)]
             | lit(">=")[pset(r.type, RGeq)]
             | lit("<=")[pset(r.type, RLeq)]
-            | lit("contain")[pset(r.type, RContains)]
+            | lit(">")[pset(r.type, RGt)]
+            | lit("<")[pset(r.type, RLt)]
             | lit("contains")[pset(r.type, RContains)]
+            | lit("contain")[pset(r.type, RContains)]
             | lit("subset")[pand(pset(r.type, RSubset), pset(canBeNegated, false))]
             | lit("superset")[pand(pset(r.type, RSuperset), pset(canBeNegated, false))];
 

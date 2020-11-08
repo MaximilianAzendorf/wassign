@@ -1,5 +1,6 @@
 #pragma once
 
+#include <future>
 #include "Types.h"
 #include "Scheduling.h"
 #include "CriticalSetAnalysis.h"
@@ -13,6 +14,7 @@ private:
     shared_ptr<Scheduling const> _currentSolution;
     bool _hasSolution;
     Options const& _options;
+    std::shared_future<void> _exitSignal;
 
     int calculate_available_max_push(vector<int> const& workshopScramble, int depth);
 
@@ -39,7 +41,7 @@ private:
 public:
     inline static const int PREF_RELAXATION = 10;
 
-    SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options);
+    SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options, std::shared_future<void> exitSignal = std::shared_future<void>());
 
     bool next_scheduling();
 

@@ -28,11 +28,6 @@ flowid MipSolver::node_workshop(int w) { return make_long(WORKSHOP_ID_HIGH, w); 
 
 flowid MipSolver::edge_id(int from, int to) { return make_long(from, to); }
 
-void MipSolver::interruption_point()
-{
-    boost::this_thread::interruption_point();
-}
-
 void MipSolver::check_for_possible_overflow(InputData const& inputData)
 {
     if(std::pow((double)inputData.max_preference(), _options.preference_exponent()) * inputData.participant_count() >= LONG_MAX)
@@ -366,90 +361,85 @@ MipSolver::feasible_neighbor(InputData const& inputData, shared_ptr<Scheduling c
 void MipSolver::do_shotgun_hill_climbing(int tid, InputData const& inputData, CriticalSetAnalysis const& csAnalysis,
                                          MipFlowStaticData const& staticData, Scoring const& scoring,
                                          map<Scheduling, Solution>& doneSchedulings,
-                                         std::shared_mutex& doneSchedulingsMutex)
+                                         std::shared_mutex& doneSchedulingsMutex,
+                                         std::shared_future<void> exitSignal)
 {
-    try
+    auto solver = new_solver(tid);
+
+    SchedulingSolver schedulingSolver(inputData, csAnalysis, _options, exitSignal);
+
+    while (schedulingSolver.next_scheduling())
     {
-        auto solver = new_solver(tid);
+        if(exitSignal.valid() && exitSignal.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return;
 
-        SchedulingSolver schedulingSolver(inputData, csAnalysis, _options);
+        _tries++;
 
-        while (schedulingSolver.next_scheduling())
+        auto schedulingPtr = schedulingSolver.scheduling();
+        Solution localBestSolution = Solution::invalid();
+
+        Score localBestScore{.major = INFINITY, .minor = INFINITY};
+
+        while(true)
         {
-            interruption_point();
-
-            _tries++;
-
-            auto schedulingPtr = schedulingSolver.scheduling();
-            Solution localBestSolution = Solution::invalid();
-
-            Score localBestScore{.major = INFINITY, .minor = INFINITY};
-
-            while(true)
+            shared_ptr<Scheduling const> nextSchedulingPtr;
+            if(localBestSolution.is_invalid())
             {
-                shared_ptr<Scheduling const> nextSchedulingPtr;
-                if(localBestSolution.is_invalid())
-                {
-                    nextSchedulingPtr = schedulingPtr;
-                }
-                else
-                {
-                    nextSchedulingPtr = feasible_neighbor(inputData, schedulingPtr);
-                }
+                nextSchedulingPtr = schedulingPtr;
+            }
+            else
+            {
+                nextSchedulingPtr = feasible_neighbor(inputData, schedulingPtr);
+            }
 
-                if(nextSchedulingPtr == nullptr)
+            if(nextSchedulingPtr == nullptr)
+            {
+                break;
+            }
+
+            if(exitSignal.valid() && exitSignal.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return;
+
+            doneSchedulingsMutex.lock_shared();
+            auto foundSolutionIt = doneSchedulings.find(*nextSchedulingPtr);
+            doneSchedulingsMutex.unlock_shared();
+
+            Solution foundSolution = Solution::invalid();
+            if(foundSolutionIt == doneSchedulings.end())
+            {
+                auto newSolution = solve_assignment(inputData, solver, nextSchedulingPtr, csAnalysis, staticData);
+                if(newSolution.is_invalid())
                 {
                     break;
                 }
 
-                interruption_point();
-                doneSchedulingsMutex.lock_shared();
-                auto foundSolutionIt = doneSchedulings.find(*nextSchedulingPtr);
-                doneSchedulingsMutex.unlock_shared();
-
-                Solution foundSolution = Solution::invalid();
-                if(foundSolutionIt == doneSchedulings.end())
-                {
-                    auto newSolution = solve_assignment(inputData, solver, nextSchedulingPtr, csAnalysis, staticData);
-                    if(newSolution.is_invalid())
-                    {
-                        break;
-                    }
-
-                    foundSolution = newSolution;
-                    doneSchedulingsMutex.lock();
-                    doneSchedulings[*nextSchedulingPtr] = foundSolution;
-                    doneSchedulingsMutex.unlock();
-                }
-                else
-                {
-                    foundSolution = foundSolutionIt->second;
-                }
-
-                Score foundScore = scoring.evaluate(foundSolution);
-
-                if(foundScore < localBestScore)
-                {
-                    localBestSolution = foundSolution;
-                    localBestScore = foundScore;
-                    schedulingPtr = nextSchedulingPtr;
-
-                    if(foundScore < _bestsScore[tid])
-                    {
-                        _bests[tid] = localBestSolution;
-                        _bestsScore[tid] = foundScore;
-                    }
-
-                    continue;
-                }
-
-                break;
+                foundSolution = newSolution;
+                doneSchedulingsMutex.lock();
+                doneSchedulings[*nextSchedulingPtr] = foundSolution;
+                doneSchedulingsMutex.unlock();
             }
+            else
+            {
+                foundSolution = foundSolutionIt->second;
+            }
+
+            Score foundScore = scoring.evaluate(foundSolution);
+
+            if(foundScore < localBestScore)
+            {
+                localBestSolution = foundSolution;
+                localBestScore = foundScore;
+                schedulingPtr = nextSchedulingPtr;
+
+                if(foundScore < _bestsScore[tid])
+                {
+                    _bests[tid] = localBestSolution;
+                    _bestsScore[tid] = foundScore;
+                }
+
+                continue;
+            }
+
+            break;
         }
-    }
-    catch(boost::thread_interrupted const&)
-    {
-        return;
     }
 }
 
@@ -510,6 +500,9 @@ Solution MipSolver::solve(InputData const& inputData)
         map<Scheduling, Solution> doneSchedulings;
         std::shared_mutex doneSchedulingsMutex;
 
+        std::promise<void> exitSignal;
+        std::shared_future<void> exitFuture = exitSignal.get_future().share();
+
         for(int tid = 0; tid < _threads.size(); tid++)
         {
             _threads[tid] = thread([&, tid]()
@@ -521,7 +514,8 @@ Solution MipSolver::solve(InputData const& inputData)
                                                staticData,
                                                scoring,
                                                doneSchedulings,
-                                               doneSchedulingsMutex);
+                                               doneSchedulingsMutex,
+                                               exitFuture);
                                    });
         }
 
@@ -562,11 +556,8 @@ Solution MipSolver::solve(InputData const& inputData)
             _solveTimeMutex.unlock();
         }
 
+        exitSignal.set_value();
         Status::info("Stopped min cost flow solver. Waiting for workers to finish.");
-        for(thread& thread : _threads)
-        {
-            thread.interrupt();
-        }
 
         for(thread& thread : _threads)
         {

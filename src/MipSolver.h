@@ -8,6 +8,7 @@
 #include "Score.h"
 
 #include <shared_mutex>
+#include <future>
 
 namespace op = operations_research;
 
@@ -29,8 +30,6 @@ private:
     vector<thread> _threads;
 
     std::shared_mutex _solveTimeMutex;
-
-    void interruption_point();
 
     void check_for_possible_overflow(InputData const& inputData);
 
@@ -68,7 +67,8 @@ private:
             MipFlowStaticData const& staticData,
             Scoring const& scoring,
             map<Scheduling, Solution>& doneSchedulings,
-            std::shared_mutex& doneSchedulingsMutex);
+            std::shared_mutex& doneSchedulingsMutex,
+            std::shared_future<void> exitSignal);
 
     Solution best_solution_found();
 

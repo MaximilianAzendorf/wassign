@@ -280,7 +280,7 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
 
     for(int depth = 0; depth < workshopScramble.size();)
     {
-        boost::this_thread::interruption_point();
+        if(_exitSignal.valid() && _exitSignal.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return {};
         if(time_now() > timeLimit)
         {
             return {};
@@ -366,12 +366,13 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
     return convert_decisions(decisions);
 }
 
-SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options)
+SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options, std::shared_future<void> exitSignal)
         : _inputData(&inputData),
           _csAnalysis(std::move(csAnalysis)),
           _currentSolution(new Scheduling(inputData)),
           _hasSolution(false),
-          _options(options)
+          _options(options),
+          _exitSignal(exitSignal)
 {
 }
 

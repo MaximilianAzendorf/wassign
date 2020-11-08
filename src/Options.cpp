@@ -3,85 +3,96 @@
 #include "Util.h"
 #include "Version.h"
 #include "InputException.h"
+#include "popl/popl.hpp"
 
 #include <iostream>
-#include <boost/program_options.hpp>
 #include <utility>
 
-namespace po = boost::program_options;
+using namespace popl;
 
-auto Options::parse_time(int& output)
+int Options::parse_time(string value)
 {
-    return [&](string const& value)
+    int time = 0;
+    int current = 0;
+
+    for(char c : value)
     {
-        int time = 0;
-        int current = 0;
-
-        for(char c : value)
+        if(c >= '0' && c <= '9')
         {
-            if(c >= '0' && c <= '9')
-            {
-                current = current * 10 + (c - '0');
-            }
-            else if(c >= 'a' && c <= 'z')
-            {
-                time += current * _timeMultiplier.at(c);
-            }
-            else
-            {
-                throw InputException("Unknown time specifier " + value + ".");
-            }
+            current = current * 10 + (c - '0');
         }
+        else if(c >= 'a' && c <= 'z')
+        {
+            time += current * _timeMultiplier.at(c);
+        }
+        else
+        {
+            throw InputException("Unknown time specifier " + value + ".");
+        }
+    }
 
-        output = time;
-    };
+    return time;
 }
 
 OptionsParseStatus Options::parse(int argc, char **argv, string const& header, Options& result)
 {
-    po::options_description desc;
+    result = Options::default_options();
 
-    try
+    OptionParser op("Allowed options");
+
+    auto helpOpt = op.add<Switch>("h", "help", "Show this help.");
+    auto versionOpt = op.add<Switch>("", "version", "Show version.");
+    auto inputOpt = op.add<Value<string>>("i", "input", "Specifies an input file.");
+    auto outputOpt = op.add<Value<string>>("o", "output", "Specifies an output file.");
+    auto verbosityOpt = op.add<Value<int>>("v", "verbosity", "A number between 0 and 3 indicating how much status information should be given.");
+    auto anyOpt = op.add<Switch>("a", "any", "Stop after the first found solution.");
+    auto prefExpOpt = op.add<Value<double>>("p", "pref-exp", "The preference exponent.");
+    auto timeoutOpt = op.add<Value<string>>("t", "timeout", "Sets the optimization timeout.");
+    auto csTimeoutOpt = op.add<Value<string>>("m", "cs-timeout", "Sets the timeout for attempting to satisfy critical sets of a certain preference level.");
+    auto noCsOpt = op.add<Switch>("", "no-cs", "Do not perform critical set analysis");
+    auto threadsOpt = op.add<Value<int>>("j", "threads", "Number of threads to use for computation.");
+
+    op.parse(argc, argv);
+
+    if(helpOpt->is_set())
     {
-        desc.add_options()
-                ("help,h", "Show this help.")
-                ("version", "Show version.")
-                ("input,i", po::value(&result._inputFiles)->multitoken(), "Specifies an input file.")
-                ("output,o", po::value(&result._outputFile), "Specifies an output file name.")
-                ("verbosity,v", po::value(&result._verbosity),
-                 "A number between 0 and 3 indicating how much status information should be given.")
-                ("any,a", po::bool_switch(&result._any), "Stop after the first found solution.")
-                ("pref-exp,p", po::value(&result._prefExp), "The preference exponent.")
-                ("timeout,t", po::value(&result._timeoutStr)->notifier(parse_time(result._timeout)), "Sets the optimization timeout.")
-                ("cs-timeout,m", po::value(&result._csTimeoutStr)->notifier(parse_time(result._csTimeout)),
-                 "Sets the timeout for attempting to satisfy critical sets of a certain preference level.")
-                ("no-cs", po::bool_switch(&result._noCs), "Do not perform critical set analysis.")
-                ("threads,j", po::value(&result._threadCount), "Number of threads to use for computation.");
-
-        po::variables_map vm;
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);
-
-        if (vm.count("help") || argc == 1)
-        {
-            std::cout << header << std::endl << desc << std::endl;
-            return EXIT;
-        } else if (vm.count("version"))
-        {
-            std::cout << WSOLVE_VERSION << std::endl;
-            return EXIT;
-        }
+        std::cout << header << std::endl << op << std::endl;
+        return EXIT;
     }
-    catch(po::error const& ex)
+    else if(versionOpt->is_set())
+    {
+        std::cout << WSOLVE_VERSION << std::endl;
+        return EXIT;
+    }
+    else if(!op.non_option_args().empty() || !op.unknown_options().empty())
     {
         return ERROR;
     }
-
-    if(result.verbosity() > 0)
+    else
     {
-        std::cerr << header << std::endl;
+        vector<string> inputFiles;
+        for(int i = 0; i < inputOpt->count(); i++)
+        {
+            inputFiles.push_back(inputOpt->value(i));
+        }
+
+        result.set_input_files(inputFiles);
+        if(outputOpt->is_set()) result.set_output_file(outputOpt->value());
+        if(verbosityOpt->is_set()) result.set_verbosity(verbosityOpt->value());
+        if(anyOpt->is_set()) result.set_any(true);
+        if(prefExpOpt->is_set()) result.set_preference_exponent(prefExpOpt->value());
+        if(timeoutOpt->is_set()) result.set_timeout_seconds(parse_time(timeoutOpt->value()));
+        if(csTimeoutOpt->is_set()) result.set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
+        if(noCsOpt->is_set()) result.set_no_critical_sets(true);
+        if(threadsOpt->is_set()) result.set_thread_count(threadsOpt->value());
+
+        if(result.verbosity() > 0)
+        {
+            std::cerr << header << std::endl;
+        }
+
+        return OK;
     }
-    return OK;
 }
 
 Options Options::default_options()

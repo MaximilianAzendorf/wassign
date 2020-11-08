@@ -12,8 +12,8 @@
 #include <chrono>
 #include <atomic>
 #include <cstddef>
+#include <thread>
 
-#include <boost/thread.hpp>
 #include <boost/functional/hash.hpp>
 
 using string = std::string;
@@ -56,6 +56,6 @@ using unique_ptr = std::unique_ptr<T>;
 template<typename T>
 using atomic = std::atomic<T>;
 
-using thread = boost::thread;
+using thread = std::thread;
 
 using size_t = std::size_t;

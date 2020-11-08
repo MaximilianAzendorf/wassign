@@ -36,7 +36,7 @@ private:
             {'w', 60 * 60 * 24 * 7},
     };
 
-    static auto parse_time(int& output);
+    static int parse_time(string value);
 
 public:
     Options() = default;
