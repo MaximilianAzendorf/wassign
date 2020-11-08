@@ -3,7 +3,10 @@
 #include <boost/spirit/home/x3.hpp>
 
 #pragma GCC diagnostic push
+
+#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 
 template<typename T>
 static auto pset(T& x) { return [&](auto& ctx){

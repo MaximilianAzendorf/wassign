@@ -70,7 +70,7 @@ void signal_handler(int signal)
 }
 
 struct sigaction old_action;
-void set_signal_handler(int signal, __sighandler_t handler)
+void set_signal_handler(int signal, sighandler_t handler)
 {
     struct sigaction action;
     memset(&action, 0, sizeof(action));
