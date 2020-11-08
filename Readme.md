@@ -1,3 +1,5 @@
+**WASM branch:** *This is the web assembly branch. Run build.sh to build a web assembly binary of wsolve. Needs clang.*
+
 wsolve is a tool to solve an extension of the [stable marriage problem](https://en.wikipedia.org/wiki/Stable_marriage_problem).
 
 ### The problem
