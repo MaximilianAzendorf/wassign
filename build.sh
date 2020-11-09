@@ -17,11 +17,6 @@ pushd build
     if [ ! -d "or-tools" ]; then
         echo "Cloning wasm-or-tools..."
         git clone https://github.com/MaximilianAzendorf/wasm-or-tools or-tools
-        pushd or-tools
-            echo "Adding parallelism to make commands to not wait a hundred years..."
-            sed -i 's/make install/make -j 32 install/g' cmake-build.sh
-            sed -i 's/ make/ make -j 32/g' host-build.sh
-        popd
     fi
 
     if [ ! -d "boost" ]; then

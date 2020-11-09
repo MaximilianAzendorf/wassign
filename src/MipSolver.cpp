@@ -464,11 +464,14 @@ MipSolver::MipSolver(Options const& options)
 
 Solution MipSolver::solve(InputData const& inputData)
 {
+    Status::error("a");
     check_for_possible_overflow(inputData);
 
+    Status::error("b");
     CriticalSetAnalysis csAnalysis = get_cs_analysis(inputData);
     MipFlowStaticData staticData = get_static_graph_data(inputData);
 
+    Status::error("c");
     if(_options.any() || inputData.slot_count() == 1)
     {
         Status::info("Computing solution.");
@@ -487,24 +490,31 @@ Solution MipSolver::solve(InputData const& inputData)
         Status::info("Started min cost flow solver with " + str(_options.thread_count()) + " thread(s).");
         Scoring scoring(inputData, _options);
 
+        Status::error("d");
         _bests.clear();
         _bestsScore.clear();
         _threads.clear();
 
+        Status::error("e");
         _bests.resize(_options.thread_count());
         _bestsScore.resize(_options.thread_count());
         _threads.resize(_options.thread_count());
 
+        Status::error("f");
         std::fill(_bestsScore.begin(), _bestsScore.end(), Score{.major = INFINITY, .minor = INFINITY});
 
+        Status::error("g");
         map<Scheduling, Solution> doneSchedulings;
         std::shared_mutex doneSchedulingsMutex;
 
+        Status::error("g");
         std::promise<void> exitSignal;
         std::shared_future<void> exitFuture = exitSignal.get_future().share();
 
+        Status::error("h");
         for(int tid = 0; tid < _threads.size(); tid++)
         {
+            Status::error("thread " + str(tid));
             _threads[tid] = thread([&, tid]()
                                    {
                                        do_shotgun_hill_climbing(
@@ -519,6 +529,7 @@ Solution MipSolver::solve(InputData const& inputData)
                                    });
         }
 
+        Status::error("i");
         datetime startTime = time_now();
         seconds timeout(_options.timeout_seconds());
 

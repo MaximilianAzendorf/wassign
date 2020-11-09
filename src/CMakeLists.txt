@@ -1,3 +1,6 @@
+# Just to make CLion happy
+include_directories(/usr/lib/emsdk/upstream/emscripten/system/include)
+
 include_directories("/usr/local/include")
 
 set(GFLAGS_USE_TARGET_NAMESPACE ON)
