@@ -6,50 +6,118 @@
 #include "CriticalSetAnalysis.h"
 #include "Options.h"
 
+/**
+ * Class for calculating (randomized) valid schedulings, taking critical sets into account.
+ */
 class SchedulingSolver
 {
 private:
-    InputData const* _inputData;
-    CriticalSetAnalysis _csAnalysis;
+    InputData const& _inputData;
+    CriticalSetAnalysis const& _csAnalysis;
+
     shared_ptr<Scheduling const> _currentSolution;
     bool _hasSolution;
-    Options const& _options;
-    std::shared_future<void> _exitSignal;
 
+    Options const& _options;
+    std::shared_future<void> _cancellation;
+
+    /**
+     * The available max push is the sum of the maximum participant counts of all workshops that are not yet assigned
+     * to a slot (the maximum number of participants that can be covered with all workshops that are not
+     * yet assigned to a slot).
+     */
     int calculate_available_max_push(vector<int> const& workshopScramble, int depth);
 
+    /**
+     * Tests if the current partial solution satisfies all given critical sets.
+     */
     bool satisfies_critical_sets(map<int, int> const& decisions, vector<CriticalSet> const& criticalSets);
 
+    /**
+     * Tests if the hypothetical decision of putting workshop into slot would violate any scheduling constraints.
+     */
     bool satisfies_scheduling_constraints(int workshop, int slot, map<int, int> const& decisions);
 
+    /**
+     * Tests if the current partial solution has any impossibilities. Impossibilities are slots that contain so few
+     * workshops that even with all the workshops not yet assigned they would not have enough capacity for all
+     * participants.
+     */
     bool has_impossibilities(map<int, int> const& decisions, int availableMaxPush);
 
+    /**
+     * Calculates critical slots in the current partial solution that limit the next decision. Critical slots are slots
+     * that need the next workshop in order to still be able to fulfill the participant count.
+     */
     vector<int> calculate_critical_slots(map<int, int> const& decisions, int availableMaxPush, int workshop);
 
+    /**
+     * Calculates the score used to decide the order in which slots are preferred when deciding a slot for a workshop
+     * (smaller score means higher priority). Currently, the score is the sum of the maximum participant counts of all
+     * workshops in this slot.
+     */
     int slot_order_heuristic_score(map<int, int> const& decisions, int slot);
 
+    /**
+     * Calculates the slots that are feasible for the next workshop regarding the current partial solution. A slot is
+     * infeasible if adding the workshop would cause the minimum participant count to exceed the total number of
+     * participants.
+     *
+     * @param lowPrioritySlot A list of slots that are low priority (they should be tried last while backtracking).
+     */
     vector<int> calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySlot, int workshop);
 
+    /**
+     * Shuffles the list of workshops to randomize the solutions found first. Currently, only auto-generated slots for
+     * unscheduled workshops are low priority.
+     * @return
+     */
     vector<int> get_workshop_scramble();
 
-    vector<bool> get_low_priority_slot_map();
+    /**
+     * Generates a vector v where v[n]=true means that n is a low-priority workshop.
+     */
+    vector<bool> get_low_priority_slots();
 
+    /**
+     * Transforms the decision map into list of lists d, where d[n] is the list of workshops assigned to slot n.
+     */
     vector<vector<int>> convert_decisions(map<int, int> const& decisions);
 
+    /**
+     * Solves a scheduling. If the timeLimit is reached, an empty vector is returned.
+     */
     vector<vector<int>> solve_scheduling(vector<CriticalSet> const& criticalSets, datetime timeLimit);
 
 public:
+    /**
+     * With a chance of 1/PREF_RELAXATION, the solver will search for a solution disregarding critical sets. This is to
+     * avoid being locked into a very small solution space by a very restrictive (but valid) critical set subset, which
+     * would hamper hill climbing performance.
+     */
     inline static const int PREF_RELAXATION = 10;
 
-    SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options, std::shared_future<void> exitSignal = std::shared_future<void>());
+    /**
+     * Constructor.
+     */
+    SchedulingSolver(InputData const& inputData, CriticalSetAnalysis const& csAnalysis, Options const& options, std::shared_future<void> cancellation = std::shared_future<void>());
 
+    /**
+     * Tries to calculate the next scheduling and returns false if none is found (within the time limit).
+     */
     bool next_scheduling();
 
+    /**
+     * Returns the last found solution.
+     */
     [[nodiscard]] shared_ptr<Scheduling const> scheduling()
     {
         return _currentSolution;
     }
 
+    /**
+     * Returns true if the solver found at least one solution in the past.
+     */
     [[nodiscard]] bool has_solution() const
     {
         return _hasSolution;

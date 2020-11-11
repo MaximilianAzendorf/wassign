@@ -9,13 +9,10 @@
 
 int SchedulingSolver::calculate_available_max_push(vector<int> const& workshopScramble, int depth)
 {
-    // The maximum number of participants that can be covered with all workshops that are not yet assigned
-    // to a slot.
-    //
     int push = 0;
     for(; depth < workshopScramble.size(); depth++)
     {
-        push += _inputData->workshop(workshopScramble[depth]).max();
+        push += _inputData.workshop(workshopScramble[depth]).max();
     }
 
     return push;
@@ -43,7 +40,7 @@ bool SchedulingSolver::satisfies_critical_sets(map<int, int> const& decisions, v
             }
         }
 
-        if(coveredSlots.size() + missing < _inputData->slot_count())
+        if(coveredSlots.size() + missing < _inputData.slot_count())
         {
             return false;
         }
@@ -54,7 +51,7 @@ bool SchedulingSolver::satisfies_critical_sets(map<int, int> const& decisions, v
 
 bool SchedulingSolver::satisfies_scheduling_constraints(int workshop, int slot, map<int, int> const& decisions)
 {
-    for(Constraint constraint : _inputData->scheduling_constraints(workshop))
+    for(Constraint constraint : _inputData.scheduling_constraints(workshop))
     {
         switch(constraint.type())
         {
@@ -94,7 +91,7 @@ bool SchedulingSolver::satisfies_scheduling_constraints(int workshop, int slot, 
                 }
 
                 int minSlot = std::max(0, 0 - offset);
-                int maxSlot = std::min(_inputData->slot_count(), _inputData->slot_count() - offset);
+                int maxSlot = std::min(_inputData.slot_count(), _inputData.slot_count() - offset);
 
                 if(slot < minSlot || slot >= maxSlot) return false;
                 break;
@@ -128,19 +125,16 @@ bool SchedulingSolver::satisfies_scheduling_constraints(int workshop, int slot, 
 
 bool SchedulingSolver::has_impossibilities(map<int, int> const& decisions, int availableMaxPush)
 {
-    // Impossibilities are slots that contain so few workshops that even with all the workshops not yet
-    // assigned they would not have enough capacity for all participants.
-    //
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    for(int s = 0; s < _inputData.slot_count(); s++)
     {
         int sum = availableMaxPush;
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->workshop(decision.first).max();
+            sum += _inputData.workshop(decision.first).max();
         }
 
-        if(sum < _inputData->participant_count())
+        if(sum < _inputData.participant_count())
         {
             return true;
         }
@@ -152,21 +146,18 @@ bool SchedulingSolver::has_impossibilities(map<int, int> const& decisions, int a
 vector<int>
 SchedulingSolver::calculate_critical_slots(map<int, int> const& decisions, int availableMaxPush, int workshop)
 {
-    // Critical slots are slots that need the current workshop in order to still be able
-    // to fulfill the participant count.
-    //
     vector<int> criticalSlots;
 
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    for(int s = 0; s < _inputData.slot_count(); s++)
     {
-        int sum = availableMaxPush - _inputData->workshop(workshop).max();
+        int sum = availableMaxPush - _inputData.workshop(workshop).max();
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->workshop(decision.first).max();
+            sum += _inputData.workshop(decision.first).max();
         }
 
-        if(sum >= _inputData->participant_count() || !satisfies_scheduling_constraints(workshop, s, decisions))
+        if(sum >= _inputData.participant_count() || !satisfies_scheduling_constraints(workshop, s, decisions))
         {
             continue;
         }
@@ -183,15 +174,14 @@ int SchedulingSolver::slot_order_heuristic_score(map<int, int> const& decisions,
     for(auto const& decision : decisions)
     {
         if(decision.second != slot) continue;
-        score += _inputData->workshop(decision.first).max();
+        score += _inputData.workshop(decision.first).max();
     }
 
     return score;
 }
 
 vector<int>
-SchedulingSolver::calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySlot,
-                                           int workshop)
+SchedulingSolver::calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySlot, int workshop)
 {
     // Feasible slots are all slots for which adding the current workshop would not cause the
     // minimal participant number of this slot to exceed the total participant count.
@@ -202,18 +192,18 @@ SchedulingSolver::calculate_feasible_slots(map<int, int> const& decisions, vecto
     // balanced schedulings.
     //
     vector<int> normalSlots, lowSlots;
-    vector<int> slotScore(_inputData->slot_count(), INT_MIN);
+    vector<int> slotScore(_inputData.slot_count(), INT_MIN);
 
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    for(int s = 0; s < _inputData.slot_count(); s++)
     {
-        int sum = _inputData->workshop(workshop).min();
+        int sum = _inputData.workshop(workshop).min();
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->workshop(decision.first).min();
+            sum += _inputData.workshop(decision.first).min();
         }
 
-        if(sum > _inputData->participant_count() || !satisfies_scheduling_constraints(workshop, s, decisions))
+        if(sum > _inputData.participant_count() || !satisfies_scheduling_constraints(workshop, s, decisions))
         {
             continue;
         }
@@ -237,23 +227,23 @@ SchedulingSolver::calculate_feasible_slots(map<int, int> const& decisions, vecto
 
 vector<int> SchedulingSolver::get_workshop_scramble()
 {
-    vector<int> workshopScramble(_inputData->workshop_count());
+    vector<int> workshopScramble(_inputData.workshop_count());
     std::iota(workshopScramble.begin(), workshopScramble.end(), 0);
     std::shuffle(workshopScramble.begin(), workshopScramble.end(), Rng::engine());
     std::sort(workshopScramble.begin(), workshopScramble.end(), [&](int const& x, int const& y)
     {
-        return _inputData->scheduling_constraints(x).size() > _inputData->scheduling_constraints(y).size();
+        return _inputData.scheduling_constraints(x).size() > _inputData.scheduling_constraints(y).size();
     });
 
     return workshopScramble;
 }
 
-vector<bool> SchedulingSolver::get_low_priority_slot_map()
+vector<bool> SchedulingSolver::get_low_priority_slots()
 {
-    vector<bool> lowPrioritySlot(_inputData->slot_count());
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    vector<bool> lowPrioritySlot(_inputData.slot_count());
+    for(int s = 0; s < _inputData.slot_count(); s++)
     {
-        lowPrioritySlot[s] = _inputData->slot(s).name().rfind(InputData::NotScheduledSlotPrefix, 0) == 0;
+        lowPrioritySlot[s] = _inputData.slot(s).name().rfind(InputData::NotScheduledSlotPrefix, 0) == 0;
     }
 
     return lowPrioritySlot;
@@ -261,7 +251,7 @@ vector<bool> SchedulingSolver::get_low_priority_slot_map()
 
 vector<vector<int>> SchedulingSolver::convert_decisions(map<int, int> const& decisions)
 {
-    vector<vector<int>> res(_inputData->slot_count());
+    vector<vector<int>> res(_inputData.slot_count());
     for(auto const& decision : decisions)
     {
         res[decision.second].push_back(decision.first);
@@ -273,14 +263,14 @@ vector<vector<int>> SchedulingSolver::convert_decisions(map<int, int> const& dec
 vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const& criticalSets, datetime timeLimit)
 {
     vector<int> workshopScramble = get_workshop_scramble();
-    vector<bool> lowPrioritySlot = get_low_priority_slot_map();
+    vector<bool> lowPrioritySlot = get_low_priority_slots();
 
     map<int, int> decisions;
     stack<vector<int>> backtracking;
 
     for(int depth = 0; depth < workshopScramble.size();)
     {
-        if(_exitSignal.valid() && _exitSignal.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return {};
+        if(_cancellation.valid() && _cancellation.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) return {};
         if(time_now() > timeLimit)
         {
             return {};
@@ -303,13 +293,13 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
                 // If the partial solution does not satisfy critical set constraints it is infeasible.
                 //
                 // This is the case when there aren't enough elements in a critical set to cover all slots. For
-                // example, for 4 Slots and the critical set {A, B, C, D}, a partial solution of the form
+                // example, for 4 Slots and the critical set {A, B, C, D, E}, a partial solution of the form
                 //
                 //      Slot 1:    ... A, C ....
                 //      Slot 2:    ... D .......
                 //      Slot 3:    .............
                 //      Slot 4:    .............
-                //   Not assigned: ... B .......
+                //   Not assigned: ... B, E ....
                 //
                 // Would not be feasible, because the critical set can not be covered anymore (we would need at
                 // least 2 open workshops in the critical set to cover Slot 3 and 4).
@@ -366,20 +356,20 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
     return convert_decisions(decisions);
 }
 
-SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis csAnalysis, Options const& options, std::shared_future<void> exitSignal)
-        : _inputData(&inputData),
+SchedulingSolver::SchedulingSolver(InputData const& inputData, CriticalSetAnalysis const& csAnalysis, Options const& options, std::shared_future<void> cancellation)
+        : _inputData(inputData),
           _csAnalysis(std::move(csAnalysis)),
           _currentSolution(new Scheduling(inputData)),
           _hasSolution(false),
           _options(options),
-          _exitSignal(exitSignal)
+          _cancellation(std::move(cancellation))
 {
 }
 
 bool SchedulingSolver::next_scheduling()
 {
     int preferenceLimit = Rng::next(0, PREF_RELAXATION) == 0
-                          ? _inputData->max_preference()
+                          ? _inputData.max_preference()
                           : _csAnalysis.preference_bound();
 
     vector<vector<int>> slots;
@@ -388,7 +378,7 @@ bool SchedulingSolver::next_scheduling()
     {
         vector<CriticalSet> csSets = _csAnalysis.for_preference(preferenceLimit);
 
-        datetime timeLimit =  preferenceLimit == _inputData->max_preference()
+        datetime timeLimit =  preferenceLimit == _inputData.max_preference()
                               ? time_never()
                               : time_now() + seconds(_options.critical_set_timeout_seconds());
 
@@ -396,18 +386,18 @@ bool SchedulingSolver::next_scheduling()
 
         if(slots.empty())
         {
-            if(preferenceLimit == _inputData->max_preference())
+            if(preferenceLimit == _inputData.max_preference())
             {
                 _hasSolution = false;
                 _currentSolution = nullptr;
                 return false;
             }
 
-            preferenceLimit = _inputData->preference_after(preferenceLimit);
+            preferenceLimit = _inputData.preference_after(preferenceLimit);
         }
     }
 
-    vector<int> scheduling(_inputData->workshop_count());
+    vector<int> scheduling(_inputData.workshop_count());
     for(int s = 0; s < slots.size(); s++)
     {
         for(int w = 0; w < slots[s].size(); w++)
@@ -417,7 +407,7 @@ bool SchedulingSolver::next_scheduling()
     }
 
     _hasSolution = true;
-    _currentSolution = std::make_shared<Scheduling>(*_inputData, scheduling);
+    _currentSolution = std::make_shared<Scheduling>(_inputData, scheduling);
 
     return true;
 }

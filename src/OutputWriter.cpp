@@ -9,7 +9,7 @@ string OutputWriter::write_scheduling_solution(Solution const& solution)
 
     for(int w = 0; w < solution.input_data().workshop_count(); w++)
     {
-        int s = solution.scheduling().slot_of(w);
+        int s = solution.scheduling()->slot_of(w);
         string wName = solution.input_data().workshop(w).name();
         if(wName.rfind(InputData::HiddenWorkshopPrefix, 0) == 0)
         {
@@ -55,8 +55,8 @@ string OutputWriter::write_assignment_solution(Solution const& solution)
 vector<int> workshops(solution.input_data().slot_count());
         for(int s = 0; s < solution.input_data().slot_count(); s++)
         {
-            int ws = solution.assignment().workshop_of(p, s);
-            workshops[solution.scheduling().slot_of(ws)] = ws;
+            int ws = solution.assignment()->workshop_of(p, s);
+            workshops[solution.scheduling()->slot_of(ws)] = ws;
         }
 
         str << endl << '"' << solution.input_data().participant(p).name() << '"';

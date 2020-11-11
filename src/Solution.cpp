@@ -11,14 +11,14 @@ Solution::Solution(shared_ptr<Scheduling const> scheduling, shared_ptr<Assignmen
     assert(&_scheduling->input_data() == &_assignment->input_data());
 }
 
-Scheduling const& Solution::scheduling() const
+shared_ptr<Scheduling const> const& Solution::scheduling() const
 {
-    return *_scheduling;
+    return _scheduling;
 }
 
-Assignment const& Solution::assignment() const
+shared_ptr<Assignment const> const& Solution::assignment() const
 {
-    return *_assignment;
+    return _assignment;
 }
 
 InputData const& Solution::input_data() const

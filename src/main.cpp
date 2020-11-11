@@ -4,7 +4,7 @@
 #include "Options.h"
 #include "Status.h"
 #include "InputReader.h"
-#include "MipSolver.h"
+#include "ShotgunSolver.h"
 #include "OutputWriter.h"
 #include "ConstraintParser.h"
 
@@ -80,6 +80,10 @@ void set_signal_handler(int signal, sighandler_t handler)
 
 int main(int argc, char** argv)
 {
+#ifdef __EMCC__
+    printf("wsolve is running as WASM.");
+    return 0;
+#else
     set_signal_handler(SIGINT, signal_handler);
     set_signal_handler(SIGTERM, signal_handler);
 
@@ -111,11 +115,16 @@ int main(int argc, char** argv)
         InputData inputData = InputReader::read_input(inputString);
         inputData.build_constraints(ConstraintParser::parse);
 
+        if(std::pow((double)inputData.max_preference(), options.preference_exponent()) * inputData.participant_count() >= (double)LONG_MAX)
+        {
+            Status::warning("The preference exponent is too large; computations may cause an integer overflow");
+        }
+
         Status::info("Found " + str(inputData.scheduling_constraints().size()) + " scheduling and "
             + str(inputData.assignment_constraints().size()) + " assignment constraints.");
 
-        MipSolver solver(options);
-        Solution solution = solver.solve(inputData);
+        // TODO: Implement
+        Solution solution = Solution::invalid();
 
         if (solution.is_invalid())
         {
@@ -142,4 +151,5 @@ int main(int argc, char** argv)
     }
 
     return 0;
+#endif
 }

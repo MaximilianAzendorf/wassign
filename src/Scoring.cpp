@@ -15,23 +15,23 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
         switch(constraint.type())
         {
             case WorkshopIsInSlot:
-                if(solution.scheduling().slot_of(l) != r) return false;
+                if(solution.scheduling()->slot_of(l) != r) return false;
                 break;
 
             case WorkshopIsNotInSlot:
-                if(solution.scheduling().slot_of(l) == r) return false;
+                if(solution.scheduling()->slot_of(l) == r) return false;
                 break;
 
             case WorkshopsAreInSameSlot:
-                if(solution.scheduling().slot_of(l) != solution.scheduling().slot_of(r)) return false;
+                if(solution.scheduling()->slot_of(l) != solution.scheduling()->slot_of(r)) return false;
                 break;
 
             case WorkshopsAreNotInSameSlot:
-                if(solution.scheduling().slot_of(l) == solution.scheduling().slot_of(r)) return false;
+                if(solution.scheduling()->slot_of(l) == solution.scheduling()->slot_of(r)) return false;
                 break;
 
             case WorkshopsHaveOffset:
-                if(solution.scheduling().slot_of(r) - solution.scheduling().slot_of(l) != e) return false;
+                if(solution.scheduling()->slot_of(r) - solution.scheduling()->slot_of(l) != e) return false;
                 break;
 
             case SlotHasLimitedSize:
@@ -39,7 +39,7 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
                 int count = 0;
                 for(int w = 0; w < solution.input_data().workshop_count(); w++)
                 {
-                    if(solution.scheduling().slot_of(w) == constraint.left())
+                    if(solution.scheduling()->slot_of(w) == constraint.left())
                     {
                         count++;
                     }
@@ -76,19 +76,19 @@ bool Scoring::satisfies_constraints_assignment(Solution const& solution) const
         switch(constraint.type())
         {
             case WorkshopsHaveSameParticipants:
-                if(solution.assignment().participants_ordered(l) != solution.assignment().participants_ordered(r)) return false;
+                if(solution.assignment()->participants_ordered(l) != solution.assignment()->participants_ordered(r)) return false;
                 break;
 
             case ParticipantIsInWorkshop:
-                if(!solution.assignment().is_in_workshop(l, r)) return false;
+                if(!solution.assignment()->is_in_workshop(l, r)) return false;
                 break;
 
             case ParticipantIsNotInWorkshop:
-                if(solution.assignment().is_in_workshop(l, r)) return false;
+                if(solution.assignment()->is_in_workshop(l, r)) return false;
                 break;
 
             case ParticipantsHaveSameWorkshops:
-                if(solution.assignment().workshops_ordered(l) != solution.assignment().workshops_ordered(r)) return false;
+                if(solution.assignment()->workshops_ordered(l) != solution.assignment()->workshops_ordered(r)) return false;
                 break;
 
             default: throw std::logic_error("Unknown assignment constraint type " + str(constraint.type()) + ".");
@@ -109,7 +109,7 @@ int Scoring::evaluate_major(Solution const& solution) const
     for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
     {
         int p = i / _inputData->slot_count();
-        int ws = solution.assignment().workshop_of(p, i % _inputData->slot_count());
+        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
         m = std::max(m, _inputData->participant(p).preference(ws));
     }
 
@@ -128,7 +128,7 @@ float Scoring::evaluate_minor(Solution const& solution) const
     for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
     {
         int p = i / _inputData->slot_count();
-        int ws = solution.assignment().workshop_of(p, i % _inputData->slot_count());
+        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
         prefCount[_inputData->participant(p).preference(ws)]++;
     }
 
@@ -161,13 +161,13 @@ bool Scoring::is_feasible(Solution const& solution) const
 
     for(int i = 0; i < _inputData->workshop_count(); i++)
     {
-        slots[i] = solution.scheduling().slot_of(i);
+        slots[i] = solution.scheduling()->slot_of(i);
     }
 
     for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
     {
         int p = i / _inputData->slot_count();
-        int ws = solution.assignment().workshop_of(p, i % _inputData->slot_count());
+        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
         if(isInSlot[p][slots[ws]])
         {
             return false;

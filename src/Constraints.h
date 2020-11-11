@@ -15,7 +15,9 @@ private:
 public:
     static vector<vector<int>> get_dependent_workshops(vector<Constraint> const& constraints, int workshopCount);
 
-    static vector<Constraint> reduce_and_optimize(vector<Constraint> const& constraints, int workshopCount, bool& isInfeasible);
+    static vector<Constraint> reduce_and_optimize(vector<Constraint> const& constraints,
+                                                  int workshopCount,
+                                                  bool& isInfeasible);
 };
 
 

@@ -2,9 +2,8 @@
 
 #include <boost/spirit/home/x3.hpp>
 
+#ifdef __GNUC__
 #pragma GCC diagnostic push
-
-#ifndef __clang__
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
@@ -21,4 +20,6 @@ static auto padd(T& x) { return [&](auto& ctx){ x.push_back(boost::spirit::x3::_
 template<typename Action1, typename Action2>
 static auto pand(Action1 a1, Action2 a2) { return [=](auto& ctx){ a1(ctx); a2(ctx); }; };
 
+#ifdef __GNUC__
 #pragma GCC diagnostic pop
+#endif

@@ -26,9 +26,9 @@ private:
 public:
     Scoring(InputData const& inputData, Options const& options);
 
-    [[nodiscard]] bool is_feasible(Solution const& solution) const;
+    [[nodiscard]] virtual bool is_feasible(Solution const& solution) const;
 
-    [[nodiscard]] Score evaluate(Solution const& solution) const;
+    [[nodiscard]] virtual Score evaluate(Solution const& solution) const;
 };
 
 

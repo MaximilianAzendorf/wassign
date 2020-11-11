@@ -52,7 +52,8 @@ void CriticalSetAnalysis::analyze()
             CriticalSet c(pref, newSet);
 
             // Clang (and thus emcc) does not support parallel execution algorithms.
-#ifndef __clang__
+            // TODO: Implement some multi-threaded solution that clang supports.
+#if defined(__clang__) || (defined(__EMCC) && !defined(__EMSCRIPTEN_PTHREADS__))
             bool isCovered = std::any_of(std::execution::par_unseq, _sets.begin(), _sets.end(),
                                          [&](CriticalSet const& other){ return c.is_covered_by(other); });
 #else

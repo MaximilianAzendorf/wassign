@@ -6,6 +6,7 @@
 #include <string>
 #include <iomanip>
 #include <chrono>
+#include <future>
 
 template<typename T>
 inline string str(T const& x)
@@ -80,4 +81,9 @@ inline vector<int> riffle_shuffle(vector<int> const& v1, vector<int> const& v2)
     }
 
     return res;
+}
+
+inline bool is_set(std::shared_future<void> flag)
+{
+    return flag.valid() && flag.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
 }

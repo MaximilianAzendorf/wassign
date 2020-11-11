@@ -2,7 +2,7 @@
 #include "../src/Solution.h"
 #include "../src/InputReader.h"
 #include "../src/ConstraintParser.h"
-#include "../src/MipSolver.h"
+#include "../src/ShotgunSolver.h"
 #include "../src/Options.h"
 #include "../src/OutputWriter.h"
 #include "../src/Status.h"
@@ -13,22 +13,29 @@ using namespace boost::algorithm;
 
 #define PREFIX "[Integration] "
 
-Solution solve(std::string input, int timeout = 1)
+InputData get_data(std::string const& input)
 {
-    auto data = new InputData(InputReader::read_input(input));
-    data->build_constraints(ConstraintParser::parse);
+    auto data = InputReader::read_input(input);
+    data.build_constraints(ConstraintParser::parse);
 
+    return data;
+}
+
+Solution solve(InputData const& data, int iterations = 1)
+{
     auto options = Options::default_options();
     options.set_thread_count(1);
-    options.set_timeout_seconds(timeout);
     options.set_verbosity(3);
 
     Status::enable_output(options);
 
-    MipSolver solver(options);
-    Solution solution = solver.solve(*data);
+    CriticalSetAnalysis csAnalysis(data, data.slot_count() > 1);
+    MipFlowStaticData staticData = MipFlowStaticData::generate(data);
 
-    return solution;
+    ShotgunSolver solver(data, csAnalysis, staticData, Scoring(data, options), options);
+    solver.iterate(iterations);
+
+    return solver.current_solution();
 }
 
 void expect_assignment(Solution solution, std::string expectation)
@@ -36,7 +43,7 @@ void expect_assignment(Solution solution, std::string expectation)
     std::string solutionStr = OutputWriter::write_assignment_solution(solution);
     solutionStr = replace_all_copy(solutionStr, " ", "");
     solutionStr = replace_all_copy(solutionStr, "\"", "");
-    solutionStr.erase(0, solutionStr.find("\n") + 1);
+    solutionStr.erase(0, solutionStr.find('\n') + 1);
     solutionStr = trim_copy(solutionStr);
     solutionStr = replace_all_copy(solutionStr, "\n", ";");
 
@@ -49,7 +56,7 @@ void expect_scheduling(Solution solution, std::string expectation)
     std::string solutionStr = OutputWriter::write_scheduling_solution(solution);
     solutionStr = replace_all_copy(solutionStr, " ", "");
     solutionStr = replace_all_copy(solutionStr, "\"", "");
-    solutionStr.erase(0, solutionStr.find("\n") + 1);
+    solutionStr.erase(0, solutionStr.find('\n') + 1);
     solutionStr = trim_copy(solutionStr);
     solutionStr = replace_all_copy(solutionStr, "\n", ";");
 
@@ -65,7 +72,8 @@ TEST_CASE(PREFIX "Minimal")
 (person) p: 1
 )";
 
-    auto solution = solve(input);
+    auto data = get_data(input);
+    auto solution = solve(data);
     expect_assignment(solution, "p,e");
     expect_scheduling(solution, "e,s");
 }
@@ -84,7 +92,8 @@ TEST_CASE(PREFIX "Single slot")
 (person) p6: 1 1
 )";
 
-    auto solution = solve(input);
+    auto data = get_data(input);
+    auto solution = solve(data);
     expect_assignment(solution, "p1,e1; p2,e2; p3,e2; p4,e1; p5,e1; p6,e2");
     expect_scheduling(solution, "e1,s; e2,s");
 }
@@ -104,7 +113,8 @@ TEST_CASE(PREFIX "Single slot with assignment constraint")
 (constraint) participants of [e2] contain not [p6]
 )";
 
-    auto solution = solve(input);
+    auto data = get_data(input);
+    auto solution = solve(data);
     expect_assignment(solution, "p1,e1; p2,e2; p3,e2; p4,e1; p5,e2; p6,e1");
     expect_scheduling(solution, "e1,s; e2,s");
 }
@@ -123,7 +133,8 @@ TEST_CASE(PREFIX "Multiple slots with scheduling constraint")
 (constraint) slot of [e1] is [s1]
 )";
 
-    auto solution = solve(input);
+    auto data = get_data(input);
+    auto solution = solve(data, 100);
     expect_assignment(solution, "p1,e1,e2; p2,e1,e3; p3,e1,e3");
     expect_scheduling(solution, "e1,s1; e2,s2; e3,s2");
 }

@@ -15,9 +15,9 @@ public:
 
     Solution(shared_ptr<Scheduling const> scheduling, shared_ptr<Assignment const> assignment);
 
-    [[nodiscard]] Scheduling const& scheduling() const;
+    [[nodiscard]] shared_ptr<Scheduling const> const& scheduling() const;
 
-    [[nodiscard]] Assignment const& assignment() const;
+    [[nodiscard]] shared_ptr<Assignment const> const& assignment() const;
 
     [[nodiscard]] InputData const& input_data() const;
 
