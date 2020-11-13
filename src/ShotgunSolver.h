@@ -14,18 +14,19 @@
 
 struct ShotgunSolverProgress
 {
-    int iterations;
-    Solution best_solution;
-    Score best_score;
+    int iterations = 0;
+    Solution best_solution = Solution::invalid();
+    Score best_score = {.major = INFINITY, .minor = INFINITY};
 };
 
 class ShotgunSolver
 {
 private:
-    InputData const& _inputData;
-    Options const& _options;
+    const_ptr<InputData> _inputData;
+    const_ptr<Options> _options;
+    cancel_token _cancellation;
 
-    Scoring _scoring;
+    const_ptr<Scoring> _scoring;
 
     unique_ptr<HillClimbingSolver> _hillClimbingSolver;
 
@@ -34,15 +35,16 @@ private:
     ShotgunSolverProgress _progress;
 
 public:
-    ShotgunSolver(InputData const& inputData,
-                  CriticalSetAnalysis const& csAnalysis,
-                  MipFlowStaticData const& staticData,
-                  Scoring const& scoring,
-                  Options const& options);
+    ShotgunSolver(const_ptr<InputData> inputData,
+                  const_ptr<CriticalSetAnalysis> const& csAnalysis,
+                  const_ptr<MipFlowStaticData> const& staticData,
+                  const_ptr<Scoring> scoring,
+                  const_ptr<Options> options,
+                  cancel_token cancellation = cancel_token());
 
-    Solution current_solution() const;
+    [[nodiscard]] Solution current_solution() const;
 
-    ShotgunSolverProgress const& progress() const;
+    [[nodiscard]] ShotgunSolverProgress const& progress() const;
 
     int iterate(int numberOfIterations = 1);
 };

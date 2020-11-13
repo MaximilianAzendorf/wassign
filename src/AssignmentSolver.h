@@ -20,11 +20,11 @@ namespace op = operations_research;
 class AssignmentSolver
 {
 private:
-    InputData const& _inputData;
-    CriticalSetAnalysis const& _csAnalysis;
-    MipFlowStaticData const& _staticData;
-    Options const& _options;
-    std::shared_future<void> _cancellation;
+    const_ptr<InputData> _inputData;
+    const_ptr<CriticalSetAnalysis> _csAnalysis;
+    const_ptr<MipFlowStaticData> _staticData;
+    const_ptr<Options> _options;
+    cancel_token _cancellation;
 
     /**
      * Calculates edges in the flow graph that have to be removed from the flow graph.
@@ -43,11 +43,11 @@ public:
      *
      * @param staticData The static flow graph data for the given input data.
      */
-    AssignmentSolver(InputData const& inputData,
-                     CriticalSetAnalysis const& csAnalysis,
-                     MipFlowStaticData const& staticData,
-                     Options const& options,
-                     std::shared_future<void> cancellation = std::shared_future<void>());
+    AssignmentSolver(const_ptr<InputData> inputData,
+                     const_ptr<CriticalSetAnalysis> csAnalysis,
+                     const_ptr<MipFlowStaticData> staticData,
+                     const_ptr<Options> options,
+                     cancel_token cancellation = cancel_token());
 
     /**
      * Calculates an optimal assignment for the given scheduling.

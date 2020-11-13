@@ -5,18 +5,18 @@ Solution::Solution()
 {
 }
 
-Solution::Solution(shared_ptr<Scheduling const> scheduling, shared_ptr<Assignment const> assignment)
+Solution::Solution(const_ptr<Scheduling> scheduling, const_ptr<Assignment> assignment)
         : _scheduling(std::move(scheduling)), _assignment(std::move(assignment))
 {
     assert(&_scheduling->input_data() == &_assignment->input_data());
 }
 
-shared_ptr<Scheduling const> const& Solution::scheduling() const
+const_ptr<Scheduling> const& Solution::scheduling() const
 {
     return _scheduling;
 }
 
-shared_ptr<Assignment const> const& Solution::assignment() const
+const_ptr<Assignment> const& Solution::assignment() const
 {
     return _assignment;
 }

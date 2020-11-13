@@ -3,13 +3,13 @@
 #include <utility>
 #include <cassert>
 
-Scheduling::Scheduling(InputData const& inputData)
-        : _inputData(&inputData)
+Scheduling::Scheduling(const_ptr<InputData> inputData)
+        : _inputData(std::move(inputData))
 {
 }
 
-Scheduling::Scheduling(InputData const& inputData, vector<int> data)
-        : _inputData(&inputData), _data(std::move(data))
+Scheduling::Scheduling(const_ptr<InputData> inputData, vector<int> data)
+        : _inputData(std::move(inputData)), _data(std::move(data))
 {
     assert(_data.size() == _inputData->workshop_count());
 }
@@ -53,7 +53,7 @@ vector<int> const& Scheduling::raw_data() const
 
 int Scheduling::get_hash() const
 {
-    int hash = (int)(long)_inputData;
+    int hash = (int)(long)_inputData.get();
     for(int i : _data)
     {
         hash = hash * 97 + i;

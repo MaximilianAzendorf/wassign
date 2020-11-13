@@ -41,9 +41,9 @@ private:
 public:
     Options() = default;
 
-    static OptionsParseStatus parse(int argc, char** argv, string const& header, Options& result);
+    static OptionsParseStatus parse(int argc, char** argv, string const& header, const_ptr<Options>& result);
 
-    static Options default_options();
+    static shared_ptr<Options> default_options();
 
     [[nodiscard]] int verbosity() const;
 

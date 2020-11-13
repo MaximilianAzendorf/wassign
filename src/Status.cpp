@@ -4,7 +4,7 @@
 
 bool Status::_output = false;
 
-Options const* Status::_options;
+const_ptr<Options> Status::_options;
 
 string Status::color(int foregroundColor)
 {
@@ -53,8 +53,8 @@ void Status::error(string const& text)
     }
 }
 
-void Status::enable_output(Options const& options)
+void Status::enable_output(const_ptr<Options> options)
 {
-    _options = &options;
+    _options = options;
     _output = true;
 }

@@ -13,6 +13,7 @@
 #include <atomic>
 #include <cstddef>
 #include <thread>
+#include <future>
 
 #include <boost/functional/hash.hpp>
 
@@ -44,6 +45,7 @@ using ordered_set = std::set<T>;
 
 using seconds = std::chrono::seconds;
 using secondsf = std::chrono::duration<double>;
+using milliseconds = std::chrono::milliseconds;
 using nanoseconds = std::chrono::nanoseconds;
 using datetime = std::chrono::time_point<std::chrono::system_clock, nanoseconds>;
 
@@ -54,8 +56,15 @@ template<typename T>
 using unique_ptr = std::unique_ptr<T>;
 
 template<typename T>
+using const_ptr = std::shared_ptr<T const>;
+
+template<typename T>
 using atomic = std::atomic<T>;
 
 using thread = std::thread;
 
 using size_t = std::size_t;
+
+using cancel_token = std::shared_future<void>;
+
+using cancel_token_source = std::promise<void>;

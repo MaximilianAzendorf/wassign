@@ -4,8 +4,8 @@
 #include <cassert>
 #include <utility>
 
-Assignment::Assignment(InputData const& inputData, vector<vector<int>> data)
-        : _inputData(&inputData), _data(std::move(data))
+Assignment::Assignment(const_ptr<InputData> inputData, vector<vector<int>> data)
+        : _inputData(std::move(inputData)), _data(std::move(data))
 {
     assert(_data.size() == _inputData->participant_count());
 

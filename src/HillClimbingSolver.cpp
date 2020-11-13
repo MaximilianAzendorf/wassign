@@ -5,15 +5,15 @@
 
 int HillClimbingSolver::max_neighbor_key()
 {
-    return _inputData.workshop_count() * (_inputData.slot_count() - 1);
+    return _inputData->workshop_count() * (_inputData->slot_count() - 1);
 }
 
 shared_ptr<Scheduling const> HillClimbingSolver::neighbor(shared_ptr<Scheduling const> const& scheduling, int neighborKey)
 {
     vector<int> data(scheduling->raw_data());
 
-    int s = neighborKey / _inputData.workshop_count();
-    int w = neighborKey % _inputData.workshop_count();
+    int s = neighborKey / _inputData->workshop_count();
+    int w = neighborKey % _inputData->workshop_count();
 
     if(s >= scheduling->slot_of(w))
     {
@@ -56,28 +56,26 @@ vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_p
     return result;
 }
 
-HillClimbingSolver::HillClimbingSolver(InputData const& inputData,
-                                       const CriticalSetAnalysis& csAnalysis,
-                                       MipFlowStaticData const& staticData,
-                                       Scoring const& scoring,
-                                       Options const& options,
-                                       std::shared_future<void> cancellation)
-    : _inputData(inputData),
-    _csAnalysis(csAnalysis),
-    _staticData(staticData),
-    _scoring(scoring),
-    _options(options),
+HillClimbingSolver::HillClimbingSolver(const_ptr<InputData> inputData,
+                                       const_ptr<CriticalSetAnalysis> csAnalysis,
+                                       const_ptr<MipFlowStaticData> staticData,
+                                       const_ptr<Scoring> scoring,
+                                       const_ptr<Options> options,
+                                       cancel_token cancellation)
+    : _inputData(std::move(inputData)),
+    _csAnalysis(std::move(csAnalysis)),
+    _staticData(std::move(staticData)),
+    _scoring(std::move(scoring)),
+    _options(std::move(options)),
     _cancellation(std::move(cancellation)),
-    _assignmentSolver(inputData, csAnalysis, staticData, options, cancellation)
+    _assignmentSolver(_inputData, _csAnalysis, _staticData, _options, _cancellation)
 {
 }
 
-Solution HillClimbingSolver::solve(shared_ptr<Scheduling const> const& scheduling)
+Solution HillClimbingSolver::solve(const_ptr<Scheduling> const& scheduling)
 {
-    if(is_set(_cancellation)) return Solution::invalid();
-
     Solution bestSolution(scheduling, _assignmentSolver.solve(scheduling));
-    Score bestScore = _scoring.evaluate(bestSolution);
+    Score bestScore = _scoring->evaluate(bestSolution);
 
     if(!bestScore.is_finite())
     {
@@ -90,7 +88,10 @@ Solution HillClimbingSolver::solve(shared_ptr<Scheduling const> const& schedulin
         for(auto const& neighbor : pick_neighbors(bestSolution.scheduling()))
         {
             Solution neighborSolution(neighbor, _assignmentSolver.solve(neighbor));
-            Score neighborScore = _scoring.evaluate(neighborSolution);
+
+            if(is_set(_cancellation)) return Solution::invalid();
+
+            Score neighborScore = _scoring->evaluate(neighborSolution);
 
             if(neighborScore < bestScore)
             {

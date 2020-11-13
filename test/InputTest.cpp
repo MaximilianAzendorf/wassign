@@ -31,13 +31,13 @@ p4, 20, 5, 21
     std::set<string> expectedWorkshopNames = { "w1", "w2", "w3" };
     std::set<string> expectedPersonNames = { "p1", "p2", "p3", "p4", "p5" };
 
-    for(auto const& s : data.slots()) expectedSlotNames.erase(s.name());
-    for(auto const& w : data.workshops()) expectedWorkshopNames.erase(w.name());
-    for(auto const& p : data.participants()) expectedPersonNames.erase(p.name());
+    for(auto const& s : data->slots()) expectedSlotNames.erase(s.name());
+    for(auto const& w : data->workshops()) expectedWorkshopNames.erase(w.name());
+    for(auto const& p : data->participants()) expectedPersonNames.erase(p.name());
 
-    CHECK(data.slot_count() == 4); // 3 real slots and 1 not-scheduled slot.
-    CHECK(data.workshop_count() == 15); // 3 real workshops + 11 extra parts of w2 + 1 unassigned slot
-    CHECK(data.participant_count() == 5);
+    CHECK(data->slot_count() == 4); // 3 real slots and 1 not-scheduled slot.
+    CHECK(data->workshop_count() == 15); // 3 real workshops + 11 extra parts of w2 + 1 unassigned slot
+    CHECK(data->participant_count() == 5);
 
     CHECK(expectedPersonNames.empty());
     CHECK(expectedSlotNames.empty());
@@ -57,11 +57,11 @@ TEST_CASE(PREFIX "Should create scheduling constraints for multi-part workshops"
 )";
 
     auto data = InputReader::read_input(input);
-    data.build_constraints(ConstraintParser::parse);
+    data->build_constraints(ConstraintParser::parse);
 
-    CHECK(data.scheduling_constraints().size() == 6);
+    CHECK(data->scheduling_constraints().size() == 6);
 
-    for(auto const& c : data.scheduling_constraints())
+    for(auto const& c : data->scheduling_constraints())
     {
         if(c.type() != ConstraintType::WorkshopsAreNotInSameSlot)
         {
@@ -83,10 +83,10 @@ TEST_CASE(PREFIX "Should create scheduling constraints for non-optional workshop
 )";
 
     auto data = InputReader::read_input(input);
-    data.build_constraints(ConstraintParser::parse);
+    data->build_constraints(ConstraintParser::parse);
 
     // One WorkshopIsNotInSlot for e and one WorkshopIsInSlot for the auto-generated unassigned-slot-filling-workshop.
-    REQUIRE(data.scheduling_constraints().size() == 2);
+    REQUIRE(data->scheduling_constraints().size() == 2);
 }
 
 TEST_CASE(PREFIX "Should auto-generate slot if none is given")
@@ -98,7 +98,7 @@ TEST_CASE(PREFIX "Should auto-generate slot if none is given")
 
     auto data = InputReader::read_input(input);
 
-    REQUIRE(data.slot_count() == 1);
+    REQUIRE(data->slot_count() == 1);
 }
 
 TEST_CASE(PREFIX "Should not accept too many preferences")

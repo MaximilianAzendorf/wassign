@@ -8,6 +8,9 @@ typedef uint64_t flowid;
 
 class MipFlowStaticData
 {
+private:
+    const_ptr<InputData> _inputData;
+
 public:
     MipFlow<flowid, flowid> baseFlow;
     vector<pair<int, int>> blockedEdges;
@@ -19,7 +22,7 @@ public:
     static flowid node_workshop(int w);
     static flowid edge_id(int from, int to);
 
-    static MipFlowStaticData generate(InputData const& inputData);
+    MipFlowStaticData(const_ptr<InputData> inputData);
 };
 
 

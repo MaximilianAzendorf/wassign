@@ -9,7 +9,7 @@
 class Assignment
 {
 private:
-    InputData const* _inputData;
+    const_ptr<InputData> _inputData;
     vector<vector<int>> _data;
 
 public:
@@ -19,7 +19,7 @@ public:
      * @param inputData The input data this instance is an assignment solution for.
      * @param data A vector of vectors so that participant x is assigned to workshop data[x][y] at slot y.
      */
-    Assignment(InputData const& inputData, vector<vector<int>> data);
+    Assignment(const_ptr<InputData> inputData, vector<vector<int>> data);
 
     /**
      * Returns the workshop the given participant is assigned to at the given slot.

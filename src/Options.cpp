@@ -3,7 +3,7 @@
 #include "Util.h"
 #include "Version.h"
 #include "InputException.h"
-#include "popl/popl.hpp"
+#include "../deps/popl/include/popl.hpp"
 
 #include <iostream>
 #include <utility>
@@ -34,9 +34,9 @@ int Options::parse_time(string value)
     return time;
 }
 
-OptionsParseStatus Options::parse(int argc, char **argv, string const& header, Options& result)
+OptionsParseStatus Options::parse(int argc, char **argv, string const& header, const_ptr<Options>& outResult)
 {
-    result = Options::default_options();
+    shared_ptr<Options> result = Options::default_options();
 
     OptionParser op("Allowed options");
 
@@ -76,28 +76,29 @@ OptionsParseStatus Options::parse(int argc, char **argv, string const& header, O
             inputFiles.push_back(inputOpt->value(i));
         }
 
-        result.set_input_files(inputFiles);
-        if(outputOpt->is_set()) result.set_output_file(outputOpt->value());
-        if(verbosityOpt->is_set()) result.set_verbosity(verbosityOpt->value());
-        if(anyOpt->is_set()) result.set_any(true);
-        if(prefExpOpt->is_set()) result.set_preference_exponent(prefExpOpt->value());
-        if(timeoutOpt->is_set()) result.set_timeout_seconds(parse_time(timeoutOpt->value()));
-        if(csTimeoutOpt->is_set()) result.set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
-        if(noCsOpt->is_set()) result.set_no_critical_sets(true);
-        if(threadsOpt->is_set()) result.set_thread_count(threadsOpt->value());
+        result->set_input_files(inputFiles);
+        if(outputOpt->is_set()) result->set_output_file(outputOpt->value());
+        if(verbosityOpt->is_set()) result->set_verbosity(verbosityOpt->value());
+        if(anyOpt->is_set()) result->set_any(true);
+        if(prefExpOpt->is_set()) result->set_preference_exponent(prefExpOpt->value());
+        if(timeoutOpt->is_set()) result->set_timeout_seconds(parse_time(timeoutOpt->value()));
+        if(csTimeoutOpt->is_set()) result->set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
+        if(noCsOpt->is_set()) result->set_no_critical_sets(true);
+        if(threadsOpt->is_set()) result->set_thread_count(threadsOpt->value());
 
-        if(result.verbosity() > 0)
+        if(result->verbosity() > 0)
         {
             std::cerr << header << std::endl;
         }
 
+        outResult = result;
         return OK;
     }
 }
 
-Options Options::default_options()
+shared_ptr<Options> Options::default_options()
 {
-    return Options();
+    return std::make_shared<Options>();
 }
 
 int Options::verbosity() const

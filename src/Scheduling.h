@@ -6,13 +6,13 @@
 class Scheduling
 {
 private:
-    InputData const* _inputData;
+    const_ptr<InputData> _inputData;
     vector<int> _data;
 
 public:
-    explicit Scheduling(InputData const& inputData);
+    explicit Scheduling(const_ptr<InputData> inputData);
 
-    Scheduling(InputData const& inputData, vector<int> data);
+    Scheduling(const_ptr<InputData> inputData, vector<int> data);
 
     [[nodiscard]] bool is_feasible() const;
 

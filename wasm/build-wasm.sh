@@ -35,7 +35,7 @@ pushd build-wasm
             ./em-setup.sh
         fi
         echo "Building or-tools..."
-        ./cmake-build.sh 
+        ./build.sh
 
         pushd emscripten
             echo "Setting up emscripten environment..."
@@ -54,6 +54,7 @@ pushd build-wasm
         emcc \
             -O3 \
             -flto \
+            -pthread \
             --bind \
             --std=c++17 \
             --closure=1 \

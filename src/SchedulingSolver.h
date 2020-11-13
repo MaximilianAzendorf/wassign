@@ -12,14 +12,14 @@
 class SchedulingSolver
 {
 private:
-    InputData const& _inputData;
-    CriticalSetAnalysis const& _csAnalysis;
+    const_ptr<InputData> _inputData;
+    const_ptr<CriticalSetAnalysis> _csAnalysis;
 
-    shared_ptr<Scheduling const> _currentSolution;
+    const_ptr<Scheduling> _currentSolution;
     bool _hasSolution;
 
-    Options const& _options;
-    std::shared_future<void> _cancellation;
+    const_ptr<Options> _options;
+    cancel_token _cancellation;
 
     /**
      * The available max push is the sum of the maximum participant counts of all workshops that are not yet assigned
@@ -100,7 +100,10 @@ public:
     /**
      * Constructor.
      */
-    SchedulingSolver(InputData const& inputData, CriticalSetAnalysis const& csAnalysis, Options const& options, std::shared_future<void> cancellation = std::shared_future<void>());
+    SchedulingSolver(const_ptr<InputData> inputData,
+                     const_ptr<CriticalSetAnalysis> csAnalysis,
+                     const_ptr<Options> options,
+                     cancel_token cancellation = cancel_token());
 
     /**
      * Tries to calculate the next scheduling and returns false if none is found (within the time limit).
@@ -110,7 +113,7 @@ public:
     /**
      * Returns the last found solution.
      */
-    [[nodiscard]] shared_ptr<Scheduling const> scheduling()
+    [[nodiscard]] const_ptr<Scheduling> scheduling()
     {
         return _currentSolution;
     }

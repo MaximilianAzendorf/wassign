@@ -135,17 +135,17 @@ float Scoring::evaluate_minor(Solution const& solution) const
     float sum = 0;
     for(int pref = 0; pref <= _inputData->max_preference(); pref++)
     {
-        sum += prefCount[pref] * std::pow((float)pref, (float)_options.preference_exponent()) / _scaling;
+        sum += prefCount[pref] * std::pow((float)pref, (float)_options->preference_exponent()) / _scaling;
     }
 
     return sum;
 }
 
-Scoring::Scoring(InputData const& inputData, Options const& options)
-        : _inputData(&inputData),
-        _options(options)
+Scoring::Scoring(const_ptr<InputData> inputData, const_ptr<Options> options)
+        : _inputData(std::move(inputData)),
+        _options(std::move(options))
 {
-    _scaling = std::pow((float)_inputData->max_preference(), (float)_options.preference_exponent());
+    _scaling = std::pow((float)_inputData->max_preference(), (float)_options->preference_exponent());
 }
 
 bool Scoring::is_feasible(Solution const& solution) const

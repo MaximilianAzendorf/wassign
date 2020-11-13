@@ -240,7 +240,7 @@ void InputReader::generate_extra_slots(MutableInputData& inputData, vector<Input
     }
 }
 
-InputData InputReader::parse(string const& input)
+shared_ptr<InputData> InputReader::parse(string const& input)
 {
     std::stringstream inputStream(input);
     string line;
@@ -257,42 +257,42 @@ InputData InputReader::parse(string const& input)
     compile_workshops(inputData, preWorkshops);
     generate_extra_slots(inputData, preWorkshops);
 
-    return InputData(inputData);
+    return std::make_shared<InputData>(inputData);
 }
 
-InputData InputReader::read_input(string const& input)
+shared_ptr<InputData> InputReader::read_input(string const& input)
 {
     Status::info("Begin parsing input.");
 
-    InputData res = parse(input);
-    int slotCount = res.slot_count();
-    int wsCount = res.workshop_count();
-    int partCount = res.participant_count();
+    auto res = parse(input);
+    int slotCount = res->slot_count();
+    int wsCount = res->workshop_count();
+    int partCount = res->participant_count();
 
     if(partCount == 0)
     {
         throw InputException("No person(s) given in input.");
     }
 
-    for(int i = 0; i < res.slot_count(); i++)
+    for(int i = 0; i < res->slot_count(); i++)
     {
-        if(res.slot(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->slot(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
             slotCount--;
         }
     }
 
-    for(int i = 0; i < res.workshop_count(); i++)
+    for(int i = 0; i < res->workshop_count(); i++)
     {
-        if(res.workshop(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->workshop(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
             wsCount--;
         }
     }
 
-    for(int i = 0; i < res.participant_count(); i++)
+    for(int i = 0; i < res->participant_count(); i++)
     {
-        if(res.participant(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->participant(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
             partCount--;
         }

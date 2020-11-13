@@ -112,7 +112,7 @@ private:
      * @param input The input.
      * @return The resulting InputData instance.
      */
-    static InputData parse(string const& input);
+    static shared_ptr<InputData> parse(string const& input);
 
 public:
     /**
@@ -121,7 +121,7 @@ public:
      * @param input The input.
      * @return The resulting InputData instance.
      */
-    static InputData read_input(string const& input);
+    static shared_ptr<InputData> read_input(string const& input);
 };
 
 #include "InputReader.ipp"

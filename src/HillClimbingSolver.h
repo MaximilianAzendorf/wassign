@@ -14,12 +14,12 @@
 class HillClimbingSolver
 {
 private:
-    InputData const& _inputData;
-    CriticalSetAnalysis const& _csAnalysis;
-    MipFlowStaticData const& _staticData;
-    Scoring const& _scoring;
-    Options const& _options;
-    std::shared_future<void> _cancellation;
+    const_ptr<InputData> _inputData;
+    const_ptr<CriticalSetAnalysis> _csAnalysis;
+    const_ptr<MipFlowStaticData> _staticData;
+    const_ptr<Scoring> _scoring;
+    const_ptr<Options> _options;
+    cancel_token _cancellation;
 
     AssignmentSolver _assignmentSolver;
 
@@ -35,14 +35,14 @@ public:
     /**
      * Constructor.
      */
-    HillClimbingSolver(InputData const& inputData,
-                       CriticalSetAnalysis const& csAnalysis,
-                       MipFlowStaticData const& staticData,
-                       Scoring const& scoring,
-                       Options const& options,
-                       std::shared_future<void> cancellation = std::shared_future<void>());
+    HillClimbingSolver(const_ptr<InputData> inputData,
+                       const_ptr<CriticalSetAnalysis> csAnalysis,
+                       const_ptr<MipFlowStaticData> staticData,
+                       const_ptr<Scoring> scoring,
+                       const_ptr<Options> options,
+                       cancel_token cancellation = cancel_token());
 
-    Solution solve(shared_ptr<Scheduling const> const& scheduling);
+    Solution solve(const_ptr<Scheduling> const& scheduling);
 };
 
 

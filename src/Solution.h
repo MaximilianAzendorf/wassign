@@ -7,17 +7,17 @@
 class Solution
 {
 private:
-    shared_ptr<Scheduling const> _scheduling;
-    shared_ptr<Assignment const> _assignment;
+    const_ptr<Scheduling> _scheduling;
+    const_ptr<Assignment> _assignment;
 
 public:
     Solution();
 
-    Solution(shared_ptr<Scheduling const> scheduling, shared_ptr<Assignment const> assignment);
+    Solution(const_ptr<Scheduling> scheduling, const_ptr<Assignment> assignment);
 
-    [[nodiscard]] shared_ptr<Scheduling const> const& scheduling() const;
+    [[nodiscard]] const_ptr<Scheduling> const& scheduling() const;
 
-    [[nodiscard]] shared_ptr<Assignment const> const& assignment() const;
+    [[nodiscard]] const_ptr<Assignment> const& assignment() const;
 
     [[nodiscard]] InputData const& input_data() const;
 

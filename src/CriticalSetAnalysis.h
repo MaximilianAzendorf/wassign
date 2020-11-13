@@ -8,7 +8,7 @@ class CriticalSetAnalysis
 {
 private:
     vector<CriticalSet> _sets;
-    InputData const& _inputData;
+    const_ptr<InputData> _inputData;
     int preferenceBound;
 
     void analyze();
@@ -16,7 +16,7 @@ private:
 public:
     inline static const seconds ProgressInterval = seconds(3);
 
-    explicit CriticalSetAnalysis(InputData const& inputData, bool analyze = true);
+    CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze = true);
 
     [[nodiscard]] vector<CriticalSet> for_preference(int preference) const;
 
@@ -24,7 +24,7 @@ public:
 
     [[nodiscard]] int preference_bound() const;
 
-    [[nodiscard]] static CriticalSetAnalysis empty(InputData const& inputData);
+    [[nodiscard]] static CriticalSetAnalysis empty(const_ptr<InputData> inputData);
 };
 
 
