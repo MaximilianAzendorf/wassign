@@ -11,8 +11,8 @@ file(GLOB SOURCE_H *.h)
 
 list(FILTER SOURCE_CPP EXCLUDE REGEX ".*main.cpp$")
 
-add_library(wsolve-lib STATIC ${SOURCE_CPP} ${SOURCE_H} ${SOURCE_IPP})
-target_link_libraries(wsolve-lib tbb ortools::ortools)
+add_library(wassign-lib STATIC ${SOURCE_CPP} ${SOURCE_H} ${SOURCE_IPP})
+target_link_libraries(wassign-lib tbb ortools::ortools)
 
-add_executable(wsolve main.cpp)
-target_link_libraries(wsolve wsolve-lib)
+add_executable(wassign main.cpp)
+target_link_libraries(wassign wassign-lib)

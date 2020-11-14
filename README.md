@@ -1,4 +1,4 @@
-wsolve is a tool to solve an extension of the [stable marriage problem](https://en.wikipedia.org/wiki/Stable_marriage_problem).
+wassign is a tool to solve an extension of the [stable marriage problem](https://en.wikipedia.org/wiki/Stable_marriage_problem).
 
 ### The problem
 
@@ -13,8 +13,8 @@ while respecting the preferences given by the persons "as much as possible". Add
 
 ### The solution
 
-The stated problem can not be computed efficiently. wsolve uses a combination of hill climbing and MIP to quickly find good solutions. The details of the used algorithms are described in the [wiki](https://github.com/MaximilianAzendorf/wsolve/wiki).
+The stated problem can not be computed efficiently. wassign uses a combination of hill climbing and MIP to quickly find good solutions. The details of the used algorithms are described in the [wiki](https://github.com/MaximilianAzendorf/wassign/wiki).
 
-### How do I build/use wsolve?
+### How do I build/use wassign?
 
-See the [wiki](https://github.com/MaximilianAzendorf/wsolve/wiki) for more information.
+See the [wiki](https://github.com/MaximilianAzendorf/wassign/wiki) for more information.

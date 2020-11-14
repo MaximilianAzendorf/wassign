@@ -48,7 +48,7 @@ pushd build-wasm
         mkdir bin
     fi
 
-    echo "Building wsolve..."
+    echo "Building wassign..."
     ( 
         set -x; \
         emcc \
@@ -136,7 +136,7 @@ pushd build-wasm
             -lscip \
             -lz \
             ../src/*.cpp \
-            -o bin/wsolve.html \
+            -o bin/wassign.html \
     )
     echo "Done. Output was written to ./build-wasm/bin"
 popd

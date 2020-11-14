@@ -41,16 +41,16 @@ string readInputStringFromStream(Stream& stream)
     return res.str();
 }
 
-string readInputString(Options const& options)
+string readInputString(const_ptr<Options> options)
 {
-    if(options.input_files().empty())
+    if(options->input_files().empty())
     {
         return readInputStringFromStream(std::cin);
     }
     else
     {
         std::stringstream res;
-        for(string const& file : options.input_files())
+        for(string const& file : options->input_files())
         {
             std::ifstream stream(file);
             if(!stream.is_open())
@@ -64,11 +64,11 @@ string readInputString(Options const& options)
     }
 }
 
-void output_string(string const& text, string const& fileSuffix, Options const& options)
+void output_string(string const& text, string const& fileSuffix, const_ptr<Options> options)
 {
-    if(!options.output_file().empty())
+    if(!options->output_file().empty())
     {
-        std::ofstream stream(options.output_file() + fileSuffix);
+        std::ofstream stream(options->output_file() + fileSuffix);
         stream << text;
         stream.close();
     }
@@ -97,7 +97,7 @@ void set_signal_handler(int signal, sighandler_t handler)
 int main(int argc, char** argv)
 {
 #ifdef __EMCC__
-    printf("wsolve is running as WASM.");
+    printf("wassign is running as WASM.");
     return 0;
 #else
     set_signal_handler(SIGINT, signal_handler);
@@ -107,8 +107,8 @@ int main(int argc, char** argv)
     {
         Rng::seed(time_now().time_since_epoch().count());
 
-        const string header = "wsolve [Version " WSOLVE_VERSION "]\n(c) 2020 Maximilian Azendorf\n";
-        Options options;
+        const string header = "wassign [Version " WASSIGN_VERSION "]\n(c) 2020 Maximilian Azendorf\n";
+        const_ptr<Options> options = std::make_shared<Options>();
 
         auto optionsStatus = Options::parse(argc, argv, header, options);
 
@@ -128,16 +128,16 @@ int main(int argc, char** argv)
         }
 
         string inputString = readInputString(options);
-        InputData inputData = InputReader::read_input(inputString);
-        inputData.build_constraints(ConstraintParser::parse);
+        auto inputData = InputReader::read_input(inputString);
+        inputData->build_constraints(ConstraintParser::parse);
 
-        if(std::pow((double)inputData.max_preference(), options.preference_exponent()) * inputData.participant_count() >= (double)LONG_MAX)
+        if(std::pow((double)inputData->max_preference(), options->preference_exponent()) * inputData->participant_count() >= (double)LONG_MAX)
         {
             Status::warning("The preference exponent is too large; computations may cause an integer overflow");
         }
 
-        Status::info("Found " + str(inputData.scheduling_constraints().size()) + " scheduling and "
-            + str(inputData.assignment_constraints().size()) + " assignment constraints.");
+        Status::info("Found " + str(inputData->scheduling_constraints().size()) + " scheduling and "
+            + str(inputData->assignment_constraints().size()) + " assignment constraints.");
 
         // TODO: Implement
         Solution solution = Solution::invalid();
@@ -150,7 +150,7 @@ int main(int argc, char** argv)
         {
             Status::info_important("Solution found.");
             Status::info("Solution score: " + Scoring(inputData, options).evaluate(solution).to_str());
-            if (inputData.slot_count() > 1)
+            if (inputData->slot_count() > 1)
             {
                 string schedulingSolutionString = OutputWriter::write_scheduling_solution(solution);
                 output_string(schedulingSolutionString, ".scheduling.csv", options);

@@ -77,7 +77,7 @@ OptionsParseStatus Options::parse(int argc, char **argv, string const& header, c
     }
     else if(versionOpt->is_set())
     {
-        std::cout << WSOLVE_VERSION << std::endl;
+        std::cout << WASSIGN_VERSION << std::endl;
         return EXIT;
     }
     else if(!op.non_option_args().empty() || !op.unknown_options().empty())
