@@ -42,7 +42,7 @@ void ShotgunSolverThreaded::thread_loop(int tid, cancel_token cancellation)
     {
         _threadSolvers[tid]->iterate();
 
-        if(_inputData->slot_count() == 1)
+        if(_inputData->set_count() == 1)
         {
             _threadFinishedEarly[tid] = true;
             break;
@@ -78,7 +78,7 @@ void ShotgunSolverThreaded::start()
 
     cancel();
 
-    int numThreads = _inputData->slot_count() == 1 ? 1 : _options->thread_count();
+    int numThreads = _inputData->set_count() == 1 ? 1 : _options->thread_count();
 
     _threads.resize(numThreads);
     _threadSolvers.resize(numThreads);

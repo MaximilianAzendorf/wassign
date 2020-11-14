@@ -21,17 +21,17 @@
 
 int HillClimbingSolver::max_neighbor_key()
 {
-    return _inputData->workshop_count() * (_inputData->slot_count() - 1);
+    return _inputData->choice_count() * (_inputData->set_count() - 1);
 }
 
 shared_ptr<Scheduling const> HillClimbingSolver::neighbor(shared_ptr<Scheduling const> const& scheduling, int neighborKey)
 {
     vector<int> data(scheduling->raw_data());
 
-    int s = neighborKey / _inputData->workshop_count();
-    int w = neighborKey % _inputData->workshop_count();
+    int s = neighborKey / _inputData->choice_count();
+    int w = neighborKey % _inputData->choice_count();
 
-    if(s >= scheduling->slot_of(w))
+    if(s >= scheduling->set_of(w))
     {
         s += 1;
     }

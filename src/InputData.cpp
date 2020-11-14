@@ -24,29 +24,29 @@
 #include "Constraints.h"
 #include "InputException.h"
 
-vector<pair<int, int>> InputData::get_dependent_workshop_limits(vector<Constraint> const& constraints)
+vector<pair<int, int>> InputData::get_dependent_choice_limits(vector<Constraint> const& constraints)
 {
-    UnionFind<int> workshopGroups(_workshops.size());
+    UnionFind<int> choiceGroups(_choices.size());
 
     for(Constraint const& constraint : constraints)
     {
-        if (constraint.type() != WorkshopsHaveSameParticipants) continue;
-        workshopGroups.join(constraint.left(), constraint.right());
+        if (constraint.type() != ChoicesHaveSameChoosers) continue;
+        choiceGroups.join(constraint.left(), constraint.right());
     }
 
-    vector<pair<int, int>> limits(_workshops.size(), std::make_pair(0, INT_MAX));
+    vector<pair<int, int>> limits(_choices.size(), std::make_pair(0, INT_MAX));
 
-    for(int w = 0; w < _workshops.size(); w++)
+    for(int w = 0; w < _choices.size(); w++)
     {
-        int idx = workshopGroups.find(w);
+        int idx = choiceGroups.find(w);
         limits[idx] = std::make_pair(
-                std::max(limits[idx].first, _workshops[w].min()),
-                std::min(limits[idx].second, _workshops[w].max()));
+                std::max(limits[idx].first, _choices[w].min()),
+                std::min(limits[idx].second, _choices[w].max()));
     }
 
-    for(int w = 0; w < _workshops.size(); w++)
+    for(int w = 0; w < _choices.size(); w++)
     {
-        limits[w] = limits[workshopGroups.find(w)];
+        limits[w] = limits[choiceGroups.find(w)];
     }
 
     return limits;
@@ -54,13 +54,13 @@ vector<pair<int, int>> InputData::get_dependent_workshop_limits(vector<Constrain
 
 vector<vector<int>> InputData::get_dependent_preferences(vector<Constraint> const& constraints)
 {
-    vector<vector<int>> depGroups = Constraints::get_dependent_workshops(constraints, workshop_count());
+    vector<vector<int>> depGroups = Constraints::get_dependent_choices(constraints, choice_count());
 
     vector<vector<int>> pref;
 
-    for(int p = 0; p < _participants.size(); p++)
+    for(int p = 0; p < _choosers.size(); p++)
     {
-        pref.push_back(_participants[p].preferences());
+        pref.push_back(_choosers[p].preferences());
 
         for(vector<int> const& group : depGroups)
         {
@@ -87,8 +87,8 @@ void InputData::compute_conductor_constraints(vector<Constraint>& constraints)
 
     for(auto data : _mutableData.conductors)
     {
-        constraints.push_back(Constraint(ParticipantIsInWorkshop, data.participant, data.workshop));
-        conductorMap[data.participant].push_back(data.workshop);
+        constraints.push_back(Constraint(ChooserIsInChoice, data.chooser, data.choice));
+        conductorMap[data.chooser].push_back(data.choice);
     }
 
     for(auto conductorList : conductorMap)
@@ -98,7 +98,7 @@ void InputData::compute_conductor_constraints(vector<Constraint>& constraints)
         {
             for(int j = i + 1; j < conductorList.second.size(); j++)
             {
-                constraints.push_back(Constraint(WorkshopsAreNotInSameSlot, conductorList.second[i], conductorList.second[j]));
+                constraints.push_back(Constraint(ChoicesAreNotInSameSet, conductorList.second[i], conductorList.second[j]));
             }
         }
     }
@@ -106,27 +106,27 @@ void InputData::compute_conductor_constraints(vector<Constraint>& constraints)
 
 void InputData::compute_part_constraints(vector<Constraint>& constraints)
 {
-    UnionFind<int> workshopGroups(_workshops.size());
+    UnionFind<int> choiceGroups(_choices.size());
 
-    for(int w = 0; w < _workshops.size(); w++)
+    for(int w = 0; w < _choices.size(); w++)
     {
-        if(_workshops[w].has_continuation())
+        if(_choices[w].has_continuation())
         {
-            workshopGroups.join(w, _workshops[w].continuation());
+            choiceGroups.join(w, _choices[w].continuation());
         }
     }
 
-    for(vector<int> group : workshopGroups.groups())
+    for(vector<int> group : choiceGroups.groups())
     {
-        // TODO: Implement proper event order support for event series.
+        // TODO: Implement proper choice order support for choice series.
         //
         std::sort(group.begin(), group.end());
         for(int i = 0; i < group.size(); i++)
         {
             for(int j = i + 1; j < group.size(); j++)
             {
-                constraints.push_back(Constraint(WorkshopsHaveSameParticipants, group[i], group[j]));
-                constraints.push_back(Constraint(WorkshopsHaveOffset, group[i], group[j], j - i));
+                constraints.push_back(Constraint(ChoicesHaveSameChoosers, group[i], group[j]));
+                constraints.push_back(Constraint(ChoicesHaveOffset, group[i], group[j], j - i));
             }
         }
     }
@@ -134,59 +134,59 @@ void InputData::compute_part_constraints(vector<Constraint>& constraints)
 
 void InputData::build_constraint_maps()
 {
-    for(int i = 0; i < _workshops.size(); i++)
+    for(int i = 0; i < _choices.size(); i++)
     {
-        _workshopConstraintMap[i] = {};
+        _choiceConstraintMap[i] = {};
     }
 
-    for(int i = 0; i < _participants.size(); i++)
+    for(int i = 0; i < _choosers.size(); i++)
     {
-        _participantConstraintMap[i] = {};
+        _chooserConstraintMap[i] = {};
     }
 
     for(Constraint const& constraint : _schedulingConstraints)
     {
         switch(constraint.type())
         {
-            case WorkshopIsInSlot:
-            case WorkshopIsNotInSlot:
+            case ChoiceIsInSet:
+            case ChoiceIsNotInSet:
             {
-                _workshopConstraintMap[constraint.left()].push_back(constraint);
+                _choiceConstraintMap[constraint.left()].push_back(constraint);
                 break;
             }
-            case WorkshopsAreInSameSlot:
-            case WorkshopsAreNotInSameSlot:
-            case WorkshopsHaveOffset:
+            case ChoicesAreInSameSet:
+            case ChoicesAreNotInSameSet:
+            case ChoicesHaveOffset:
             {
-                _workshopConstraintMap[constraint.left()].push_back(constraint);
-                _workshopConstraintMap[constraint.right()].push_back(constraint);
+                _choiceConstraintMap[constraint.left()].push_back(constraint);
+                _choiceConstraintMap[constraint.right()].push_back(constraint);
                 break;
             }
-            case ParticipantIsInWorkshop:
-            case ParticipantIsNotInWorkshop:
+            case ChooserIsInChoice:
+            case ChooserIsNotInChoice:
             {
-                _participantConstraintMap[constraint.left()].push_back(constraint);
+                _chooserConstraintMap[constraint.left()].push_back(constraint);
                 break;
             }
-            case ParticipantsHaveSameWorkshops:
+            case ChoosersHaveSameChoices:
             {
-                _participantConstraintMap[constraint.left()].push_back(constraint);
-                _participantConstraintMap[constraint.right()].push_back(constraint);
+                _chooserConstraintMap[constraint.left()].push_back(constraint);
+                _chooserConstraintMap[constraint.right()].push_back(constraint);
                 break;
             }
-            case WorkshopsHaveSameParticipants:
+            case ChoicesHaveSameChoosers:
             {
-                for(int i = 0; i < _participants.size(); i++)
+                for(int i = 0; i < _choosers.size(); i++)
                 {
-                    _participantConstraintMap[i].push_back(constraint);
+                    _chooserConstraintMap[i].push_back(constraint);
                 }
                 break;
             }
-            case SlotHasLimitedSize:
+            case SetHasLimitedSize:
             {
-                for(int i = 0; i < _workshops.size(); i++)
+                for(int i = 0; i < _choices.size(); i++)
                 {
-                    _workshopConstraintMap[i].push_back(constraint);
+                    _choiceConstraintMap[i].push_back(constraint);
                 }
                 break;
             }
@@ -200,35 +200,35 @@ InputData::InputData(MutableInputData& data)
     _mutableData = data;
 
     _maxPreference = INT_MIN;
-    for(int p = 0; p < data.participants.size(); p++)
+    for(int p = 0; p < data.choosers.size(); p++)
     {
-        if(data.participants[p].preferences().size() != data.workshops.size())
+        if(data.choosers[p].preferences().size() != data.choices.size())
         {
-            throw InputException("Wrong number of preferences given for person \"" + data.participants[p].name() + "\".");
+            throw InputException("Wrong number of preferences given for chooser \"" + data.choosers[p].name() + "\".");
         }
-        for(int w = 0; w < data.workshops.size(); w++)
+        for(int w = 0; w < data.choices.size(); w++)
         {
-            int pref = -data.participants[p].preference(w);
+            int pref = -data.choosers[p].preference(w);
             _maxPreference = std::max(_maxPreference, pref);
         }
     }
 
-    for(int p = 0; p < data.participants.size(); p++)
+    for(int p = 0; p < data.choosers.size(); p++)
     {
-        vector<int> newPrefs(data.participants[p].preferences());
+        vector<int> newPrefs(data.choosers[p].preferences());
         for(int i = 0; i < newPrefs.size(); i++)
         {
             newPrefs[i] = newPrefs[i] == MinPrefPlaceholder ? 0 : (newPrefs[i] + _maxPreference);
         }
 
-        data.participants[p] = ParticipantData(data.participants[p].name(), newPrefs);
+        data.choosers[p] = ChooserData(data.choosers[p].name(), newPrefs);
     }
 
-    for(int p = 0; p < data.participants.size(); p++)
+    for(int p = 0; p < data.choosers.size(); p++)
     {
-        for(int w = 0; w < data.workshops.size(); w++)
+        for(int w = 0; w < data.choices.size(); w++)
         {
-            _preferenceLevels.push_back(data.participants[p].preference(w));
+            _preferenceLevels.push_back(data.choosers[p].preference(w));
         }
     }
     _preferenceLevels.push_back(_maxPreference);
@@ -236,13 +236,13 @@ InputData::InputData(MutableInputData& data)
     std::sort(_preferenceLevels.begin(), _preferenceLevels.end());
     _preferenceLevels.erase(std::unique(_preferenceLevels.begin(), _preferenceLevels.end()), _preferenceLevels.end());
 
-    _workshops = data.workshops;
-    _participants = data.participants;
-    _slots = data.slots;
+    _choices = data.choices;
+    _choosers = data.choosers;
+    _sets = data.sets;
 
-    if(_slots.empty())
+    if(_sets.empty())
     {
-        _slots.push_back(SlotData(GeneratedSlotName));
+        _sets.push_back(SetData(GeneratedSetName));
     }
 }
 
@@ -264,9 +264,9 @@ vector<Constraint> const& InputData::scheduling_constraints() const
     return _schedulingConstraints;
 }
 
-vector<Constraint> const& InputData::scheduling_constraints(int workshopId) const
+vector<Constraint> const& InputData::scheduling_constraints(int choiceId) const
 {
-    return _workshopConstraintMap.at(workshopId);
+    return _choiceConstraintMap.at(choiceId);
 }
 
 vector<Constraint> const& InputData::assignment_constraints() const
@@ -274,44 +274,44 @@ vector<Constraint> const& InputData::assignment_constraints() const
     return _assignmentConstraints;
 }
 
-vector<Constraint> const& InputData::assignment_constraints(int participantId) const
+vector<Constraint> const& InputData::assignment_constraints(int chooserId) const
 {
-    return _participantConstraintMap.at(participantId);
+    return _chooserConstraintMap.at(chooserId);
 }
 
-vector<WorkshopData> const& InputData::workshops() const
+vector<ChoiceData> const& InputData::choices() const
 {
-    return _workshops;
+    return _choices;
 }
 
-vector<ParticipantData> const& InputData::participants() const
+vector<ChooserData> const& InputData::choosers() const
 {
-    return _participants;
+    return _choosers;
 }
 
-vector<SlotData> const& InputData::slots() const
+vector<SetData> const& InputData::sets() const
 {
-    return _slots;
+    return _sets;
 }
 
-WorkshopData const& InputData::workshop(int index) const
+ChoiceData const& InputData::choice(int index) const
 {
-    return _workshops[index];
+    return _choices[index];
 }
 
-ParticipantData const& InputData::participant(int index) const
+ChooserData const& InputData::chooser(int index) const
 {
-    return _participants[index];
+    return _choosers[index];
 }
 
-SlotData const& InputData::slot(int index) const
+SetData const& InputData::set(int index) const
 {
-    return _slots[index];
+    return _sets[index];
 }
 
-vector<vector<int>> const& InputData::dependent_workshop_groups() const
+vector<vector<int>> const& InputData::dependent_choice_groups() const
 {
-    return _dependentWorkshopGroups;
+    return _dependentChoiceGroups;
 }
 
 vector<int> const& InputData::preference_levels() const
@@ -324,17 +324,17 @@ int InputData::max_preference() const
     return _maxPreference;
 }
 
-int InputData::workshop_count() const
+int InputData::choice_count() const
 {
-    return _workshops.size();
+    return _choices.size();
 }
 
-int InputData::participant_count() const
+int InputData::chooser_count() const
 {
-    return _participants.size();
+    return _choosers.size();
 }
 
-int InputData::slot_count() const
+int InputData::set_count() const
 {
-    return _slots.size();
+    return _sets.size();
 }

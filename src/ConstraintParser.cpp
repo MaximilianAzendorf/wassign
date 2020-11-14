@@ -23,21 +23,21 @@ void ConstraintParser::complete_accessor_types(string const& constraint, InputDa
 
     int hits = 0;
 
-    if(find_name(constraint, accessor.name, data.slots()) >= 0)
+    if(find_name(constraint, accessor.name, data.sets()) >= 0)
     {
-        accessor.type = Slot;
+        accessor.type = Set;
         hits++;
     }
 
-    if(find_name(constraint, accessor.name, data.workshops()) >= 0)
+    if(find_name(constraint, accessor.name, data.choices()) >= 0)
     {
-        accessor.type = Workshop;
+        accessor.type = Choice;
         hits++;
     }
 
-    if(find_name(constraint, accessor.name, data.participants()) >= 0)
+    if(find_name(constraint, accessor.name, data.choosers()) >= 0)
     {
-        accessor.type = Participant;
+        accessor.type = Chooser;
         hits++;
     }
 
@@ -60,20 +60,20 @@ int ConstraintParser::resolve_accessor(InputData const& data, string const& cons
 {
     switch(accessor.type)
     {
-        case Slot: return find_name(constraint, accessor.name, data.slots());
-        case Participant: return find_name(constraint, accessor.name, data.participants());
-        case Workshop:
+        case Set: return find_name(constraint, accessor.name, data.sets());
+        case Chooser: return find_name(constraint, accessor.name, data.choosers());
+        case Choice:
         {
-            int w = find_name(constraint, accessor.name, data.workshops());
+            int w = find_name(constraint, accessor.name, data.choices());
             int part = accessor.part;
             while(part-- > 0)
             {
-                if(!data.workshop(w).has_continuation())
+                if(!data.choice(w).has_continuation())
                 {
-                    throw InputException("The given workshop doesn't have a part " + str(accessor.part)
+                    throw InputException("The given choice doesn't have a part " + str(accessor.part)
                                          + " given in constraint \"" + constraint + "\".");
                 }
-                w = data.workshop(w).continuation();
+                w = data.choice(w).continuation();
             }
             return w;
         }
@@ -84,7 +84,7 @@ int ConstraintParser::resolve_accessor(InputData const& data, string const& cons
 
 vector<Constraint> ConstraintParser::parse(InputData const& data, string text)
 {
-    // TODO: Add support for event series constraints.
+    // TODO: Add support for choice series constraints.
 
     auto begin = text.begin();
     ConstraintExpr expr = parse_constraint_expr(text, begin, text.end());
@@ -112,29 +112,29 @@ vector<Constraint> ConstraintParser::parse(InputData const& data, string text)
     {
         switch (key(expr.left.type, expr.left.subType, expr.relation.type, expr.right.type, expr.right.subType))
         {
-            case key(Workshop, Slot, REq, Slot, NotSet): add(WorkshopIsInSlot); break;
-            case key(Workshop, Slot, RNeq, Slot, NotSet): add(WorkshopIsNotInSlot); break;
-            case key(Workshop, Slot, REq, Workshop, Slot): add(WorkshopsAreInSameSlot); break;
-            case key(Workshop, Slot, RNeq, Workshop, Slot): add(WorkshopsAreNotInSameSlot); break;
-            case key(Slot, Workshop, RContains, Workshop, NotSet): add(SlotContainsWorkshop); break;
-            case key(Slot, Workshop, RNotContains, Workshop, NotSet): add(SlotNotContainsWorkshop); break;
-            case key(Slot, Workshop, REq, Slot, Workshop): add(SlotsHaveSameWorkshops); break;
+            case key(Choice, Set, REq, Set, NotSet): add(ChoiceIsInSet); break;
+            case key(Choice, Set, RNeq, Set, NotSet): add(ChoiceIsNotInSet); break;
+            case key(Choice, Set, REq, Choice, Set): add(ChoicesAreInSameSet); break;
+            case key(Choice, Set, RNeq, Choice, Set): add(ChoicesAreNotInSameSet); break;
+            case key(Set, Choice, RContains, Choice, NotSet): add(SetContainsChoice); break;
+            case key(Set, Choice, RNotContains, Choice, NotSet): add(SetNotContainsChoice); break;
+            case key(Set, Choice, REq, Set, Choice): add(SetsHaveSameChoices); break;
 
-            case key(Workshop, Participant, REq, Workshop, Participant): add(WorkshopsHaveSameParticipants); break;
-            case key(Participant, Workshop, RContains, Workshop, NotSet): add(ParticipantIsInWorkshop); break;
-            case key(Participant, Workshop, RNotContains, Workshop, NotSet): add(ParticipantIsNotInWorkshop); break;
-            case key(Participant, Workshop, REq, Participant, Workshop): add(ParticipantsHaveSameWorkshops); break;
-            case key(Workshop, Participant, RContains, Participant, NotSet): add(WorkshopContainsParticipant); break;
-            case key(Workshop, Participant, RNotContains, Participant, NotSet): add(WorkshopNotContainsParticipant); break;
+            case key(Choice, Chooser, REq, Choice, Chooser): add(ChoicesHaveSameChoosers); break;
+            case key(Chooser, Choice, RContains, Choice, NotSet): add(ChooserIsInChoice); break;
+            case key(Chooser, Choice, RNotContains, Choice, NotSet): add(ChooserIsNotInChoice); break;
+            case key(Chooser, Choice, REq, Chooser, Choice): add(ChoosersHaveSameChoices); break;
+            case key(Choice, Chooser, RContains, Chooser, NotSet): add(ChoiceContainsChooser); break;
+            case key(Choice, Chooser, RNotContains, Chooser, NotSet): add(ChoiceNotContainsChooser); break;
 
-            case key(Slot, Size, REq, Integer, NotSet):
-            case key(Slot, Size, RNeq, Integer, NotSet):
-            case key(Slot, Size, RGt, Integer, NotSet):
-            case key(Slot, Size, RLt, Integer, NotSet):
-            case key(Slot, Size, RGeq, Integer, NotSet):
-            case key(Slot, Size, RLeq, Integer, NotSet):
+            case key(Set, Size, REq, Integer, NotSet):
+            case key(Set, Size, RNeq, Integer, NotSet):
+            case key(Set, Size, RGt, Integer, NotSet):
+            case key(Set, Size, RLt, Integer, NotSet):
+            case key(Set, Size, RGeq, Integer, NotSet):
+            case key(Set, Size, RLeq, Integer, NotSet):
             {
-                add(SlotHasLimitedSize, (SlotSizeLimitOp)expr.relation.type);
+                add(SetHasLimitedSize, (SetSizeLimitOp)expr.relation.type);
                 break;
             }
 

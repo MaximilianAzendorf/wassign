@@ -31,17 +31,17 @@ void CriticalSetAnalysis::analyze()
     for(auto prefIt = _inputData->preference_levels().rbegin(); prefIt != _inputData->preference_levels().rend(); prefIt++, prefIdx++)
     {
         int pref = *prefIt;
-        for(int p = 0; p < _inputData->participant_count(); p++)
+        for(int p = 0; p < _inputData->chooser_count(); p++)
         {
             if(time_now() > nextOutput)
             {
                 float progress = (float)prefIdx / (float)_inputData->preference_levels().size()
                                  + (1.0f / _inputData->preference_levels().size())
-                                   * ((float)p / (float)_inputData->participant_count());
+                                   * ((float)p / (float)_inputData->chooser_count());
 
                 Status::info("    " + str(100 * progress, 2)
                              + "% (pref. " + str(pref) + "/" + str(_inputData->preference_levels().size())
-                             + ", participant " + str(p) + "/" + str(_inputData->participant_count()) + "); "
+                             + ", chooser " + str(p) + "/" + str(_inputData->chooser_count()) + "); "
                              + str(_sets.size()) + " sets so far.");
 
                 nextOutput = time_now() + ProgressInterval;
@@ -50,16 +50,16 @@ void CriticalSetAnalysis::analyze()
             newSet.clear();
             int minCount = 0;
 
-            for(int w = 0; w < _inputData->workshop_count(); w++)
+            for(int w = 0; w < _inputData->choice_count(); w++)
             {
-                if(_inputData->participant(p).preference(w) <= pref)
+                if(_inputData->chooser(p).preference(w) <= pref)
                 {
                     newSet.push_back(w);
-                    minCount += _inputData->workshop(w).min();
+                    minCount += _inputData->choice(w).min();
                 }
             }
 
-            if(minCount > _inputData->participant_count() * (_inputData->slot_count() - 1))
+            if(minCount > _inputData->chooser_count() * (_inputData->set_count() - 1))
             {
                 // It is impossible that this critical set is not fulfilled by any solution.
                 continue;
@@ -134,7 +134,7 @@ CriticalSetAnalysis::CriticalSetAnalysis(const_ptr<InputData> inputData, bool an
         for(int prefLevel : _inputData->preference_levels())
         {
             auto subset = for_preference(prefLevel);
-            if(!subset.empty() && subset.front().size() >= _inputData->slot_count())
+            if(!subset.empty() && subset.front().size() >= _inputData->set_count())
             {
                 preferenceBound = std::min(preferenceBound, prefLevel);
             }

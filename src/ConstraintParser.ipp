@@ -39,19 +39,19 @@ ConstraintParser::Accessor ConstraintParser::parse_accessor(string const& constr
     Accessor a{};
 
     auto baseAccessor =
-            -(lit("event")[pset(a.type, Workshop)]
-              | lit("slot")[pset(a.type, Slot)]
-              | lit("person")[pset(a.type, Participant)]
+            -(lit("choice")[pset(a.type, Choice)]
+              | lit("set")[pset(a.type, Set)]
+              | lit("chooser")[pset(a.type, Chooser)]
             )
                     >> lit("[")
                     >> lexeme[ (*(char_ - ']'))[pset(a.name)] ]
                     >> lit("]")
-                    >> -(lit("part") >> uint_[pand(pset(a.part), pset(a.type, Workshop))]);
+                    >> -(lit("part") >> uint_[pand(pset(a.part), pset(a.type, Choice))]);
 
     auto accessor =
-            -((lit("events")[pset(a.subType, Workshop)]
-               | lit("slot")[pset(a.subType, Slot)]
-               | lit("participants")[pset(a.subType, Participant)]
+            -((lit("choices")[pset(a.subType, Choice)]
+               | lit("set")[pset(a.subType, Set)]
+               | lit("choosers")[pset(a.subType, Chooser)]
                | lit("size")[pset(a.subType, Size)]
             )
                     >> lit("of"))

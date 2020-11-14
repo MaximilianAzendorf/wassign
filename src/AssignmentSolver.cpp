@@ -32,31 +32,31 @@ set<pair<int, int>> AssignmentSolver::get_blocked_constraint_edges(shared_ptr<Sc
     {
         switch(constraint.type())
         {
-            case ParticipantIsInWorkshop:
+            case ChooserIsInChoice:
             {
-                int s = scheduling->slot_of(constraint.right());
-                int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_participant(constraint.left(), s));
+                int s = scheduling->set_of(constraint.right());
+                int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
 
-                for(int w = 0; w < _inputData->workshop_count(); w++)
+                for(int w = 0; w < _inputData->choice_count(); w++)
                 {
-                    if(constraint.right() == w || scheduling->slot_of(w) != s) continue;
+                    if(constraint.right() == w || scheduling->set_of(w) != s) continue;
 
-                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_workshop(w));
+                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(w));
                     blockedEdges.insert(std::make_pair(from, to));
                 }
                 break;
             }
-            case ParticipantIsNotInWorkshop:
+            case ChooserIsNotInChoice:
             {
-                for(int s = 0; s < _inputData->slot_count(); s++)
+                for(int s = 0; s < _inputData->set_count(); s++)
                 {
-                    int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_participant(constraint.left(), s));
-                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_workshop(constraint.right()));
+                    int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
+                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(constraint.right()));
                     blockedEdges.insert(std::make_pair(from, to));
                 }
                 break;
             }
-            case WorkshopsHaveSameParticipants:
+            case ChoicesHaveSameChoosers:
             {
                 // This is handled elsewhere.
                 //
@@ -78,33 +78,33 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
 {
     MipFlow<flowid, flowid> flow(_staticData->baseFlow);
 
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            flow.add_supply(flow.nodes().at(MipFlowStaticData::node_participant(p, s)), 1);
+            flow.add_supply(flow.nodes().at(MipFlowStaticData::node_chooser(p, s)), 1);
         }
     }
 
-    for(int w = 0; w < _inputData->workshop_count(); w++)
+    for(int w = 0; w < _inputData->choice_count(); w++)
     {
-        flow.add_supply(flow.nodes().at(MipFlowStaticData::node_workshop(w)), -_inputData->workshop(w).min());
+        flow.add_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min());
     }
 
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    for(int s = 0; s < _inputData->set_count(); s++)
     {
-        // Count the number of participants that will already be absorbed by the workshop nodes.
+        // Count the number of choosers that will already be absorbed by the choice nodes.
         //
-        int coveredParticipants = 0;
-        for(int w = 0; w < _inputData->workshop_count(); w++)
+        int coveredChoosers = 0;
+        for(int w = 0; w < _inputData->choice_count(); w++)
         {
-            if(scheduling->slot_of(w) != s) continue;
-            coveredParticipants += _inputData->workshop(w).min();
+            if(scheduling->set_of(w) != s) continue;
+            coveredChoosers += _inputData->choice(w).min();
         }
 
         flow.add_supply(
-                flow.nodes().at(MipFlowStaticData::node_slot(s)),
-                -(_inputData->participant_count() - coveredParticipants));
+                flow.nodes().at(MipFlowStaticData::node_set(s)),
+                -(_inputData->chooser_count() - coveredChoosers));
     }
 
     vector<int> edgesCap;
@@ -112,39 +112,39 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
     map<pair<int, int>, int> edgesIdx;
     int nextEdgeIdx = 0;
 
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            for(int w = 0; w < _inputData->workshop_count(); w++)
+            for(int w = 0; w < _inputData->choice_count(); w++)
             {
-                if(scheduling->slot_of(w) != s || _inputData->participant(p).preference(w) > preferenceLimit)
+                if(scheduling->set_of(w) != s || _inputData->chooser(p).preference(w) > preferenceLimit)
                     continue;
 
                 edgesCap.push_back(1);
                 edgesCost.push_back(
-                        (long)pow(_inputData->participant(p).preference(w) + 1.0, _options->preference_exponent()));
+                        (long)pow(_inputData->chooser(p).preference(w) + 1.0, _options->preference_exponent()));
 
                 edgesIdx[std::make_pair(
-                        flow.nodes().at(MipFlowStaticData::node_participant(p, s)),
-                        flow.nodes().at(MipFlowStaticData::node_workshop(w)))]
+                        flow.nodes().at(MipFlowStaticData::node_chooser(p, s)),
+                        flow.nodes().at(MipFlowStaticData::node_choice(w)))]
                         = nextEdgeIdx++;
             }
         }
     }
 
-    for(int w = 0; w < _inputData->workshop_count(); w++)
+    for(int w = 0; w < _inputData->choice_count(); w++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            if(scheduling->slot_of(w) != s) continue;
+            if(scheduling->set_of(w) != s) continue;
 
-            edgesCap.push_back(_inputData->workshop(w).max() - _inputData->workshop(w).min());
+            edgesCap.push_back(_inputData->choice(w).max() - _inputData->choice(w).min());
             edgesCost.push_back(0);
 
             edgesIdx[std::make_pair(
-                    flow.nodes().at(MipFlowStaticData::node_workshop(w)),
-                    flow.nodes().at(MipFlowStaticData::node_slot(s)))]
+                    flow.nodes().at(MipFlowStaticData::node_choice(w)),
+                    flow.nodes().at(MipFlowStaticData::node_set(s)))]
                     = nextEdgeIdx++;
         }
     }
@@ -171,20 +171,20 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
 
     // Create edge groups
     //
-    for(vector<int> const& group : Constraints::get_dependent_workshops(
+    for(vector<int> const& group : Constraints::get_dependent_choices(
             _inputData->assignment_constraints(),
-            _inputData->workshop_count()))
+            _inputData->choice_count()))
     {
         if(group.size() == 1) continue;
 
-        for(int p = 0; p < _inputData->participant_count(); p++)
+        for(int p = 0; p < _inputData->chooser_count(); p++)
         {
             vector<long> edgeGroup;
             for(int w : group)
             {
-                int s = scheduling->slot_of(w);
-                int from = flow.nodes().at(MipFlowStaticData::node_participant(p, s));
-                int to = flow.nodes().at(MipFlowStaticData::node_workshop(w));
+                int s = scheduling->set_of(w);
+                int from = flow.nodes().at(MipFlowStaticData::node_chooser(p, s));
+                int to = flow.nodes().at(MipFlowStaticData::node_choice(w));
                 edgeGroup.push_back(MipFlowStaticData::edge_id(from, to));
             }
 
@@ -201,15 +201,15 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
 
     // Now we have to extract the assignment solution from the min cost flow solution
     //
-    vector<vector<int>> data(_inputData->participant_count(), vector<int>(_inputData->slot_count(), -1));
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    vector<vector<int>> data(_inputData->chooser_count(), vector<int>(_inputData->set_count(), -1));
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            for(int w = 0; w < _inputData->workshop_count(); w++)
+            for(int w = 0; w < _inputData->choice_count(); w++)
             {
-                int from = flow.nodes().at(MipFlowStaticData::node_participant(p, s));
-                int to = flow.nodes().at(MipFlowStaticData::node_workshop(w));
+                int from = flow.nodes().at(MipFlowStaticData::node_chooser(p, s));
+                int to = flow.nodes().at(MipFlowStaticData::node_choice(w));
 
                 if(flow.solution_value_at(MipFlowStaticData::edge_id(from, to)) == 1)
                 {

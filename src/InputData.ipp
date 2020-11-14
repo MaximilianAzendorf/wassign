@@ -51,29 +51,29 @@ void InputData::build_constraints(ConstraintParserFunction constraintParser)
     }
 
     bool isInfeasible = false;
-    constraints = Constraints::reduce_and_optimize(constraints, workshop_count(), isInfeasible);
+    constraints = Constraints::reduce_and_optimize(constraints, choice_count(), isInfeasible);
 
     if(isInfeasible)
     {
         throw InputException("The given constraints are not satisfiable.");
     }
 
-    auto newLimits = get_dependent_workshop_limits(constraints);
+    auto newLimits = get_dependent_choice_limits(constraints);
     auto newPrefs = get_dependent_preferences(constraints);
 
-    for(int i = 0; i < _workshops.size(); i++)
+    for(int i = 0; i < _choices.size(); i++)
     {
-        _workshops[i] = WorkshopData(
-                _workshops[i].name(),
+        _choices[i] = ChoiceData(
+                _choices[i].name(),
                 newLimits[i].first,
                 newLimits[i].second,
-                _workshops[i].opt_continuation());
+                _choices[i].opt_continuation());
     }
 
-    for(int i = 0; i < _participants.size(); i++)
+    for(int i = 0; i < _choosers.size(); i++)
     {
-        _participants[i] = ParticipantData(
-                _participants[i].name(),
+        _choosers[i] = ChooserData(
+                _choosers[i].name(),
                 newPrefs[i]);
     }
 
@@ -90,5 +90,5 @@ void InputData::build_constraints(ConstraintParserFunction constraintParser)
     }
 
     build_constraint_maps();
-    _dependentWorkshopGroups = Constraints::get_dependent_workshops(constraints, workshop_count());
+    _dependentChoiceGroups = Constraints::get_dependent_choices(constraints, choice_count());
 }

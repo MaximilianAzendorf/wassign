@@ -17,30 +17,30 @@
 #pragma once
 
 #include "Types.h"
-#include "WorkshopData.h"
-#include "ParticipantData.h"
-#include "SlotData.h"
+#include "ChoiceData.h"
+#include "ChooserData.h"
+#include "SetData.h"
 #include "Constraint.h"
 #include "MutableInputData.h"
 
 class InputData
 {
 private:
-    vector<WorkshopData> _workshops;
-    vector<ParticipantData> _participants;
-    vector<SlotData> _slots;
+    vector<ChoiceData> _choices;
+    vector<ChooserData> _choosers;
+    vector<SetData> _sets;
     vector<Constraint> _schedulingConstraints;
     vector<Constraint> _assignmentConstraints;
-    vector<vector<int>> _dependentWorkshopGroups;
+    vector<vector<int>> _dependentChoiceGroups;
     vector<int> _preferenceLevels;
     int _maxPreference;
 
-    map<int, vector<Constraint>> _workshopConstraintMap;
-    map<int, vector<Constraint>> _participantConstraintMap;
+    map<int, vector<Constraint>> _choiceConstraintMap;
+    map<int, vector<Constraint>> _chooserConstraintMap;
 
     MutableInputData _mutableData;
 
-    vector<pair<int, int>> get_dependent_workshop_limits(vector<Constraint> const& constraints);
+    vector<pair<int, int>> get_dependent_choice_limits(vector<Constraint> const& constraints);
 
     vector<vector<int>> get_dependent_preferences(vector<Constraint> const& constraints);
 
@@ -55,9 +55,9 @@ private:
 
 public:
     inline static const string GeneratedPrefix = "~";
-    inline static const string NotScheduledSlotPrefix = GeneratedPrefix + "not_scheduled_";
-    inline static const string HiddenWorkshopPrefix = GeneratedPrefix + "hidden_";
-    inline static const string GeneratedSlotName = "Generated Slot";
+    inline static const string NotScheduledSetPrefix = GeneratedPrefix + "not_scheduled_";
+    inline static const string HiddenChoicePrefix = GeneratedPrefix + "hidden_";
+    inline static const string GeneratedSetName = "Generated Set";
     inline static const int MinPrefPlaceholder = INT_MAX;
 
     explicit InputData(MutableInputData& data);
@@ -69,35 +69,35 @@ public:
 
     [[nodiscard]] vector<Constraint> const& scheduling_constraints() const;
 
-    [[nodiscard]] vector<Constraint> const& scheduling_constraints(int workshopId) const;
+    [[nodiscard]] vector<Constraint> const& scheduling_constraints(int choiceId) const;
 
     [[nodiscard]] vector<Constraint> const& assignment_constraints() const;
 
-    [[nodiscard]] vector<Constraint> const& assignment_constraints(int participantId) const;
+    [[nodiscard]] vector<Constraint> const& assignment_constraints(int chooserId) const;
 
-    [[nodiscard]] vector<WorkshopData> const& workshops() const;
+    [[nodiscard]] vector<ChoiceData> const& choices() const;
 
-    [[nodiscard]] vector<ParticipantData> const& participants() const;
+    [[nodiscard]] vector<ChooserData> const& choosers() const;
 
-    [[nodiscard]] vector<SlotData> const& slots() const;
+    [[nodiscard]] vector<SetData> const& sets() const;
 
-    [[nodiscard]] WorkshopData const& workshop(int index) const;
+    [[nodiscard]] ChoiceData const& choice(int index) const;
 
-    [[nodiscard]] ParticipantData const& participant(int index) const;
+    [[nodiscard]] ChooserData const& chooser(int index) const;
 
-    [[nodiscard]] SlotData const& slot(int index) const;
+    [[nodiscard]] SetData const& set(int index) const;
 
-    [[nodiscard]] vector<vector<int>> const& dependent_workshop_groups() const;
+    [[nodiscard]] vector<vector<int>> const& dependent_choice_groups() const;
 
     [[nodiscard]] vector<int> const& preference_levels() const;
 
     [[nodiscard]] int max_preference() const;
 
-    [[nodiscard]] int workshop_count() const;
+    [[nodiscard]] int choice_count() const;
 
-    [[nodiscard]] int participant_count() const;
+    [[nodiscard]] int chooser_count() const;
 
-    [[nodiscard]] int slot_count() const;
+    [[nodiscard]] int set_count() const;
 };
 
 #include "InputData.ipp"

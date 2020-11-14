@@ -22,11 +22,11 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(input_data)
 {
     class_<InputData>("InputData")
-        .function("workshop", &InputData::workshop)
-        .function("participant", &InputData::participant)
-        .function("slot", &InputData::slot)
+        .function("choice", &InputData::choice)
+        .function("chooser", &InputData::chooser)
+        .function("set", &InputData::set)
         .property("maxPreference", &InputData::max_preference)
-        .property("workshopCount", &InputData::workshop_count)
-        .property("participantCount", &InputData::participant_count)
-        .property("slotCount", &InputData::slot_count)
+        .property("choiceCount", &InputData::choice_count)
+        .property("chooserCount", &InputData::chooser_count)
+        .property("setCount", &InputData::set_count)
 }

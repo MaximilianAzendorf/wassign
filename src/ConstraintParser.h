@@ -35,14 +35,14 @@ private:
     {
         NotSet,
 
-        Participant,
-        Workshop,
-        Slot,
+        Chooser,
+        Choice,
+        Set,
         Size,
-        ParticipantsOfWorkshop,
-        WorkshopsOfParticipant,
-        WorkshopsOfSlot,
-        SlotOfWorkshop,
+        ChoosersOfChoice,
+        ChoicesOfChooser,
+        ChoicesOfSet,
+        SetOfChoice,
         Integer,
     };
 

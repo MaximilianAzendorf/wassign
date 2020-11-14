@@ -32,7 +32,7 @@ public:
 
     [[nodiscard]] bool is_feasible() const;
 
-    [[nodiscard]] int slot_of(int workshop) const;
+    [[nodiscard]] int set_of(int choice) const;
 
     [[nodiscard]] InputData const& input_data() const;
 

@@ -20,8 +20,8 @@
 #include "InputData.h"
 
 /**
- * Represents a single assignment solution for the given input data. An assignment is a mapping between participants
- * and workshops
+ * Represents a single assignment solution for the given input data. An assignment is a mapping between choosers
+ * and choices
  */
 class Assignment
 {
@@ -34,33 +34,33 @@ public:
      * Constructor.
      *
      * @param inputData The input data this instance is an assignment solution for.
-     * @param data A vector of vectors so that participant x is assigned to workshop data[x][y] at slot y.
+     * @param data A vector of vectors so that chooser x is assigned to choice data[x][y] at set y.
      */
     Assignment(const_ptr<InputData> inputData, vector<vector<int>> data);
 
     /**
-     * Returns the workshop the given participant is assigned to at the given slot.
+     * Returns the choice the given chooser is assigned to at the given set.
      */
-    [[nodiscard]] int workshop_of(int participant, int slot) const;
+    [[nodiscard]] int choice_of(int chooser, int set) const;
 
     /**
      *
-     * Returns an ordered vector of all participants that are assigned to the given workshop.
+     * Returns an ordered vector of all choosers that are assigned to the given choice.
      */
-    [[nodiscard]] vector<int> participants_ordered(int workshop) const;
+    [[nodiscard]] vector<int> choosers_ordered(int choice) const;
 
     /**
-     * Returns an ordered vector of all workshops to which the given participant is assigned.
+     * Returns an ordered vector of all choices to which the given chooser is assigned.
      */
-    [[nodiscard]] vector<int> workshops_ordered(int participant) const;
+    [[nodiscard]] vector<int> choices_ordered(int chooser) const;
 
     /**
-     * Returns true if the given participant is assigned to the given workshop.
+     * Returns true if the given chooser is assigned to the given choice.
      */
-    [[nodiscard]] bool is_in_workshop(int participant, int workshop) const;
+    [[nodiscard]] bool is_in_choice(int chooser, int choice) const;
 
     /**
-     * Returns the maximum preference that any participant has for any of their assigned to workshop.
+     * Returns the maximum preference that any chooser has for any of their assigned to choice.
      */
     [[nodiscard]] int max_used_preference() const;
 

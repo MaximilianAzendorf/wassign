@@ -30,38 +30,38 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
 
         switch(constraint.type())
         {
-            case WorkshopIsInSlot:
-                if(solution.scheduling()->slot_of(l) != r) return false;
+            case ChoiceIsInSet:
+                if(solution.scheduling()->set_of(l) != r) return false;
                 break;
 
-            case WorkshopIsNotInSlot:
-                if(solution.scheduling()->slot_of(l) == r) return false;
+            case ChoiceIsNotInSet:
+                if(solution.scheduling()->set_of(l) == r) return false;
                 break;
 
-            case WorkshopsAreInSameSlot:
-                if(solution.scheduling()->slot_of(l) != solution.scheduling()->slot_of(r)) return false;
+            case ChoicesAreInSameSet:
+                if(solution.scheduling()->set_of(l) != solution.scheduling()->set_of(r)) return false;
                 break;
 
-            case WorkshopsAreNotInSameSlot:
-                if(solution.scheduling()->slot_of(l) == solution.scheduling()->slot_of(r)) return false;
+            case ChoicesAreNotInSameSet:
+                if(solution.scheduling()->set_of(l) == solution.scheduling()->set_of(r)) return false;
                 break;
 
-            case WorkshopsHaveOffset:
-                if(solution.scheduling()->slot_of(r) - solution.scheduling()->slot_of(l) != e) return false;
+            case ChoicesHaveOffset:
+                if(solution.scheduling()->set_of(r) - solution.scheduling()->set_of(l) != e) return false;
                 break;
 
-            case SlotHasLimitedSize:
+            case SetHasLimitedSize:
             {
                 int count = 0;
-                for(int w = 0; w < solution.input_data().workshop_count(); w++)
+                for(int w = 0; w < solution.input_data().choice_count(); w++)
                 {
-                    if(solution.scheduling()->slot_of(w) == constraint.left())
+                    if(solution.scheduling()->set_of(w) == constraint.left())
                     {
                         count++;
                     }
                 }
 
-                switch((SlotSizeLimitOp)e)
+                switch((SetSizeLimitOp)e)
                 {
                     case Eq: if(count != r) return false; break;
                     case Neq: if(count == r) return false; break;
@@ -69,7 +69,7 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
                     case Lt: if(count >= r) return false; break;
                     case Geq: if(count < r) return false; break;
                     case Leq: if(count > r) return false; break;
-                    default: throw std::logic_error("Unknown slot size limit operator " + str(e) + ".");
+                    default: throw std::logic_error("Unknown set size limit operator " + str(e) + ".");
                 }
                 break;
             }
@@ -91,20 +91,20 @@ bool Scoring::satisfies_constraints_assignment(Solution const& solution) const
 
         switch(constraint.type())
         {
-            case WorkshopsHaveSameParticipants:
-                if(solution.assignment()->participants_ordered(l) != solution.assignment()->participants_ordered(r)) return false;
+            case ChoicesHaveSameChoosers:
+                if(solution.assignment()->choosers_ordered(l) != solution.assignment()->choosers_ordered(r)) return false;
                 break;
 
-            case ParticipantIsInWorkshop:
-                if(!solution.assignment()->is_in_workshop(l, r)) return false;
+            case ChooserIsInChoice:
+                if(!solution.assignment()->is_in_choice(l, r)) return false;
                 break;
 
-            case ParticipantIsNotInWorkshop:
-                if(solution.assignment()->is_in_workshop(l, r)) return false;
+            case ChooserIsNotInChoice:
+                if(solution.assignment()->is_in_choice(l, r)) return false;
                 break;
 
-            case ParticipantsHaveSameWorkshops:
-                if(solution.assignment()->workshops_ordered(l) != solution.assignment()->workshops_ordered(r)) return false;
+            case ChoosersHaveSameChoices:
+                if(solution.assignment()->choices_ordered(l) != solution.assignment()->choices_ordered(r)) return false;
                 break;
 
             default: throw std::logic_error("Unknown assignment constraint type " + str(constraint.type()) + ".");
@@ -122,11 +122,11 @@ bool Scoring::satisfies_constraints(Solution const& solution) const
 int Scoring::evaluate_major(Solution const& solution) const
 {
     int m = 0;
-    for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
     {
-        int p = i / _inputData->slot_count();
-        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
-        m = std::max(m, _inputData->participant(p).preference(ws));
+        int p = i / _inputData->set_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
+        m = std::max(m, _inputData->chooser(p).preference(ws));
     }
 
     return m;
@@ -141,11 +141,11 @@ float Scoring::evaluate_minor(Solution const& solution) const
 
     vector<int> prefCount(_inputData->max_preference() + 1);
 
-    for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
     {
-        int p = i / _inputData->slot_count();
-        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
-        prefCount[_inputData->participant(p).preference(ws)]++;
+        int p = i / _inputData->set_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
+        prefCount[_inputData->chooser(p).preference(ws)]++;
     }
 
     float sum = 0;
@@ -166,36 +166,36 @@ Scoring::Scoring(const_ptr<InputData> inputData, const_ptr<Options> options)
 
 bool Scoring::is_feasible(Solution const& solution) const
 {
-    vector<int> partCounts(_inputData->workshop_count());
-    vector<vector<bool>> isInSlot(_inputData->participant_count(), vector<bool>(_inputData->slot_count()));
-    vector<int> slots(_inputData->workshop_count());
+    vector<int> partCounts(_inputData->choice_count());
+    vector<vector<bool>> isInSet(_inputData->chooser_count(), vector<bool>(_inputData->set_count()));
+    vector<int> sets(_inputData->choice_count());
 
     if(!satisfies_constraints(solution))
     {
         return false;
     }
 
-    for(int i = 0; i < _inputData->workshop_count(); i++)
+    for(int i = 0; i < _inputData->choice_count(); i++)
     {
-        slots[i] = solution.scheduling()->slot_of(i);
+        sets[i] = solution.scheduling()->set_of(i);
     }
 
-    for(int i = 0; i < _inputData->participant_count() * _inputData->slot_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
     {
-        int p = i / _inputData->slot_count();
-        int ws = solution.assignment()->workshop_of(p, i % _inputData->slot_count());
-        if(isInSlot[p][slots[ws]])
+        int p = i / _inputData->set_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
+        if(isInSet[p][sets[ws]])
         {
             return false;
         }
 
-        isInSlot[p][slots[ws]] = true;
+        isInSet[p][sets[ws]] = true;
         partCounts[ws]++;
     }
 
-    for(int i = 0; i < _inputData->workshop_count(); i++)
+    for(int i = 0; i < _inputData->choice_count(); i++)
     {
-        if(partCounts[i] < _inputData->workshop(i).min() || partCounts[i] > _inputData->workshop(i).max())
+        if(partCounts[i] < _inputData->choice(i).min() || partCounts[i] > _inputData->choice(i).max())
         {
             return false;
         }

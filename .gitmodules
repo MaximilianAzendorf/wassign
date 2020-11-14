@@ -4,3 +4,6 @@
 [submodule "deps/popl"]
 	path = deps/popl
 	url = https://github.com/badaix/popl
+[submodule "deps/chaiscript"]
+	path = deps/chaiscript
+	url = https://github.com/ChaiScript/ChaiScript

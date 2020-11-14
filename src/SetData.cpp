@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "SetData.h"
 
-#include "Types.h"
-
-class ParticipantData
+SetData::SetData(string name)
+        : _name(std::move(name))
 {
-private:
-    string _name;
-    vector<int> _preferences;
+}
 
-public:
-    ParticipantData(string name, vector<int> preferences);
-
-    [[nodiscard]] string const& name() const;
-
-    [[nodiscard]] int preference(int workshopIndex) const;
-
-    [[nodiscard]] vector<int> const& preferences() const;
-};
+string const& SetData::name() const
+{
+    return _name;
+}

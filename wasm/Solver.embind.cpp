@@ -29,7 +29,7 @@ public:
     JsSolver(const_ptr<InputData> inputData, const_ptr<Options> options)
         : ShotgunSolverThreaded(
                 inputData,
-                std::make_shared<CriticalSetAnalysis>(inputData, inputData->slot_count() > 1),
+                std::make_shared<CriticalSetAnalysis>(inputData, inputData->set_count() > 1),
                 std::make_shared<MipFlowStaticData>(inputData),
                 std::make_shared<Scoring>(inputData, options),
                 options)

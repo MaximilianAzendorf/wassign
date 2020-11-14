@@ -14,14 +14,24 @@
  * limitations under the License.
  */
 
-#include "SlotData.h"
+#include "ChooserData.h"
 
-SlotData::SlotData(string name)
-        : _name(std::move(name))
+ChooserData::ChooserData(string name, vector<int> preferences)
+        : _name(std::move(name)), _preferences(std::move(preferences))
 {
 }
 
-string const& SlotData::name() const
+string const& ChooserData::name() const
 {
     return _name;
+}
+
+int ChooserData::preference(int choiceIndex) const
+{
+    return _preferences[choiceIndex];
+}
+
+vector<int> const& ChooserData::preferences() const
+{
+    return _preferences;
 }

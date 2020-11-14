@@ -26,13 +26,13 @@ private:
 
     static vector<vector<int>> get_mandatory_critical_sets(vector<Constraint> const& constraints);
 
-    static vector<Constraint> expand_dependent_constraints(vector<Constraint> const& constraints, int workshopCount);
+    static vector<Constraint> expand_dependent_constraints(vector<Constraint> const& constraints, int choiceCount);
 
 public:
-    static vector<vector<int>> get_dependent_workshops(vector<Constraint> const& constraints, int workshopCount);
+    static vector<vector<int>> get_dependent_choices(vector<Constraint> const& constraints, int choiceCount);
 
     static vector<Constraint> reduce_and_optimize(vector<Constraint> const& constraints,
-                                                  int workshopCount,
+                                                  int choiceCount,
                                                   bool& isInfeasible);
 };
 

@@ -26,7 +26,7 @@ vector<vector<int>> Constraints::get_mandatory_critical_sets(vector<Constraint> 
 
     for(Constraint const& constraint : constraints)
     {
-        if(constraint.type() != ParticipantIsInWorkshop) continue;
+        if(constraint.type() != ChooserIsInChoice) continue;
         constGroups[constraint.left()].push_back(constraint.right());
     }
 
@@ -38,14 +38,14 @@ vector<vector<int>> Constraints::get_mandatory_critical_sets(vector<Constraint> 
     return res;
 }
 
-vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> const& constraints, int workshopCount)
+vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> const& constraints, int choiceCount)
 {
     vector<Constraint> res;
 
-    vector<vector<int>> dependentWorkshops = get_dependent_workshops(constraints, workshopCount);
+    vector<vector<int>> dependentChoices = get_dependent_choices(constraints, choiceCount);
     vector<vector<int>> mandatoryCritSets = get_mandatory_critical_sets(constraints);
 
-    auto allGroups = {dependentWorkshops, mandatoryCritSets};
+    auto allGroups = {dependentChoices, mandatoryCritSets};
 
     for(auto const& groupList : allGroups)
     {
@@ -55,7 +55,7 @@ vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> 
             {
                 for(int j = i + 1; j < group.size(); j++)
                 {
-                    res.push_back(Constraint(WorkshopsAreNotInSameSlot, group[i], group[j]));
+                    res.push_back(Constraint(ChoicesAreNotInSameSet, group[i], group[j]));
                 }
             }
         }
@@ -63,10 +63,10 @@ vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> 
 
     for(Constraint const& constraint : constraints)
     {
-        if(constraint.type() != ParticipantIsInWorkshop && constraint.type() != ParticipantIsNotInWorkshop) continue;
+        if(constraint.type() != ChooserIsInChoice && constraint.type() != ChooserIsNotInChoice) continue;
 
         vector<int> group;
-        for(vector<int> const& depGroup : dependentWorkshops)
+        for(vector<int> const& depGroup : dependentChoices)
         {
             if(std::find(depGroup.begin(), depGroup.end(), constraint.right()) != depGroup.end())
             {
@@ -93,21 +93,21 @@ vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> 
     return res;
 }
 
-vector<vector<int>> Constraints::get_dependent_workshops(vector<Constraint> const& constraints, int workshopCount)
+vector<vector<int>> Constraints::get_dependent_choices(vector<Constraint> const& constraints, int choiceCount)
 {
-    UnionFind<int> workshopGroups(workshopCount);
+    UnionFind<int> choiceGroups(choiceCount);
 
     for(Constraint const& constraint : constraints)
     {
-        if(constraint.type() != WorkshopsHaveSameParticipants) continue;
-        workshopGroups.join(constraint.left(), constraint.right());
+        if(constraint.type() != ChoicesHaveSameChoosers) continue;
+        choiceGroups.join(constraint.left(), constraint.right());
     }
 
-    return workshopGroups.groups();
+    return choiceGroups.groups();
 }
 
 vector<Constraint>
-Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int workshopCount, bool& isInfeasible)
+Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int choiceCount, bool& isInfeasible)
 {
     isInfeasible = false;
     vector<Constraint> res;
@@ -120,12 +120,12 @@ Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int work
 
         switch(c.type())
         {
-            case SlotContainsWorkshop: newType = WorkshopIsInSlot; break;
-            case SlotNotContainsWorkshop: newType = WorkshopIsNotInSlot; break;
-            case WorkshopContainsParticipant: newType = ParticipantIsInWorkshop; break;
-            case WorkshopNotContainsParticipant: newType = ParticipantIsNotInWorkshop; break;
+            case SetContainsChoice: newType = ChoiceIsInSet; break;
+            case SetNotContainsChoice: newType = ChoiceIsNotInSet; break;
+            case ChoiceContainsChooser: newType = ChooserIsInChoice; break;
+            case ChoiceNotContainsChooser: newType = ChooserIsNotInChoice; break;
 
-            case SlotsHaveSameWorkshops:
+            case SetsHaveSameChoices:
             {
                 // This constraint is always either a tautology or a contradiction.
                 //
@@ -150,5 +150,5 @@ Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int work
         }
     }
 
-    return expand_dependent_constraints(res, workshopCount);
+    return expand_dependent_constraints(res, choiceCount);
 }

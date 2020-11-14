@@ -2,14 +2,14 @@ wassign is a tool to solve an extension of the [stable marriage problem](https:/
 
 ### The problem
 
-Given are three sets: timeslots, events and persons. Each person has a specified preferences towards all events (e.g. 100 meaning "i really want to attend this event" and 0 meaning "i do not want to attend this event").
+Given are three sets: sets, choices and persons. Each person has a specified preferences towards all choices (e.g. 100 meaning "i really want to attend this choice" and 0 meaning "i do not want to attend this choice").
 
 We now want to match
 
-1. events to timeslots, such that each event is assigned to exactly one timeslot
-2. persons to events, such that each person is in exactly one workshop *per slot*.
+1. events to sets, such that each event is assigned to exactly one set
+2. persons to events, such that each person is in exactly one choice *per set*.
 
-while respecting the preferences given by the persons "as much as possible". Additionally, each workshop has a minimum and a maximum number of participants.
+while respecting the preferences given by the persons "as much as possible". Additionally, each choice has a minimum and a maximum number of choosers.
 
 ### The solution
 

@@ -38,11 +38,11 @@ private:
     cancel_token _cancellation;
 
     /**
-     * The available max push is the sum of the maximum participant counts of all workshops that are not yet assigned
-     * to a slot (the maximum number of participants that can be covered with all workshops that are not
-     * yet assigned to a slot).
+     * The available max push is the sum of the maximum chooser counts of all choices that are not yet assigned
+     * to a set (the maximum number of choosers that can be covered with all choices that are not
+     * yet assigned to a set).
      */
-    int calculate_available_max_push(vector<int> const& workshopScramble, int depth);
+    int calculate_available_max_push(vector<int> const& choiceScramble, int depth);
 
     /**
      * Tests if the current partial solution satisfies all given critical sets.
@@ -50,53 +50,53 @@ private:
     bool satisfies_critical_sets(map<int, int> const& decisions, vector<CriticalSet> const& criticalSets);
 
     /**
-     * Tests if the hypothetical decision of putting workshop into slot would violate any scheduling constraints.
+     * Tests if the hypothetical decision of putting choice into set would violate any scheduling constraints.
      */
-    bool satisfies_scheduling_constraints(int workshop, int slot, map<int, int> const& decisions);
+    bool satisfies_scheduling_constraints(int choice, int set, map<int, int> const& decisions);
 
     /**
-     * Tests if the current partial solution has any impossibilities. Impossibilities are slots that contain so few
-     * workshops that even with all the workshops not yet assigned they would not have enough capacity for all
-     * participants.
+     * Tests if the current partial solution has any impossibilities. Impossibilities are sets that contain so few
+     * choices that even with all the choices not yet assigned they would not have enough capacity for all
+     * choosers.
      */
     bool has_impossibilities(map<int, int> const& decisions, int availableMaxPush);
 
     /**
-     * Calculates critical slots in the current partial solution that limit the next decision. Critical slots are slots
-     * that need the next workshop in order to still be able to fulfill the participant count.
+     * Calculates critical sets in the current partial solution that limit the next decision. Critical sets are sets
+     * that need the next choice in order to still be able to fulfill the chooser count.
      */
-    vector<int> calculate_critical_slots(map<int, int> const& decisions, int availableMaxPush, int workshop);
+    vector<int> calculate_critical_sets(map<int, int> const& decisions, int availableMaxPush, int choice);
 
     /**
-     * Calculates the score used to decide the order in which slots are preferred when deciding a slot for a workshop
-     * (smaller score means higher priority). Currently, the score is the sum of the maximum participant counts of all
-     * workshops in this slot.
+     * Calculates the score used to decide the order in which sets are preferred when deciding a set for a choice
+     * (smaller score means higher priority). Currently, the score is the sum of the maximum chooser counts of all
+     * choices in this set.
      */
-    int slot_order_heuristic_score(map<int, int> const& decisions, int slot);
+    int set_order_heuristic_score(map<int, int> const& decisions, int set);
 
     /**
-     * Calculates the slots that are feasible for the next workshop regarding the current partial solution. A slot is
-     * infeasible if adding the workshop would cause the minimum participant count to exceed the total number of
-     * participants.
+     * Calculates the sets that are feasible for the next choice regarding the current partial solution. A set is
+     * infeasible if adding the choice would cause the minimum chooser count to exceed the total number of
+     * choosers.
      *
-     * @param lowPrioritySlot A list of slots that are low priority (they should be tried last while backtracking).
+     * @param lowPrioritySet A list of sets that are low priority (they should be tried last while backtracking).
      */
-    vector<int> calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySlot, int workshop);
+    vector<int> calculate_feasible_sets(map<int, int> const& decisions, vector<bool> const& lowPrioritySet, int choice);
 
     /**
-     * Shuffles the list of workshops to randomize the solutions found first. Currently, only auto-generated slots for
-     * unscheduled workshops are low priority.
+     * Shuffles the list of choices to randomize the solutions found first. Currently, only auto-generated sets for
+     * unscheduled choices are low priority.
      * @return
      */
-    vector<int> get_workshop_scramble();
+    vector<int> get_choice_scramble();
 
     /**
-     * Generates a vector v where v[n]=true means that n is a low-priority workshop.
+     * Generates a vector v where v[n]=true means that n is a low-priority choice.
      */
-    vector<bool> get_low_priority_slots();
+    vector<bool> get_low_priority_sets();
 
     /**
-     * Transforms the decision map into list of lists d, where d[n] is the list of workshops assigned to slot n.
+     * Transforms the decision map into list of lists d, where d[n] is the list of choices assigned to set n.
      */
     vector<vector<int>> convert_decisions(map<int, int> const& decisions);
 

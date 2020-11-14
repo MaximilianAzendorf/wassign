@@ -27,24 +27,24 @@ using x3::uint_;
 using x3::lit;
 using x3::lexeme;
 
-bool InputReader::parse_line_slot(string const& line, MutableInputData& inputData)
+bool InputReader::parse_line_set(string const& line, MutableInputData& inputData)
 {
     string name;
 
-    auto syntax = lit("(slot)") >> lexeme[ (*char_)[pset(name)] ];
+    auto syntax = lit("(set)") >> lexeme[ (*char_)[pset(name)] ];
 
     if(!parse(line, syntax)) return false;
-    inputData.slots.push_back(SlotData(name));
+    inputData.sets.push_back(SetData(name));
     return true;
 }
 
-bool InputReader::parse_line_workshop(string const& line, vector<InputReader::PreWorkshop>& preWorkshops)
+bool InputReader::parse_line_choice(string const& line, vector<InputReader::PreChoice>& preChoices)
 {
-    PreWorkshop ws{};
+    PreChoice ws{};
 
     auto name = *(char_ - char_(":,[]"));
     auto syntax =
-            lit("(event)")
+            lit("(choice)")
                     >> lexeme[ name[pset(ws.name)] ] >> ':'
                     >> uint_[pset(ws.min)] >> '-' >> uint_[pset(ws.max)]
                     >> -('['
@@ -60,28 +60,28 @@ bool InputReader::parse_line_workshop(string const& line, vector<InputReader::Pr
     if(ws.optional && ws.parts > 1)
     {
         // TODO: Implement support for this
-        throw InputException("Optional events with multiple parts are not supported.");
+        throw InputException("Optional choices with multiple parts are not supported.");
     }
 
     if(!ws.optional && ws.min < 1)
     {
-        throw InputException("Events with no minimum number of participants are not supported. Make them optional instead.");
+        throw InputException("Choices with no minimum number of choosers are not supported. Make them optional instead.");
     }
 
     boost::algorithm::trim(ws.name);
 
-    preWorkshops.push_back(ws);
+    preChoices.push_back(ws);
     return true;
 }
 
 
-bool InputReader::parse_line_participant(string const& line, MutableInputData& inputData)
+bool InputReader::parse_line_chooser(string const& line, MutableInputData& inputData)
 {
     string name;
     vector<int> pref;
 
     auto syntax =
-            lit("(person)")
+            lit("(chooser)")
                     >> lexeme[ (*(char_ - ':'))[pset(name)] ]
                     >> ':'
                     >> +(uint_[padd(pref)]);
@@ -95,11 +95,11 @@ bool InputReader::parse_line_participant(string const& line, MutableInputData& i
 
     boost::algorithm::trim(name);
 
-    inputData.participants.push_back(ParticipantData(name, pref));
+    inputData.choosers.push_back(ChooserData(name, pref));
     return true;
 }
 
-bool InputReader::parse_line_participant_csv(string const& line, MutableInputData& inputData)
+bool InputReader::parse_line_chooser_csv(string const& line, MutableInputData& inputData)
 {
     string name;
     vector<int> pref;
@@ -113,7 +113,7 @@ bool InputReader::parse_line_participant_csv(string const& line, MutableInputDat
 
     boost::algorithm::trim(name);
 
-    inputData.participants.push_back(ParticipantData(name, pref));
+    inputData.choosers.push_back(ChooserData(name, pref));
     return true;
 
 }
@@ -129,7 +129,7 @@ bool InputReader::parse_line_constraint(string const& line, MutableInputData& in
     return true;
 }
 
-void InputReader::parse_line(string& line, MutableInputData& inputData, vector<InputReader::PreWorkshop>& preWorkshops)
+void InputReader::parse_line(string& line, MutableInputData& inputData, vector<InputReader::PreChoice>& preChoices)
 {
     boost::algorithm::trim(line);
     if(line.empty() || line.front() == '#')
@@ -137,45 +137,45 @@ void InputReader::parse_line(string& line, MutableInputData& inputData, vector<I
         return;
     }
 
-    if(!parse_line_slot(line, inputData)
-       && !parse_line_workshop(line, preWorkshops)
-       && !parse_line_participant(line, inputData)
+    if(!parse_line_set(line, inputData)
+       && !parse_line_choice(line, preChoices)
+       && !parse_line_chooser(line, inputData)
        && !parse_line_constraint(line, inputData)
-       && !parse_line_participant_csv(line, inputData))
+       && !parse_line_chooser_csv(line, inputData))
     {
         throw InputException("Could not parse line \"" + line + "\".");
     }
 }
 
-void InputReader::compile_workshops(MutableInputData& inputData, vector<InputReader::PreWorkshop>& preWorkshops)
+void InputReader::compile_choices(MutableInputData& inputData, vector<InputReader::PreChoice>& preChoices)
 {
     int wsidx = 0;
 
-    for(PreWorkshop const& pw : preWorkshops)
+    for(PreChoice const& pw : preChoices)
     {
         vector<int> conductors;
         for(string const& name : pw.cond)
         {
             bool found = false;
-            for(int p = 0; p < inputData.participants.size(); p++)
+            for(int p = 0; p < inputData.choosers.size(); p++)
             {
-                if(inputData.participants[p].name() == name)
+                if(inputData.choosers[p].name() == name)
                 {
                     conductors.push_back(p);
-                    vector<int> newPref(inputData.participants[p].preferences());
+                    vector<int> newPref(inputData.choosers[p].preferences());
                     newPref[wsidx] = InputData::MinPrefPlaceholder;
-                    inputData.participants[p] = ParticipantData(inputData.participants[p].name(), newPref);
-                    inputData.conductors.push_back({.participant = p, .workshop = wsidx});
+                    inputData.choosers[p] = ChooserData(inputData.choosers[p].name(), newPref);
+                    inputData.conductors.push_back({.chooser = p, .choice = wsidx});
 
                     found = true;
                     break;
                 }
             }
 
-            if(!found) throw InputException("Unknown participant \"" + name + "\".");
+            if(!found) throw InputException("Unknown chooser \"" + name + "\".");
         }
 
-        inputData.workshops.push_back(WorkshopData(
+        inputData.choices.push_back(ChoiceData(
                 pw.name,
                 pw.min,
                 pw.max,
@@ -184,24 +184,24 @@ void InputReader::compile_workshops(MutableInputData& inputData, vector<InputRea
         wsidx++;
         if(pw.parts > 1)
         {
-            for(int p = 0; p < inputData.participants.size(); p++)
+            for(int p = 0; p < inputData.choosers.size(); p++)
             {
                 vector<int> newPrefs;
-                for(int i = 0; i < inputData.participants[p].preferences().size(); i++)
+                for(int i = 0; i < inputData.choosers[p].preferences().size(); i++)
                 {
                     for(int j = 0; j < (i == wsidx - 1 ? pw.parts : 1); j++)
                     {
-                        newPrefs.push_back(inputData.participants[p].preference(i));
+                        newPrefs.push_back(inputData.choosers[p].preference(i));
                     }
                 }
 
-                inputData.participants[p] = ParticipantData(inputData.participants[p].name(), newPrefs);
+                inputData.choosers[p] = ChooserData(inputData.choosers[p].name(), newPrefs);
             }
 
             for(int i = 1; i < pw.parts; i++)
             {
                 string name = InputData::GeneratedPrefix + "[" + str(i + 1) + "] " + pw.name;
-                inputData.workshops.push_back(WorkshopData(
+                inputData.choices.push_back(ChoiceData(
                         name,
                         pw.min,
                         pw.max,
@@ -212,46 +212,46 @@ void InputReader::compile_workshops(MutableInputData& inputData, vector<InputRea
     }
 }
 
-void InputReader::generate_extra_slots(MutableInputData& inputData, vector<InputReader::PreWorkshop>& preWorkshops)
+void InputReader::generate_extra_sets(MutableInputData& inputData, vector<InputReader::PreChoice>& preChoices)
 {
     int optMin = 0;
-    for(PreWorkshop pw : preWorkshops)
+    for(PreChoice pw : preChoices)
     {
         if(!pw.optional) continue;
         optMin += pw.min;
     }
 
-    int numExtraSlots = (int)std::ceil((double)optMin / (double)inputData.participants.size());
+    int numExtraSets = (int)std::ceil((double)optMin / (double)inputData.choosers.size());
 
-    for(int i = 0; i < numExtraSlots; i++)
+    for(int i = 0; i < numExtraSets; i++)
     {
-        string extraSlot = InputData::NotScheduledSlotPrefix + str(i);
-        string extraWorkshop = InputData::HiddenWorkshopPrefix + "unassigned_" + str(i);
+        string extraSet = InputData::NotScheduledSetPrefix + str(i);
+        string extraChoice = InputData::HiddenChoicePrefix + "unassigned_" + str(i);
 
-        int s = inputData.slots.size();
+        int s = inputData.sets.size();
 
-        inputData.slots.push_back(SlotData(extraSlot));
-        inputData.workshops.push_back(WorkshopData(extraWorkshop, 0, inputData.participants.size() + 1));
-        inputData.constraints.push_back(Constraint(WorkshopIsInSlot, inputData.workshops.size() - 1, s));
+        inputData.sets.push_back(SetData(extraSet));
+        inputData.choices.push_back(ChoiceData(extraChoice, 0, inputData.choosers.size() + 1));
+        inputData.constraints.push_back(Constraint(ChoiceIsInSet, inputData.choices.size() - 1, s));
 
-        for(int p = 0; p < inputData.participants.size(); p++)
+        for(int p = 0; p < inputData.choosers.size(); p++)
         {
-            vector<int> newPref(inputData.participants[p].preferences());
+            vector<int> newPref(inputData.choosers[p].preferences());
             newPref.push_back(InputData::MinPrefPlaceholder);
-            inputData.participants[p] = ParticipantData(inputData.participants[p].name(), newPref);
+            inputData.choosers[p] = ChooserData(inputData.choosers[p].name(), newPref);
         }
 
-        for(PreWorkshop pw : preWorkshops)
+        for(PreChoice pw : preChoices)
         {
             if(pw.optional) continue;
 
             int w = 0;
-            for(; w < inputData.workshops.size(); w++)
+            for(; w < inputData.choices.size(); w++)
             {
-                if(inputData.workshops[w].name() == pw.name) break;
+                if(inputData.choices[w].name() == pw.name) break;
             }
 
-            inputData.constraints.push_back(Constraint(WorkshopIsNotInSlot, w, s));
+            inputData.constraints.push_back(Constraint(ChoiceIsNotInSet, w, s));
         }
     }
 }
@@ -262,16 +262,16 @@ shared_ptr<InputData> InputReader::parse(string const& input)
     string line;
 
     MutableInputData inputData;
-    vector<PreWorkshop> preWorkshops;
+    vector<PreChoice> preChoices;
 
     while(std::getline(inputStream, line, '\n'))
     {
         if(line.back() == '\r') line.resize(line.size() - 1);
-        parse_line(line, inputData, preWorkshops);
+        parse_line(line, inputData, preChoices);
     }
 
-    compile_workshops(inputData, preWorkshops);
-    generate_extra_slots(inputData, preWorkshops);
+    compile_choices(inputData, preChoices);
+    generate_extra_sets(inputData, preChoices);
 
     return std::make_shared<InputData>(inputData);
 }
@@ -281,43 +281,43 @@ shared_ptr<InputData> InputReader::read_input(string const& input)
     Status::info("Begin parsing input.");
 
     auto res = parse(input);
-    int slotCount = res->slot_count();
-    int wsCount = res->workshop_count();
-    int partCount = res->participant_count();
+    int setCount = res->set_count();
+    int wsCount = res->choice_count();
+    int partCount = res->chooser_count();
 
     if(partCount == 0)
     {
-        throw InputException("No person(s) given in input.");
+        throw InputException("No chooser(s) given in input.");
     }
 
-    for(int i = 0; i < res->slot_count(); i++)
+    for(int i = 0; i < res->set_count(); i++)
     {
-        if(res->slot(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->set(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
-            slotCount--;
+            setCount--;
         }
     }
 
-    for(int i = 0; i < res->workshop_count(); i++)
+    for(int i = 0; i < res->choice_count(); i++)
     {
-        if(res->workshop(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->choice(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
             wsCount--;
         }
     }
 
-    for(int i = 0; i < res->participant_count(); i++)
+    for(int i = 0; i < res->chooser_count(); i++)
     {
-        if(res->participant(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
+        if(res->chooser(i).name().rfind(InputData::GeneratedPrefix, 0) == 0)
         {
             partCount--;
         }
     }
 
     Status::info("Read "
-                 + str(slotCount) + " slot(s), "
-                 + str(wsCount) + " event(s) and "
-                 + str(partCount) + " participant(s).");
+                 + str(setCount) + " set(s), "
+                 + str(wsCount) + " choice(s) and "
+                 + str(partCount) + " chooser(s).");
 
     return res;
 }

@@ -23,54 +23,54 @@
 Assignment::Assignment(const_ptr<InputData> inputData, vector<vector<int>> data)
         : _inputData(std::move(inputData)), _data(std::move(data))
 {
-    assert(_data.size() == _inputData->participant_count());
+    assert(_data.size() == _inputData->chooser_count());
 
     for(vector<int> const& i : _data)
     {
-        assert(i.size() == _inputData->slot_count());
+        assert(i.size() == _inputData->set_count());
     }
 }
 
-int Assignment::workshop_of(int participant, int slot) const
+int Assignment::choice_of(int chooser, int set) const
 {
-    return _data[participant][slot];
+    return _data[chooser][set];
 }
 
-vector<int> Assignment::participants_ordered(int workshop) const
+vector<int> Assignment::choosers_ordered(int choice) const
 {
-    vector<int> participants;
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    vector<int> choosers;
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            if(workshop_of(p, s) == workshop)
+            if(choice_of(p, s) == choice)
             {
-                participants.push_back(p);
+                choosers.push_back(p);
             }
         }
     }
 
-    std::sort(participants.begin(), participants.end());
-    return participants;
+    std::sort(choosers.begin(), choosers.end());
+    return choosers;
 }
 
-vector<int> Assignment::workshops_ordered(int participant) const
+vector<int> Assignment::choices_ordered(int chooser) const
 {
-    vector<int> workshops;
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    vector<int> choices;
+    for(int s = 0; s < _inputData->set_count(); s++)
     {
-        workshops.push_back(workshop_of(participant, s));
+        choices.push_back(choice_of(chooser, s));
     }
 
-    std::sort(workshops.begin(), workshops.end());
-    return workshops;
+    std::sort(choices.begin(), choices.end());
+    return choices;
 }
 
-bool Assignment::is_in_workshop(int participant, int workshop) const
+bool Assignment::is_in_choice(int chooser, int choice) const
 {
-    for(int s = 0; s < _inputData->slot_count(); s++)
+    for(int s = 0; s < _inputData->set_count(); s++)
     {
-        if(workshop_of(participant, s) == workshop) return true;
+        if(choice_of(chooser, s) == choice) return true;
     }
 
     return false;
@@ -79,11 +79,11 @@ bool Assignment::is_in_workshop(int participant, int workshop) const
 int Assignment::max_used_preference() const
 {
     int c = INT_MIN;
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            c = std::max(_inputData->participant(p).preference(workshop_of(p, s)), c);
+            c = std::max(_inputData->chooser(p).preference(choice_of(p, s)), c);
         }
     }
 
@@ -99,11 +99,11 @@ bool Assignment::operator==(Assignment const& other) const
 {
     if(&_inputData != &other._inputData) return false;
 
-    for(int p = 0; p < _inputData->participant_count(); p++)
+    for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->slot_count(); s++)
+        for(int s = 0; s < _inputData->set_count(); s++)
         {
-            if(workshop_of(p, s) != other.workshop_of(p, s))
+            if(choice_of(p, s) != other.choice_of(p, s))
             {
                 return false;
             }

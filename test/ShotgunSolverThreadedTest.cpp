@@ -50,18 +50,18 @@ TEST_CASE(PREFIX "Minimal")
     expect_scheduling(solution, "e,s");
 }
 
-TEST_CASE(PREFIX "Multiple slots with scheduling constraints")
+TEST_CASE(PREFIX "Multiple sets with scheduling constraints")
 {
     auto input = R"(
-(slot) s1
-(slot) s2
-(event) e1: 3-3
-(event) e2: 1-3
-(event) e3: 2-3
-(person) p1: 9 5 0
-(person) p2: 5 9 5
-(person) p3: 5 0 9
-(constraint) slot of [e1] is [s1]
+(set) s1
+(set) s2
+(choice) e1: 3-3
+(choice) e2: 1-3
+(choice) e3: 2-3
+(chooser) p1: 9 5 0
+(chooser) p2: 5 9 5
+(chooser) p3: 5 0 9
+(constraint) set of [e1] is [s1]
 )";
 
     auto data = parse_data(input);

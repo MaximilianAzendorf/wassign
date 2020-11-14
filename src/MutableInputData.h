@@ -17,23 +17,23 @@
 #pragma once
 
 #include "Types.h"
-#include "WorkshopData.h"
-#include "ParticipantData.h"
-#include "SlotData.h"
+#include "ChoiceData.h"
+#include "ChooserData.h"
+#include "SetData.h"
 #include "Constraint.h"
 #include "InputData.h"
 
 struct MutableInputDataConductorData
 {
-    int participant;
-    int workshop;
+    int chooser;
+    int choice;
 };
 
 struct MutableInputData
 {
-    vector<WorkshopData> workshops;
-    vector<ParticipantData> participants;
-    vector<SlotData> slots;
+    vector<ChoiceData> choices;
+    vector<ChooserData> choosers;
+    vector<SetData> sets;
     vector<string> constraintStrings;
     vector<Constraint> constraints;
     vector<MutableInputDataConductorData> conductors;

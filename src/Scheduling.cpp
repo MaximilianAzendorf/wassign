@@ -27,23 +27,23 @@ Scheduling::Scheduling(const_ptr<InputData> inputData)
 Scheduling::Scheduling(const_ptr<InputData> inputData, vector<int> data)
         : _inputData(std::move(inputData)), _data(std::move(data))
 {
-    assert(_data.size() == _inputData->workshop_count());
+    assert(_data.size() == _inputData->choice_count());
 }
 
 bool Scheduling::is_feasible() const
 {
-    vector<int> slotMin(_inputData->slot_count(), 0);
-    vector<int> slotMax(_inputData->slot_count(), 0);
+    vector<int> setMin(_inputData->set_count(), 0);
+    vector<int> setMax(_inputData->set_count(), 0);
 
     for(int i = 0; i < _data.size(); i++)
     {
-        slotMin[_data[i]] += _inputData->workshop(i).min();
-        slotMax[_data[i]] += _inputData->workshop(i).max();
+        setMin[_data[i]] += _inputData->choice(i).min();
+        setMax[_data[i]] += _inputData->choice(i).max();
     }
 
-    for(int i = 0; i < _inputData->slot_count(); i++)
+    for(int i = 0; i < _inputData->set_count(); i++)
     {
-        if(slotMin[i] > _inputData->participant_count() || slotMax[i] < _inputData->participant_count())
+        if(setMin[i] > _inputData->chooser_count() || setMax[i] < _inputData->chooser_count())
         {
             return false;
         }
@@ -52,9 +52,9 @@ bool Scheduling::is_feasible() const
     return true;
 }
 
-int Scheduling::slot_of(int workshop) const
+int Scheduling::set_of(int choice) const
 {
-    return _data[workshop];
+    return _data[choice];
 }
 
 InputData const& Scheduling::input_data() const

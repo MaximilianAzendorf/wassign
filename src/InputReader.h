@@ -29,10 +29,10 @@ private:
     InputReader() = default;
 
     /**
-     * Represents a workshop in a form that is very close to the input. Final workshop objects are built after all
+     * Represents a choice in a form that is very close to the input. Final choice objects are built after all
      * input is parsed.
      */
-    struct PreWorkshop
+    struct PreChoice
     {
         string name;
         vector<string> cond;
@@ -52,40 +52,40 @@ private:
     static bool parse(string const& line, Parser parser);
 
     /**
-     * Parses a line containing a slot description.
+     * Parses a line containing a set description.
      *
      * @param line The line to be parsed.
      * @param inputData The mutable input data into which the result will be inserted
      * @return true if the parsing is successful.
      */
-    static bool parse_line_slot(string const& line, MutableInputData& inputData);
+    static bool parse_line_set(string const& line, MutableInputData& inputData);
 
     /**
-     * Parses a line containing a workshop description.
+     * Parses a line containing a choice description.
      *
      * @param line The line to be parsed.
-     * @param preWorkshops The list of PreWorkshop instances into which the result will be inserted
+     * @param preChoices The list of PreChoice instances into which the result will be inserted
      * @return true if the parsing is successful.
      */
-    static bool parse_line_workshop(string const& line, vector<PreWorkshop>& preWorkshops);
+    static bool parse_line_choice(string const& line, vector<PreChoice>& preChoices);
 
     /**
-     * Parses a line containing a participant description.
-     *
-     * @param line The line to be parsed.
-     * @param inputData The mutable input data into which the result will be inserted
-     * @return true if the parsing is successful.
-     */
-    static bool parse_line_participant(string const& line, MutableInputData& inputData);
-
-    /**
-     * Parses a line containing a participant description in CSV format.
+     * Parses a line containing a chooser description.
      *
      * @param line The line to be parsed.
      * @param inputData The mutable input data into which the result will be inserted
      * @return true if the parsing is successful.
      */
-    static bool parse_line_participant_csv(string const& line, MutableInputData& inputData);
+    static bool parse_line_chooser(string const& line, MutableInputData& inputData);
+
+    /**
+     * Parses a line containing a chooser description in CSV format.
+     *
+     * @param line The line to be parsed.
+     * @param inputData The mutable input data into which the result will be inserted
+     * @return true if the parsing is successful.
+     */
+    static bool parse_line_chooser_csv(string const& line, MutableInputData& inputData);
 
     /**
      * Parses a line containing a constraint description.
@@ -101,26 +101,26 @@ private:
      *
      * @param line The line to be parsed.
      * @param inputData The mutable input data into which the result may be inserted.
-     * @param preWorkshops The list of PreWorkshop instances into which the result may be inserted.
+     * @param preChoices The list of PreChoice instances into which the result may be inserted.
      */
-    static void parse_line(string& line, MutableInputData& inputData, vector<PreWorkshop>& preWorkshops);
+    static void parse_line(string& line, MutableInputData& inputData, vector<PreChoice>& preChoices);
 
     /**
-     * Converts all PreWorkshop instances into final workshop descriptions.
+     * Converts all PreChoice instances into final choice descriptions.
      *
      * @param inputData The mutable input data.
-     * @param preWorkshops The list of PreWorkshop instances.
+     * @param preChoices The list of PreChoice instances.
      */
-    static void compile_workshops(MutableInputData& inputData, vector<PreWorkshop>& preWorkshops);
+    static void compile_choices(MutableInputData& inputData, vector<PreChoice>& preChoices);
 
     /**
-     * Generates extra slots if there are optional workshops present (which are internally handled with a virtual
-     * "not scheduled"-slot and extra virtual workhops to which to assign all participants in this virtual slot).
+     * Generates extra sets if there are optional choices present (which are internally handled with a virtual
+     * "not scheduled"-set and extra virtual workhops to which to assign all choosers in this virtual set).
      *
      * @param inputData The mutable input data.
-     * @param preWorkshops The list of PreWorkshop instances.
+     * @param preChoices The list of PreChoice instances.
      */
-    static void generate_extra_slots(MutableInputData& inputData, vector<PreWorkshop>& preWorkshops);
+    static void generate_extra_sets(MutableInputData& inputData, vector<PreChoice>& preChoices);
 
     /**
      * Parses a string containing the input.

@@ -33,9 +33,9 @@ public:
     vector<Constraint> constraints;
 
     static flowid make_long(int high, int low);
-    static flowid node_participant(int p, int s);
-    static flowid node_slot(int s);
-    static flowid node_workshop(int w);
+    static flowid node_chooser(int p, int s);
+    static flowid node_set(int s);
+    static flowid node_choice(int w);
     static flowid edge_id(int from, int to);
 
     MipFlowStaticData(const_ptr<InputData> inputData);

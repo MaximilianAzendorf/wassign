@@ -127,7 +127,7 @@ int main(int argc, char** argv)
         auto inputData = InputReader::read_input(inputString);
         inputData->build_constraints(ConstraintParser::parse);
 
-        if(std::pow((double)inputData->max_preference(), options->preference_exponent()) * inputData->participant_count() >= (double)LONG_MAX)
+        if(std::pow((double)inputData->max_preference(), options->preference_exponent()) * inputData->chooser_count() >= (double)LONG_MAX)
         {
             Status::warning("The preference exponent is too large; computations may cause an integer overflow");
         }
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
         {
             Status::info_important("Solution found.");
             Status::info("Solution score: " + Scoring(inputData, options).evaluate(solution).to_str());
-            if (inputData->slot_count() > 1)
+            if (inputData->set_count() > 1)
             {
                 string schedulingSolutionString = OutputWriter::write_scheduling_solution(solution);
                 output_string(schedulingSolutionString, ".scheduling.csv", options);

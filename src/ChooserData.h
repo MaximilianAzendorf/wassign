@@ -18,13 +18,18 @@
 
 #include "Types.h"
 
-class SlotData
+class ChooserData
 {
 private:
     string _name;
+    vector<int> _preferences;
 
 public:
-    explicit SlotData(string name);
+    ChooserData(string name, vector<int> preferences);
 
     [[nodiscard]] string const& name() const;
+
+    [[nodiscard]] int preference(int choiceIndex) const;
+
+    [[nodiscard]] vector<int> const& preferences() const;
 };

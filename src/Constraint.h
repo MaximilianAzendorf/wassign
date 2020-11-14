@@ -30,28 +30,28 @@ enum ConstraintType
 {
     Invalid = 0,
 
-    WorkshopIsInSlot = 1,
-    WorkshopIsNotInSlot,
-    WorkshopsAreInSameSlot,
-    WorkshopsAreNotInSameSlot,
-    WorkshopsHaveOffset,
-    SlotHasLimitedSize,
-    SlotContainsWorkshop,  // reduced
-    SlotNotContainsWorkshop,  // reduced
-    SlotsHaveSameWorkshops,  // reduced
+    ChoiceIsInSet = 1,
+    ChoiceIsNotInSet,
+    ChoicesAreInSameSet,
+    ChoicesAreNotInSameSet,
+    ChoicesHaveOffset,
+    SetHasLimitedSize,
+    SetContainsChoice,  // reduced
+    SetNotContainsChoice,  // reduced
+    SetsHaveSameChoices,  // reduced
 
-    WorkshopsHaveSameParticipants = CONSTRAINT_TYPE_DISCRIMINATION_LIMIT,
-    ParticipantIsInWorkshop,
-    ParticipantIsNotInWorkshop,
-    ParticipantsHaveSameWorkshops,
-    WorkshopContainsParticipant,  // reduced
-    WorkshopNotContainsParticipant,  // reduced
+    ChoicesHaveSameChoosers = CONSTRAINT_TYPE_DISCRIMINATION_LIMIT,
+    ChooserIsInChoice,
+    ChooserIsNotInChoice,
+    ChoosersHaveSameChoices,
+    ChoiceContainsChooser,  // reduced
+    ChoiceNotContainsChooser,  // reduced
 };
 
 /**
- * Relation operators supported by the SlotHasLimitedSize constraint.
+ * Relation operators supported by the SetHasLimitedSize constraint.
  */
-enum SlotSizeLimitOp
+enum SetSizeLimitOp
 {
     Eq = 1,
     Gt = 2,
