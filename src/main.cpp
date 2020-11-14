@@ -96,7 +96,7 @@ void set_signal_handler(int signal, sighandler_t handler)
 
 int main(int argc, char** argv)
 {
-#ifdef __EMCC__
+#ifdef __EMSCRIPTEN__
     printf("wassign is running as WASM.");
     return 0;
 #else

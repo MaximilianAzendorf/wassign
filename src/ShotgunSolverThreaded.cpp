@@ -135,7 +135,7 @@ ShotgunSolverThreadedProgress ShotgunSolverThreaded::progress() const
     {
         progress.milliseconds_remaining = std::max(
                 progress.milliseconds_remaining,
-                (milliseconds(_options->timeout_seconds() * 1000) - (time_now() - _threadStartTimes[tid])).count());
+                (long)(milliseconds(_options->timeout_seconds() * 1000) - (time_now() - _threadStartTimes[tid])).count());
 
         ShotgunSolverProgress threadProgress = _threadSolvers[tid]->progress();
 

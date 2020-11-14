@@ -18,10 +18,8 @@
 
 #include <boost/spirit/home/x3.hpp>
 
-#ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
 
 template<typename T>
 static auto pset(T& x) { return [&](auto& ctx){
