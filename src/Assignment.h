@@ -20,7 +20,8 @@
 #include "InputData.h"
 
 /**
- * Represents a single assignment solution for the given input data.
+ * Represents a single assignment solution for the given input data. An assignment is a mapping between participants
+ * and workshops
  */
 class Assignment
 {

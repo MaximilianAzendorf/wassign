@@ -49,14 +49,16 @@ pushd $(git rev-parse --show-toplevel)
             mkdir bin
         fi
 
+        shopt -s extglob
         echo "Building wassign..."
-        ( 
+        (
             set -x; \
             emcc \
                 -O3 \
                 -flto \
                 -pthread \
                 --bind \
+                --no-entry \
                 --std=c++17 \
                 --closure=1 \
                 -s WASM=1 \
@@ -134,7 +136,8 @@ pushd $(git rev-parse --show-toplevel)
                 -lprotobuf \
                 -lscip \
                 -lz \
-                ../src/*.cpp \
+                ../src/!(main).cpp \
+                ../wasm/*.cpp \
                 -o bin/wassign.html \
         )
         echo "Done. Output was written to ./build-wasm/bin"

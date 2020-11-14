@@ -96,10 +96,6 @@ void set_signal_handler(int signal, sighandler_t handler)
 
 int main(int argc, char** argv)
 {
-#ifdef __EMSCRIPTEN__
-    printf("wassign is running as WASM.");
-    return 0;
-#else
     set_signal_handler(SIGINT, signal_handler);
     set_signal_handler(SIGTERM, signal_handler);
 
@@ -167,5 +163,4 @@ int main(int argc, char** argv)
     }
 
     return 0;
-#endif
 }
