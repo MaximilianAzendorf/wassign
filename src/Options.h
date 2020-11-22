@@ -17,7 +17,6 @@
 #pragma once
 
 #include "Types.h"
-#include "InputException.h"
 
 #include <thread>
 
@@ -40,9 +39,6 @@ private:
     int _csTimeout = 3;
     bool _noCs = false;
     int _threadCount = (int)std::thread::hardware_concurrency();
-
-    string _timeoutStr;
-    string _csTimeoutStr;
 
     inline static const map<char, int> _timeMultiplier = {
             {'s', 1},

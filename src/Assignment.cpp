@@ -83,7 +83,7 @@ int Assignment::max_used_preference() const
     {
         for(int s = 0; s < _inputData->set_count(); s++)
         {
-            c = std::max(_inputData->chooser(p).preference(choice_of(p, s)), c);
+            c = std::max(_inputData->chooser(p).preferences[choice_of(p, s)], c);
         }
     }
 

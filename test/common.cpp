@@ -16,8 +16,8 @@
 
 #include "common.h"
 
-#include "../src/InputReader.h"
-#include "../src/ConstraintParser.h"
+#include "../src/input/InputReader.h"
+#include "../src/input/ConstraintParser.h"
 #include <boost/algorithm/string.hpp>
 #include <utility>
 #include "../src/OutputWriter.h"
@@ -27,8 +27,7 @@ using namespace boost::algorithm;
 
 const_ptr<InputData> parse_data(std::string const& input)
 {
-    auto data = InputReader::read_input(input);
-    data->build_constraints(ConstraintParser::parse);
+    auto data = InputReader().read_input(input);
 
     return data;
 }
@@ -83,9 +82,9 @@ void expect_scheduling(Solution const& solution, std::string expectation)
     REQUIRE(solutionStr == expectation);
 }
 
-const_ptr<CriticalSetAnalysis> cs(const_ptr<InputData> data, bool analyze)
+const_ptr<CriticalSetAnalysis> csa(const_ptr<InputData> data, bool analzye)
 {
-    return std::make_shared<CriticalSetAnalysis>(std::move(data), analyze);
+    return std::make_shared<CriticalSetAnalysis>(std::move(data), analzye);
 }
 
 const_ptr<MipFlowStaticData> sd(const_ptr<InputData> data)

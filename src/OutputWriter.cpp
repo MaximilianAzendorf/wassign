@@ -26,13 +26,13 @@ string OutputWriter::write_scheduling_solution(Solution const& solution)
     for(int w = 0; w < solution.input_data().choice_count(); w++)
     {
         int s = solution.scheduling()->set_of(w);
-        string wName = solution.input_data().choice(w).name();
+        string wName = solution.input_data().choice(w).name;
         if(wName.rfind(InputData::HiddenChoicePrefix, 0) == 0)
         {
             continue;
         }
 
-        string sName = solution.input_data().set(s).name();
+        string sName = solution.input_data().set(s).name;
         if(sName.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
         {
             sName = "not scheduled";
@@ -58,12 +58,12 @@ string OutputWriter::write_assignment_solution(Solution const& solution)
 
     for(int s = 0; s < solution.input_data().set_count(); s++)
     {
-        if(solution.input_data().set(s).name().rfind(InputData::NotScheduledSetPrefix, 0) == 0)
+        if(solution.input_data().set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
         {
             continue;
         }
 
-        str << ", \"" << solution.input_data().set(s).name() << '"';
+        str << ", \"" << solution.input_data().set(s).name << '"';
     }
 
     for(int p = 0; p < solution.input_data().chooser_count(); p++)
@@ -75,16 +75,16 @@ vector<int> choices(solution.input_data().set_count());
             choices[solution.scheduling()->set_of(ws)] = ws;
         }
 
-        str << endl << '"' << solution.input_data().chooser(p).name() << '"';
+        str << endl << '"' << solution.input_data().chooser(p).name << '"';
 
         for(int s = 0; s < solution.input_data().set_count(); s++)
         {
-            if(solution.input_data().set(s).name().rfind(InputData::NotScheduledSetPrefix, 0) == 0)
+            if(solution.input_data().set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
             {
                 continue;
             }
 
-            string wName = solution.input_data().choice(choices[s]).name();
+            string wName = solution.input_data().choice(choices[s]).name;
             if(wName.rfind(InputData::GeneratedPrefix, 0) == 0)
             {
                 wName = wName.substr(InputData::GeneratedPrefix.length());

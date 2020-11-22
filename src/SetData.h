@@ -20,11 +20,9 @@
 
 class SetData
 {
-private:
-    string _name;
-
 public:
-    explicit SetData(string name);
+    string name;
 
-    [[nodiscard]] string const& name() const;
+    SetData() = default;
+    explicit SetData(string name);
 };

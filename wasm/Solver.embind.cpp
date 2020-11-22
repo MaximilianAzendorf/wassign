@@ -37,7 +37,7 @@ public:
     }
 };
 
-EMSCRIPTEN_BINDINGS(solver)
+EMSCRIPTEN_BINDINGS(wassign_solver)
 {
     class_<JsSolver>("Solver")
             .constructor<const_ptr<InputData>, const_ptr<Options>>()

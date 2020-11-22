@@ -18,7 +18,7 @@
 #include <string>
 
 inline const std::string INPUT_MINIMAL = R"(
-(set) s
-(choice) e: 1-1
-(chooser) p: 1
++set("s");
++choice("e", bounds(1, 1));
++chooser("p", [1]);
 )";

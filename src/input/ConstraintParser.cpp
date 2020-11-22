@@ -73,7 +73,7 @@ int ConstraintParser::resolve_accessor(InputData const& data, string const& cons
                     throw InputException("The given choice doesn't have a part " + str(accessor.part)
                                          + " given in constraint \"" + constraint + "\".");
                 }
-                w = data.choice(w).continuation();
+                w = data.choice(w).continuation_value();
             }
             return w;
         }

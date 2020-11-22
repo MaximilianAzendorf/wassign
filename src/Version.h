@@ -16,9 +16,6 @@
 
 #pragma once
 
-#include "Types.h"
-#include "Util.h"
-
 #define WASSIGN_VERSION_MAJOR "2"
 #define WASSIGN_VERSION_MINOR "0"
 #define WASSIGN_VERSION_PATCH "0"

@@ -28,7 +28,7 @@ int SchedulingSolver::calculate_available_max_push(vector<int> const& choiceScra
     int push = 0;
     for(; depth < choiceScramble.size(); depth++)
     {
-        push += _inputData->choice(choiceScramble[depth]).max();
+        push += _inputData->choice(choiceScramble[depth]).max;
     }
 
     return push;
@@ -147,7 +147,7 @@ bool SchedulingSolver::has_impossibilities(map<int, int> const& decisions, int a
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->choice(decision.first).max();
+            sum += _inputData->choice(decision.first).max;
         }
 
         if(sum < _inputData->chooser_count())
@@ -166,11 +166,11 @@ SchedulingSolver::calculate_critical_sets(map<int, int> const& decisions, int av
 
     for(int s = 0; s < _inputData->set_count(); s++)
     {
-        int sum = availableMaxPush - _inputData->choice(choice).max();
+        int sum = availableMaxPush - _inputData->choice(choice).max;
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->choice(decision.first).max();
+            sum += _inputData->choice(decision.first).max;
         }
 
         if(sum >= _inputData->chooser_count() || !satisfies_scheduling_constraints(choice, s, decisions))
@@ -190,7 +190,7 @@ int SchedulingSolver::set_order_heuristic_score(map<int, int> const& decisions, 
     for(auto const& decision : decisions)
     {
         if(decision.second != set) continue;
-        score += _inputData->choice(decision.first).max();
+        score += _inputData->choice(decision.first).max;
     }
 
     return score;
@@ -212,11 +212,11 @@ SchedulingSolver::calculate_feasible_sets(map<int, int> const& decisions, vector
 
     for(int s = 0; s < _inputData->set_count(); s++)
     {
-        int sum = _inputData->choice(choice).min();
+        int sum = _inputData->choice(choice).min;
         for(auto const& decision : decisions)
         {
             if(decision.second != s) continue;
-            sum += _inputData->choice(decision.first).min();
+            sum += _inputData->choice(decision.first).min;
         }
 
         if(sum > _inputData->chooser_count() || !satisfies_scheduling_constraints(choice, s, decisions))
@@ -259,7 +259,7 @@ vector<bool> SchedulingSolver::get_low_priority_sets()
     vector<bool> lowPrioritySet(_inputData->set_count());
     for(int s = 0; s < _inputData->set_count(); s++)
     {
-        lowPrioritySet[s] = _inputData->set(s).name().rfind(InputData::NotScheduledSetPrefix, 0) == 0;
+        lowPrioritySet[s] = _inputData->set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0;
     }
 
     return lowPrioritySet;

@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include "Types.h"
-#include "Util.h"
 #include "SpiritUtil.h"
-#include "Constraint.h"
-#include "InputData.h"
 #include "FuzzyMatch.h"
+#include "../Types.h"
+#include "../Util.h"
+#include "../Constraint.h"
+#include "../InputData.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/spirit/home/x3.hpp>

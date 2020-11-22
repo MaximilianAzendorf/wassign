@@ -21,11 +21,16 @@
 #include "ChooserData.h"
 #include "SetData.h"
 #include "Constraint.h"
-#include "MutableInputData.h"
+
+class InputDataBuilder;
 
 class InputData
 {
+    friend class InputDataBuilder;
+
 private:
+    InputData() = default;
+
     vector<ChoiceData> _choices;
     vector<ChooserData> _choosers;
     vector<SetData> _sets;
@@ -38,32 +43,12 @@ private:
     map<int, vector<Constraint>> _choiceConstraintMap;
     map<int, vector<Constraint>> _chooserConstraintMap;
 
-    MutableInputData _mutableData;
-
-    vector<pair<int, int>> get_dependent_choice_limits(vector<Constraint> const& constraints);
-
-    vector<vector<int>> get_dependent_preferences(vector<Constraint> const& constraints);
-
-    void compute_conductor_constraints(vector<Constraint>& constraints);
-
-    void compute_part_constraints(vector<Constraint>& constraints);
-
-    template<typename ConstraintParserFunction>
-    vector<Constraint> parse_constraints(ConstraintParserFunction constraintBuilder);
-
-    void build_constraint_maps();
-
 public:
     inline static const string GeneratedPrefix = "~";
     inline static const string NotScheduledSetPrefix = GeneratedPrefix + "not_scheduled_";
     inline static const string HiddenChoicePrefix = GeneratedPrefix + "hidden_";
     inline static const string GeneratedSetName = "Generated Set";
     inline static const int MinPrefPlaceholder = INT_MAX;
-
-    explicit InputData(MutableInputData& data);
-
-    template<typename ConstraintParserFunction>
-    void build_constraints(ConstraintParserFunction constraintParser);
 
     [[nodiscard]] int preference_after(int preference) const;
 
@@ -99,5 +84,3 @@ public:
 
     [[nodiscard]] int set_count() const;
 };
-
-#include "InputData.ipp"

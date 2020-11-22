@@ -23,7 +23,7 @@
 TEST_CASE(PREFIX "Minimal")
 {
     auto data = parse_data(INPUT_MINIMAL);
-    AssignmentSolver solver(data, cs(data), sd(data), default_options());
+    AssignmentSolver solver(data, csa(data), sd(data), default_options());
 
     auto scheduling = MAKE_SCHED(data, 0);
     auto assignment = solver.solve(scheduling);
@@ -34,7 +34,7 @@ TEST_CASE(PREFIX "Minimal")
 TEST_CASE(PREFIX "Large")
 {
     auto data = parse_data(INPUT_BIG_REALISTIC);
-    AssignmentSolver solver(data, cs(data, false), sd(data), default_options());
+    AssignmentSolver solver(data, csa(data, false), sd(data), default_options());
 
     auto scheduling = MAKE_SCHED(data, SCHEDULING_BIG_REALISTIC);
     auto assignment = solver.solve(scheduling);

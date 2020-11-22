@@ -5,9 +5,9 @@ set(GFLAGS_USE_TARGET_NAMESPACE ON)
 find_package(TBB REQUIRED)
 find_package(ortools CONFIG REQUIRED)
 
-file(GLOB SOURCE_CPP *.cpp)
-file(GLOB SOURCE_IPP *.ipp)
-file(GLOB SOURCE_H *.h)
+file(GLOB_RECURSE SOURCE_CPP *.cpp)
+file(GLOB_RECURSE SOURCE_IPP *.ipp)
+file(GLOB_RECURSE SOURCE_H *.h)
 
 list(FILTER SOURCE_CPP EXCLUDE REGEX ".*main.cpp$")
 

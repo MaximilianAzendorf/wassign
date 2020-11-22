@@ -24,6 +24,11 @@
 struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
 {
     long milliseconds_remaining = 0;
+
+    [[nodiscard]] long getMillisecondsRemaining() const;
+    [[nodiscard]] int getIterations() const;
+    [[nodiscard]] Solution getBestSolution() const;
+    [[nodiscard]] Score getBestScore() const;
 };
 
 class ShotgunSolverThreaded

@@ -52,10 +52,10 @@ void CriticalSetAnalysis::analyze()
 
             for(int w = 0; w < _inputData->choice_count(); w++)
             {
-                if(_inputData->chooser(p).preference(w) <= pref)
+                if(_inputData->chooser(p).preferences[w] <= pref)
                 {
                     newSet.push_back(w);
-                    minCount += _inputData->choice(w).min();
+                    minCount += _inputData->choice(w).min;
                 }
             }
 

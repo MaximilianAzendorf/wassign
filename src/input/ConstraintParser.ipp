@@ -127,7 +127,7 @@ int ConstraintParser::find_name(string const& constraint, string name, vector<Da
     vector<string> names;
     for(int i = 0; i < dataVector.size(); i++)
     {
-        names.push_back(dataVector[i].name());
+        names.push_back(dataVector[i].name);
     }
 
     auto res = FuzzyMatch::find(name, names);

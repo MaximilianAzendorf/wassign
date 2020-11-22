@@ -21,7 +21,7 @@
 #include "ChooserData.h"
 #include "SetData.h"
 #include "Constraint.h"
-#include "InputData.h"
+#include "input/ProtoChoiceData.h"
 
 struct MutableInputDataConductorData
 {
@@ -32,6 +32,7 @@ struct MutableInputDataConductorData
 struct MutableInputData
 {
     vector<ChoiceData> choices;
+    vector<ProtoChoiceData> preChoices;
     vector<ChooserData> choosers;
     vector<SetData> sets;
     vector<string> constraintStrings;

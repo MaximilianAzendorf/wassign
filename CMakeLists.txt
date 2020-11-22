@@ -4,6 +4,11 @@ set(CMAKE_CXX_STANDARD 17)
 project(wassign)
 
 include_directories(build-wasm/or-tools/emscripten/upstream/emscripten/system/include)
+include_directories(
+        deps/chaiscript/include
+        deps/catch2/single_include
+        deps/popl/include
+        deps/magic_enum/include)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

@@ -126,7 +126,7 @@ int Scoring::evaluate_major(Solution const& solution) const
     {
         int p = i / _inputData->set_count();
         int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
-        m = std::max(m, _inputData->chooser(p).preference(ws));
+        m = std::max(m, _inputData->chooser(p).preferences[ws]);
     }
 
     return m;
@@ -145,7 +145,7 @@ float Scoring::evaluate_minor(Solution const& solution) const
     {
         int p = i / _inputData->set_count();
         int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
-        prefCount[_inputData->chooser(p).preference(ws)]++;
+        prefCount[_inputData->chooser(p).preferences[ws]]++;
     }
 
     float sum = 0;
@@ -195,7 +195,7 @@ bool Scoring::is_feasible(Solution const& solution) const
 
     for(int i = 0; i < _inputData->choice_count(); i++)
     {
-        if(partCounts[i] < _inputData->choice(i).min() || partCounts[i] > _inputData->choice(i).max())
+        if(partCounts[i] < _inputData->choice(i).min || partCounts[i] > _inputData->choice(i).max)
         {
             return false;
         }

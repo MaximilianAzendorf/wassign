@@ -18,6 +18,26 @@
 
 #include <utility>
 
+long ShotgunSolverThreadedProgress::getMillisecondsRemaining() const
+{
+    return milliseconds_remaining;
+}
+
+int ShotgunSolverThreadedProgress::getIterations() const
+{
+    return iterations;
+}
+
+Solution ShotgunSolverThreadedProgress::getBestSolution() const
+{
+    return best_solution;
+}
+
+Score ShotgunSolverThreadedProgress::getBestScore() const
+{
+    return best_score;
+}
+
 ShotgunSolverThreaded::ShotgunSolverThreaded(const_ptr<InputData> inputData,
                                              const_ptr<CriticalSetAnalysis> csAnalysis,
                                              const_ptr<MipFlowStaticData> staticData,

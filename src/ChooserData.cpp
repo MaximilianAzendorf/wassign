@@ -17,21 +17,6 @@
 #include "ChooserData.h"
 
 ChooserData::ChooserData(string name, vector<int> preferences)
-        : _name(std::move(name)), _preferences(std::move(preferences))
+        : name(std::move(name)), preferences(std::move(preferences))
 {
-}
-
-string const& ChooserData::name() const
-{
-    return _name;
-}
-
-int ChooserData::preference(int choiceIndex) const
-{
-    return _preferences[choiceIndex];
-}
-
-vector<int> const& ChooserData::preferences() const
-{
-    return _preferences;
 }

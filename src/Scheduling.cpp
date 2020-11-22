@@ -37,8 +37,8 @@ bool Scheduling::is_feasible() const
 
     for(int i = 0; i < _data.size(); i++)
     {
-        setMin[_data[i]] += _inputData->choice(i).min();
-        setMax[_data[i]] += _inputData->choice(i).max();
+        setMin[_data[i]] += _inputData->choice(i).min;
+        setMax[_data[i]] += _inputData->choice(i).max;
     }
 
     for(int i = 0; i < _inputData->set_count(); i++)

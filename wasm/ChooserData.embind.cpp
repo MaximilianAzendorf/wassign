@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "../src/ChooserData.h"
 
-#include "InputReader.h"
+#include <emscripten/bind.h>
+using namespace emscripten;
 
-using x3::eoi;
-
-template<typename Parser>
-bool InputReader::parse(string const& line, Parser parser)
+EMSCRIPTEN_BINDINGS(wassign_chooserdata)
 {
-    return x3::phrase_parse(line.begin(), line.end(), parser >> eoi, x3::ascii::space);
-}
-
+    class_<ChooserData>("ChooserData")
+            .property("name", &ChooserData::name)
+            .property("preferences", &ChooserData::preferences);
+};

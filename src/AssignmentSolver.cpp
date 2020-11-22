@@ -19,8 +19,9 @@
 #ifndef USE_CBC
 #define USE_CBC
 #endif
-
 #include <ortools/linear_solver/linear_solver.h>
+
+#include "Constraints.h"
 
 #include <utility>
 
@@ -88,7 +89,7 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
 
     for(int w = 0; w < _inputData->choice_count(); w++)
     {
-        flow.add_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min());
+        flow.add_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min);
     }
 
     for(int s = 0; s < _inputData->set_count(); s++)
@@ -99,7 +100,7 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
         for(int w = 0; w < _inputData->choice_count(); w++)
         {
             if(scheduling->set_of(w) != s) continue;
-            coveredChoosers += _inputData->choice(w).min();
+            coveredChoosers += _inputData->choice(w).min;
         }
 
         flow.add_supply(
@@ -118,12 +119,12 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
         {
             for(int w = 0; w < _inputData->choice_count(); w++)
             {
-                if(scheduling->set_of(w) != s || _inputData->chooser(p).preference(w) > preferenceLimit)
+                if(scheduling->set_of(w) != s || _inputData->chooser(p).preferences[w] > preferenceLimit)
                     continue;
 
                 edgesCap.push_back(1);
                 edgesCost.push_back(
-                        (long)pow(_inputData->chooser(p).preference(w) + 1.0, _options->preference_exponent()));
+                        (long)pow(_inputData->chooser(p).preferences[w] + 1.0, _options->preference_exponent()));
 
                 edgesIdx[std::make_pair(
                         flow.nodes().at(MipFlowStaticData::node_chooser(p, s)),
@@ -139,7 +140,7 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
         {
             if(scheduling->set_of(w) != s) continue;
 
-            edgesCap.push_back(_inputData->choice(w).max() - _inputData->choice(w).min());
+            edgesCap.push_back(_inputData->choice(w).max - _inputData->choice(w).min);
             edgesCost.push_back(0);
 
             edgesIdx[std::make_pair(

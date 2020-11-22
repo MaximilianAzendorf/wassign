@@ -16,11 +16,10 @@
 
 #include "Options.h"
 
-#include "Util.h"
 #include "Version.h"
-#include "InputException.h"
-#include "../deps/popl/include/popl.hpp"
+#include "input/InputException.h"
 
+#include <popl.hpp>
 #include <iostream>
 #include <utility>
 

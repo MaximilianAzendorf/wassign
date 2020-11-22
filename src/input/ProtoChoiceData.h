@@ -13,20 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#include "../src/InputData.h"
+#include "../Types.h"
 
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-EMSCRIPTEN_BINDINGS(wassign_inputdata)
+/**
+ * Represents a choice in a form that is very close to the input. Final choice objects are built after all
+ * input is parsed.
+ */
+class ProtoChoiceData
 {
-    class_<InputData>("InputData")
-        .function("choice", &InputData::choice)
-        .function("chooser", &InputData::chooser)
-        .function("set", &InputData::set)
-        .property("maxPreference", &InputData::max_preference)
-        .property("choiceCount", &InputData::choice_count)
-        .property("chooserCount", &InputData::chooser_count)
-        .property("setCount", &InputData::set_count);
-}
+public:
+    string name;
+    vector<string> cond;
+    int min, max, parts;
+    bool optional;
+};
+
+

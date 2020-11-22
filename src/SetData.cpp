@@ -17,11 +17,6 @@
 #include "SetData.h"
 
 SetData::SetData(string name)
-        : _name(std::move(name))
+        : name(std::move(name))
 {
-}
-
-string const& SetData::name() const
-{
-    return _name;
 }

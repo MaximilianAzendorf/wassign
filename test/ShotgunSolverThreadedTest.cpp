@@ -16,12 +16,7 @@
 
 #include "common.h"
 #include "common_inputs.h"
-#include "../src/Solution.h"
-#include "../src/InputReader.h"
-#include "../src/ConstraintParser.h"
 #include "../src/ShotgunSolver.h"
-#include "../src/Options.h"
-#include "../src/OutputWriter.h"
 #include "../src/Status.h"
 #include "../src/ShotgunSolverThreaded.h"
 
@@ -32,7 +27,7 @@ Solution solve(const_ptr<InputData> data, int timeout = 1)
     auto options = default_options();
     options->set_timeout_seconds(timeout);
 
-    ShotgunSolverThreaded solver(data, cs(data), sd(data), scoring(data, options), options);
+    ShotgunSolverThreaded solver(data, csa(data), sd(data), scoring(data, options), options);
     solver.start();
 
     Solution sol = solver.wait_for_result();
@@ -53,15 +48,15 @@ TEST_CASE(PREFIX "Minimal")
 TEST_CASE(PREFIX "Multiple sets with scheduling constraints")
 {
     auto input = R"(
-(set) s1
-(set) s2
-(choice) e1: 3-3
-(choice) e2: 1-3
-(choice) e3: 2-3
-(chooser) p1: 9 5 0
-(chooser) p2: 5 9 5
-(chooser) p3: 5 0 9
-(constraint) set of [e1] is [s1]
++set("s1");
++set("s2");
++choice("e1", bounds(3, 3));
++choice("e2", bounds(1, 3));
++choice("e3", bounds(2, 3));
++chooser("p1", [9, 5, 0]);
++chooser("p2", [5, 9, 5]);
++chooser("p3", [5, 0, 9]);
+add_constraint("set of [e1] is [s1]");
 )";
 
     auto data = parse_data(input);

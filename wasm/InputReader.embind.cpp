@@ -14,19 +14,14 @@
  * limitations under the License.
  */
 
-#include "../src/InputData.h"
+#include "../src/input/InputReader.h"
 
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-EMSCRIPTEN_BINDINGS(wassign_inputdata)
+EMSCRIPTEN_BINDINGS(wassign_inputreader)
 {
-    class_<InputData>("InputData")
-        .function("choice", &InputData::choice)
-        .function("chooser", &InputData::chooser)
-        .function("set", &InputData::set)
-        .property("maxPreference", &InputData::max_preference)
-        .property("choiceCount", &InputData::choice_count)
-        .property("chooserCount", &InputData::chooser_count)
-        .property("setCount", &InputData::set_count);
-}
+    class_<SetData>("InputReader")
+            .constructor()
+            .function("readInput", &InputReader::read_input);
+};

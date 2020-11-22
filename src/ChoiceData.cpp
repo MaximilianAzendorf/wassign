@@ -17,46 +17,26 @@
 #include "ChoiceData.h"
 
 ChoiceData::ChoiceData(string name, int min, int max)
-        : _name(std::move(name)), _min(min), _max(max), _continuation(std::nullopt)
+        : name(std::move(name)), min(min), max(max), continuation(std::nullopt)
 {
 }
 
 ChoiceData::ChoiceData(string name, int min, int max, int continuation)
-        : _name(std::move(name)), _min(min), _max(max), _continuation(continuation)
+        : name(std::move(name)), min(min), max(max), continuation(continuation)
 {
 }
 
 ChoiceData::ChoiceData(string name, int min, int max, optional<int> continuation)
-        : _name(std::move(name)), _min(min), _max(max), _continuation(continuation)
+        : name(std::move(name)), min(min), max(max), continuation(continuation)
 {
-}
-
-string const& ChoiceData::name() const
-{
-    return _name;
-}
-
-int ChoiceData::min() const
-{
-    return _min;
-}
-
-int ChoiceData::max() const
-{
-    return _max;
 }
 
 bool ChoiceData::has_continuation() const
 {
-    return _continuation.has_value();
+    return continuation.has_value();
 }
 
-int ChoiceData::continuation() const
+int ChoiceData::continuation_value() const
 {
-    return _continuation.value();
-}
-
-optional<int> ChoiceData::opt_continuation() const
-{
-    return _continuation;
+    return continuation.value();
 }

@@ -8,7 +8,7 @@ echo "                                        "
 
 set -e
 
-pushd $(git rev-parse --show-toplevel)
+pushd "$(git rev-parse --show-toplevel)"
     if [ ! -d "build-wasm" ]; then
         echo "Creating build directory..."
         mkdir build-wasm
@@ -50,6 +50,7 @@ pushd $(git rev-parse --show-toplevel)
         fi
 
         shopt -s extglob
+        shopt -s globstar
         echo "Building wassign..."
         (
             set -x; \
@@ -66,6 +67,9 @@ pushd $(git rev-parse --show-toplevel)
                 -s ERROR_ON_UNDEFINED_SYMBOLS=0 \
                 -I or-tools/wasmbuild/install/include \
                 -I boost \
+                -I ../deps/popl/include \
+                -I ../deps/magic_enum/include \
+                -I ../deps/chaiscript/include \
                 -Lor-tools/wasmbuild/install/lib \
                 -lm \
                 -lglog \
@@ -136,7 +140,7 @@ pushd $(git rev-parse --show-toplevel)
                 -lprotobuf \
                 -lscip \
                 -lz \
-                ../src/!(main).cpp \
+                ../src/**/!(main).cpp \
                 ../wasm/*.cpp \
                 -o bin/wassign.html \
         )

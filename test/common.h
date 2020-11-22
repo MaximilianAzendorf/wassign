@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "../deps/catch2/single_include/catch2/catch.hpp"
+#include <catch2/catch.hpp>
 
 #include "../src/Solution.h"
 #include "../src/InputData.h"
@@ -33,7 +33,7 @@ shared_ptr<Options> default_options();
 
 const_ptr<Scoring> scoring(const_ptr<InputData> inputData, const_ptr<Options> options);
 
-const_ptr<CriticalSetAnalysis> cs(const_ptr<InputData> data, bool analzye = true);
+const_ptr<CriticalSetAnalysis> csa(const_ptr<InputData> data, bool analzye = true);
 
 const_ptr<MipFlowStaticData> sd(const_ptr<InputData> data);
 

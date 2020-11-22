@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#include "../src/InputData.h"
+#include "../Types.h"
+#include "../SetData.h"
+#include "InputObject.h"
 
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-EMSCRIPTEN_BINDINGS(wassign_inputdata)
+class InputSetData : public SetData, public InputObject
 {
-    class_<InputData>("InputData")
-        .function("choice", &InputData::choice)
-        .function("chooser", &InputData::chooser)
-        .function("set", &InputData::set)
-        .property("maxPreference", &InputData::max_preference)
-        .property("choiceCount", &InputData::choice_count)
-        .property("chooserCount", &InputData::chooser_count)
-        .property("setCount", &InputData::set_count);
-}
+};
+
+

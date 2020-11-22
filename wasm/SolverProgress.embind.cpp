@@ -19,11 +19,11 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-EMSCRIPTEN_BINDINGS(solver_progress)
+EMSCRIPTEN_BINDINGS(wassign_solverprogress)
 {
     class_<ShotgunSolverThreadedProgress>("SolverProgress")
-            .property("millisecondsRemaining", &ShotgunSolverThreadedProgress::milliseconds_remaining)
-            .property("iterations", &ShotgunSolverThreadedProgress::iterations)
-            .property("bestSolution", &ShotgunSolverThreadedProgress::best_solution)
-            .property("bestScore", &ShotgunSolverThreadedProgress::best_score);
+            .property("millisecondsRemaining", &ShotgunSolverThreadedProgress::getMillisecondsRemaining)
+            .property("iterations", &ShotgunSolverThreadedProgress::getIterations)
+            .property("bestSolution", &ShotgunSolverThreadedProgress::getBestSolution)
+            .property("bestScore", &ShotgunSolverThreadedProgress::getBestScore);
 }

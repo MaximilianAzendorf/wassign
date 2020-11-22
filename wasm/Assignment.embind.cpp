@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-#include "../src/InputData.h"
+#include "../src/Assignment.h"
 
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-EMSCRIPTEN_BINDINGS(wassign_inputdata)
+EMSCRIPTEN_BINDINGS(wassign_assignment)
 {
-    class_<InputData>("InputData")
-        .function("choice", &InputData::choice)
-        .function("chooser", &InputData::chooser)
-        .function("set", &InputData::set)
-        .property("maxPreference", &InputData::max_preference)
-        .property("choiceCount", &InputData::choice_count)
-        .property("chooserCount", &InputData::chooser_count)
-        .property("setCount", &InputData::set_count);
-}
+    class_<Assignment>("Assignment")
+            .function("choiceOf", &Assignment::choice_of)
+            .function("choosersOrdered", &Assignment::choosers_ordered)
+            .function("choicesOrdered", &Assignment::choices_ordered)
+            .function("isInChoice", &Assignment::is_in_choice)
+            .function("maxUsedPreference", &Assignment::max_used_preference)
+            .function("inputData", &Assignment::input_data);
+};
