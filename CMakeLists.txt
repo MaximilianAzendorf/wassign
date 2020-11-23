@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.15)
 set(CMAKE_CXX_STANDARD 17)
 project(wassign)
 
-include_directories(build-wasm/or-tools/emscripten/upstream/emscripten/system/include)
 include_directories(
         deps/chaiscript/include
         deps/catch2/single_include
