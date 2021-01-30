@@ -59,7 +59,7 @@ set<pair<int, int>> AssignmentSolver::get_blocked_constraint_edges(shared_ptr<Sc
             }
             case ChoicesHaveSameChoosers:
             {
-                // This is handled elsewhere.
+                // This is handled with Constraints::get_dependent_choices.
                 //
                 break;
             }
@@ -73,7 +73,7 @@ set<pair<int, int>> AssignmentSolver::get_blocked_constraint_edges(shared_ptr<Sc
     return blockedEdges;
 }
 
-shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Scheduling const> const& scheduling,
+const_ptr<Assignment> AssignmentSolver::solve_with_limit(shared_ptr<Scheduling const> const& scheduling,
                                                                 int preferenceLimit,
                                                                 op::MPSolver& solver)
 {
@@ -220,10 +220,11 @@ shared_ptr<Assignment const> AssignmentSolver::solve_with_limit(shared_ptr<Sched
         }
     }
 
+    _lpCount++;
     return std::make_shared<Assignment const>(_inputData, data);
 }
 
-shared_ptr<Assignment const> AssignmentSolver::solve(const_ptr<Scheduling const> const& scheduling)
+const_ptr<Assignment> AssignmentSolver::solve(const_ptr<Scheduling const> const& scheduling)
 {
     auto solver = op::MPSolver("solver", op::MPSolver::CBC_MIXED_INTEGER_PROGRAMMING);
 
@@ -238,23 +239,32 @@ shared_ptr<Assignment const> AssignmentSolver::solve(const_ptr<Scheduling const>
 
     shared_ptr<Assignment const> bestAssignment = nullptr;
 
-    // We do binary search through all possible preference limits to find the lowest one.
-    //
-    do
+    if(!_options->greedy())
     {
-        int prefLimit = _inputData->preference_levels().at(prefIdx);
-        auto assignment = solve_with_limit(scheduling, prefLimit, solver);
-        if(assignment == nullptr)
+        // We do binary search through all possible preference limits to find the lowest one.
+        //
+        do
         {
-            minIdx = prefIdx + 1;
-        }
-        else
-        {
-            bestAssignment = assignment;
-            maxIdx = prefIdx - 1;
-        }
-        prefIdx = (maxIdx + minIdx) / 2;
-    } while(maxIdx > minIdx);
+            int prefLimit = _inputData->preference_levels().at(prefIdx);
+            auto assignment = solve_with_limit(scheduling, prefLimit, solver);
+            if (assignment == nullptr)
+            {
+                minIdx = prefIdx + 1;
+            }
+            else
+            {
+                bestAssignment = assignment;
+                maxIdx = prefIdx - 1;
+            }
+            prefIdx = (maxIdx + minIdx) / 2;
+        } while (maxIdx > minIdx);
+    }
+    else
+    {
+        // In greedy mode, we don't set a preference limit; just solve it.
+        //
+        bestAssignment = solve_with_limit(scheduling, _inputData->max_preference(), solver);
+    }
 
     return bestAssignment;
 }
@@ -270,4 +280,9 @@ AssignmentSolver::AssignmentSolver(const_ptr<InputData> inputData,
     _options(std::move(options)),
     _cancellation(std::move(cancellation))
 {
+}
+
+int AssignmentSolver::lp_count() const
+{
+    return _lpCount;
 }

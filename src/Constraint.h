@@ -128,8 +128,20 @@ public:
      */
     [[nodiscard]] bool is_assignment_constraint() const;
 
+    [[nodiscard]] int get_hash() const;
+
     bool operator == (Constraint const& other) const;
     bool operator != (Constraint const& other) const;
 };
 
-size_t hash_value(Constraint const& c);
+namespace std
+{
+    template <>
+    struct hash<Constraint>
+    {
+        size_t operator()(Constraint const& c) const
+        {
+            return c.get_hash();
+        }
+    };
+}

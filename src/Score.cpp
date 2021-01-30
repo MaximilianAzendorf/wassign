@@ -23,18 +23,26 @@
 
 string Score::to_str() const
 {
+    if(std::isnan(major)) return str(minor, 5);
     return "(" + str(major, 0) + ", " + str(minor, 5) + ")";
 }
 
 bool Score::is_finite() const
 {
-    return std::isfinite(minor) && std::isfinite(major);
+    return std::isfinite(minor) && (std::isfinite(major) || std::isnan(major));
 }
 
 
 bool Score::operator<(Score const& other) const
 {
-    if(major == other.major)
+    if(std::isinf(other.major) && std::isinf(other.minor))
+    {
+        // This special case is needed because (inf, inf) represents an infinite score which has to also be comparable
+        // to greedy scores (of the form (NaN, x)).
+        //
+        return true;
+    }
+    if(major == other.major || (std::isnan(major) && (std::isnan(other.major))))
     {
         return minor < other.minor;
     }
@@ -45,7 +53,7 @@ bool Score::operator<(Score const& other) const
 }
 bool Score::operator==(Score const& other) const
 {
-    return major == other.major && minor == other.minor;
+    return (major == other.major || (std::isnan(major) && std::isnan(other.major))) && minor == other.minor;
 }
 
 bool Score::operator!=(Score const& other) const

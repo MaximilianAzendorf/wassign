@@ -19,6 +19,7 @@
 #include <climits>
 #include <cassert>
 #include <utility>
+#include <algorithm>
 
 Assignment::Assignment(const_ptr<InputData> inputData, vector<vector<int>> data)
         : _inputData(std::move(inputData)), _data(std::move(data))

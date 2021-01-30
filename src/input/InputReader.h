@@ -24,6 +24,7 @@
 #include "InputChooserData.h"
 #include "ChaiscriptInterface.h"
 #include "InputDataBuilder.h"
+#include "ConstraintExpression.h"
 
 #include <chaiscript/chaiscript.hpp>
 
@@ -39,6 +40,9 @@ class InputReader
 
 private:
     cs::ChaiScript _chai;
+
+    shared_ptr<Options> _options;
+
     map<string, shared_ptr<InputSetData>> _setMap;
     map<string, shared_ptr<InputChoiceData>> _choiceMap;
     map<string, shared_ptr<InputChooserData>> _chooserMap;
@@ -48,9 +52,10 @@ private:
     vector<shared_ptr<InputChooserData>> _choosers;
     vector<shared_ptr<InputObject>> _inputObjects;
     vector<string> _constraintStrings;
+    vector<ConstraintExpression> _constraintExpressions;
 
 public:
-    explicit InputReader();
+    explicit InputReader(shared_ptr<Options> options);
 
     /**
      * Parses a string containing the input and prints status information.

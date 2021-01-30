@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 #include "InputDataBuilder.h"
-#include "ConstraintParser.h"
+#include "ConstraintBuilder.h"
 #include "../UnionFind.h"
 #include "../Constraints.h"
 
@@ -273,9 +273,9 @@ vector<Constraint> InputDataBuilder::parse_constraints(InputReader const& reader
 {
     vector<Constraint> constraints;
 
-    for(string const& extraConstraint : reader._constraintStrings)
+    for(auto const& extraConstraint : reader._constraintExpressions)
     {
-        for(Constraint constraint : ConstraintParser::parse(*_inputData, extraConstraint))
+        for(Constraint constraint : ConstraintBuilder::build(*_inputData, extraConstraint))
         {
             constraints.push_back(constraint);
         }

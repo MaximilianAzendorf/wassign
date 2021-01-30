@@ -17,7 +17,9 @@
 #pragma once
 
 #include "Types.h"
-
+/**
+ * Contains the input data of a single set.
+ */
 class SetData
 {
 public:

@@ -18,7 +18,7 @@
 
 #include "../src/input/InputReader.h"
 #include "../src/SetData.h"
-#include "../src/input/ConstraintParser.h"
+#include "../src/input/ConstraintBuilder.h"
 #include "../src/input/InputReader.h"
 
 #define PREFIX "[Input] "
@@ -30,7 +30,7 @@ TEST_CASE(PREFIX "Should parse everything without error")
 +set("x");
 +set("a-b'c d");
 
-+choice("w1", bounds(1, 9), optionalz);
++choice("w1", bounds(1, 9), optional);
 +choice("w2", bounds(1, 178));
 +choice("w3", bounds(12, 13), parts(12));
 
@@ -40,11 +40,12 @@ TEST_CASE(PREFIX "Should parse everything without error")
 +chooser("p4", [20, 5, 21]);
 +chooser("q5", [2, 4, 5]);
 
++constraint(choice("w1").set == set("x"));
+
 chooser("q5").name = "p5";
-add_constraint("set of [w1] is [x]");
 )";
 
-    auto reader = InputReader();
+    auto reader = InputReader(Options::default_options());
     auto data = reader.read_input(input);
 
     std::set<string> expectedSetNames = { ".", "x", "a-b'c d" };
@@ -76,7 +77,7 @@ TEST_CASE(PREFIX "Should create scheduling constraints for multi-part choices")
 +chooser("p", [1]);
 )";
 
-    auto data = InputReader().read_input(input);
+    auto data = InputReader(Options::default_options()).read_input(input);
 
     CHECK(data->scheduling_constraints().size() == 6);
 
@@ -101,7 +102,7 @@ TEST_CASE(PREFIX "Should create scheduling constraints for non-optional choices"
 +chooser("p", [1, 1]);
 )";
 
-    auto data = InputReader().read_input(input);
+    auto data = InputReader(Options::default_options()).read_input(input);
 
     // One ChoiceIsNotInSet for e and one ChoiceIsInSet for the auto-generated unassigned-set-filling-choice.
     REQUIRE(data->scheduling_constraints().size() == 2);
@@ -114,7 +115,7 @@ TEST_CASE(PREFIX "Should auto-generate set if none is given")
 +chooser("p1", [0]);
 )";
 
-    auto data = InputReader().read_input(input);
+    auto data = InputReader(Options::default_options()).read_input(input);
 
     REQUIRE(data->set_count() == 1);
 }
@@ -126,7 +127,7 @@ TEST_CASE(PREFIX "Should not accept too many preferences")
 +chooser("p1", [0, 1]);
 )";
 
-    REQUIRE_THROWS_AS(InputReader().read_input(input), InputException);
+    REQUIRE_THROWS_AS(InputReader(Options::default_options()).read_input(input), InputException);
 }
 
 TEST_CASE(PREFIX "Should not accept too few preferences")
@@ -137,7 +138,7 @@ TEST_CASE(PREFIX "Should not accept too few preferences")
 +chooser("p1", [0]);
 )";
 
-    REQUIRE_THROWS_AS(InputReader().read_input(input), InputException);
+    REQUIRE_THROWS_AS(InputReader(Options::default_options()).read_input(input), InputException);
 }
 
 TEST_CASE(PREFIX "Should not accept choices with zero minimum chooser count")
@@ -148,7 +149,7 @@ TEST_CASE(PREFIX "Should not accept choices with zero minimum chooser count")
 +chooser("p", [1, 1]);
 )";
 
-    REQUIRE_THROWS_AS(InputReader().read_input(input), InputException);
+    REQUIRE_THROWS_AS(InputReader(Options::default_options()).read_input(input), InputException);
 }
 
 TEST_CASE(PREFIX "Should not accept input without choices")
@@ -158,7 +159,7 @@ TEST_CASE(PREFIX "Should not accept input without choices")
 +chooser("p1", []);
 )";
 
-    REQUIRE_THROWS_AS(InputReader().read_input(input), InputException);
+    REQUIRE_THROWS_AS(InputReader(Options::default_options()).read_input(input), InputException);
 }
 
 TEST_CASE(PREFIX "Should not accept input without choosers")
@@ -168,5 +169,5 @@ TEST_CASE(PREFIX "Should not accept input without choosers")
 +choice("w1", max(1));
 )";
 
-    REQUIRE_THROWS_AS(InputReader().read_input(input), InputException);
+    REQUIRE_THROWS_AS(InputReader(Options::default_options()).read_input(input), InputException);
 }

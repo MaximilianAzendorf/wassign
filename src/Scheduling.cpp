@@ -97,8 +97,3 @@ bool Scheduling::operator!=(Scheduling const& other) const
 {
     return !(*this == other);
 }
-
-size_t hash_value(Scheduling const& scheduling)
-{
-    return scheduling.get_hash();
-}

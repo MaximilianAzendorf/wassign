@@ -18,14 +18,18 @@
 
 #include "Types.h"
 
+/**
+ * Represents the score of a single solution. If major is NaN, major is ignored and the score consists of only the
+ * single minor value.
+ */
 struct Score
 {
     float major;
     float minor;
 
-    string to_str() const;
+    [[nodiscard]] string to_str() const;
 
-    bool is_finite() const;
+    [[nodiscard]] bool is_finite() const;
 
     bool operator <(Score const& other) const;
 

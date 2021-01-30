@@ -38,8 +38,8 @@ ShotgunSolver::ShotgunSolver(const_ptr<InputData> inputData,
     _cancellation(std::move(cancellation)),
     _scoring(std::move(scoring))
 {
-    _hillClimbingSolver = std::make_unique<HillClimbingSolver>(_inputData, csAnalysis, staticData, _scoring, _options);
-    _schedulingSolver = std::make_unique<SchedulingSolver>(_inputData, csAnalysis, _options);
+    _hillClimbingSolver = std::make_unique<HillClimbingSolver>(_inputData, csAnalysis, staticData, _scoring, _options, _cancellation);
+    _schedulingSolver = std::make_unique<SchedulingSolver>(_inputData, csAnalysis, _options, _cancellation);
 
     _progress.best_score = {.major = INFINITY, .minor = INFINITY};
     _progress.best_solution = Solution::invalid();
@@ -73,7 +73,9 @@ int ShotgunSolver::iterate(int numberOfIterations)
     return iteration;
 }
 
-ShotgunSolverProgress const& ShotgunSolver::progress() const
+ShotgunSolverProgress const& ShotgunSolver::progress()
 {
+    _progress.assignments = _hillClimbingSolver->assignment_count();
+    _progress.lp = _hillClimbingSolver->lp_count();
     return _progress;
 }

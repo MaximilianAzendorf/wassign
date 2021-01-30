@@ -36,8 +36,7 @@ inline string pad(string x, int count, char character)
     return x;
 }
 
-template<>
-inline string str(secondsf const& x)
+inline string str_secondsf(secondsf const& x)
 {
     double total = x.count() / (60 * 60);
 
@@ -56,16 +55,10 @@ inline string str(secondsf const& x)
         + ":" + pad(str(seconds), 2, '0');
 }
 
-template<>
-inline string str(seconds const& x)
+template<typename Rep, typename Period>
+inline string str(std::chrono::duration<Rep, Period> const& x)
 {
-    return str(std::chrono::duration_cast<secondsf>(x));
-}
-
-template<>
-inline string str(nanoseconds const& x)
-{
-    return str(std::chrono::duration_cast<secondsf>(x));
+    return str_secondsf(std::chrono::duration_cast<secondsf>(x));
 }
 
 inline string str(double x, int precision)
@@ -85,6 +78,17 @@ inline datetime time_never()
     return std::chrono::system_clock::now() + seconds(3153600000);
 }
 
+inline vector<int> parse_ints(vector<string> const& strings)
+{
+    vector<int> res(strings.size());
+    for(int i = 0; i < strings.size(); i++)
+    {
+        res[i] = std::stoi(strings[i]);
+    }
+
+    return res;
+}
+
 inline vector<int> riffle_shuffle(vector<int> const& v1, vector<int> const& v2)
 {
     vector<int> res(v1.size() + v2.size(), 0);
@@ -102,4 +106,16 @@ inline vector<int> riffle_shuffle(vector<int> const& v1, vector<int> const& v2)
 inline bool is_set(std::shared_future<void> flag)
 {
     return flag.valid() && flag.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+}
+
+namespace std
+{
+    template <>
+    struct hash<pair<int, int>>
+    {
+        size_t operator()(pair<int, int> const& pair) const
+        {
+            return pair.first + 197 * pair.second;
+        }
+    };
 }

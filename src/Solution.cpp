@@ -15,6 +15,7 @@
  */
 
 #include "Solution.h"
+#include <cassert>
 
 Solution::Solution()
         : _scheduling(nullptr), _assignment(nullptr)

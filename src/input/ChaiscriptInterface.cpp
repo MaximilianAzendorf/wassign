@@ -13,7 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "ChaiscriptInterface.h"
+#include "../Util.h"
+
+#include <utility>
+
+#include <chaiscript/extras/math.hpp>
+#include <chaiscript/extras/string_methods.hpp>
 
 void unsupported_value(Tagged const& t)
 {
@@ -25,8 +32,30 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     auto& c = reader._chai;
     auto readerRef = std::ref(reader);
 
+    c.add(cs::extras::math::bootstrap());
+    c.add(cs::extras::string_methods::bootstrap());
+
+    c.add(cs::bootstrap::standard_library::vector_type<vector<int>>("vectorInt"));
+    c.add(cs::bootstrap::standard_library::vector_type<vector<string>>("vectorString"));
+    c.add(cs::bootstrap::standard_library::vector_type<vector<vector<string>>>("vectorString2d"));
+
     c.add(cs::vector_conversion<vector<int>>());
+    c.add(cs::vector_conversion<vector<string>>());
+    c.add(cs::vector_conversion<vector<vector<string>>>());
     c.add(cs::vector_conversion<vector<Tagged>>());
+
+    c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::end), "end");
+    c.add(cs::fun(&ChaiscriptInterface::slice), "slice");
+
+    c.add(cs::fun(&ChaiscriptInterface::set_arguments, readerRef), "set_arguments");
+
+    c.add(cs::fun(&ChaiscriptInterface::range), "range");
+
+    c.add(cs::fun(&ChaiscriptInterface::string_int_append), "+");
+    c.add(cs::fun(&ChaiscriptInterface::int_string_append), "+");
+
+    c.add(cs::user_type<ConstraintExpression>(), "__cexp");
+    c.add(cs::user_type<ConstraintExpressionAccessor>(), "__cexpAccessor");
 
     c.add(cs::user_type<InputSetData>(), "set");
     c.add(cs::user_type<SetData>(), "rawSet");
@@ -45,9 +74,21 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChooserData::name), "name");
     c.add(cs::fun(&ChooserData::preferences), "preferences");
 
+    c.add(cs::user_type<rapidcsv::Document>(), "csvDoc");
+    c.add(cs::fun(&ChaiscriptInterface::get_csv_rows), "rows");
+    c.add(cs::fun(&ChaiscriptInterface::get_csv_row), "row");
+    c.add(cs::fun(&ChaiscriptInterface::get_csv_row), "[]");
+
     c.add(cs::base_class<SetData, InputSetData>());
     c.add(cs::base_class<ProtoChoiceData, InputChoiceData>());
     c.add(cs::base_class<ChooserData, InputChooserData>());
+
+    c.add(cs::type_conversion<InputSetData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_set_accessor_conversion));
+    c.add(cs::type_conversion<InputChoiceData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_choice_accessor_conversion));
+    c.add(cs::type_conversion<InputChooserData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_chooser_accessor_conversion));
+    c.add(cs::type_conversion<int, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_integer_accessor_conversion));
+    c.add(cs::type_conversion<string, int>(&ChaiscriptInterface::int_string_conversion));
+    c.add(cs::type_conversion<int, string>(&ChaiscriptInterface::string_int_conversion));
 
     c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, string const&)>(&ChaiscriptInterface::set), readerRef), "set");
     c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, string const&, vector<Tagged> const&)>(&ChaiscriptInterface::set), readerRef), "set");
@@ -62,6 +103,18 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<int> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<Tagged> const& t, vector<int> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
+    c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<string> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
+    c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<Tagged> const& t, vector<string> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
+
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSetData> const&)>(&ChaiscriptInterface::cexp_choices)), "choices");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChooserData> const&)>(&ChaiscriptInterface::cexp_choices)), "choices");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&)>(&ChaiscriptInterface::cexp_set)), "set");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&, int)>(&ChaiscriptInterface::cexp_set)), "set");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&)>(&ChaiscriptInterface::cexp_choosers)), "choosers");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&, int)>(&ChaiscriptInterface::cexp_choosers)), "choosers");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSetData> const&)>(&ChaiscriptInterface::cexp_size)), "size");
+
+    c.add(cs::fun(&ChaiscriptInterface::constraint), "constraint");
 
     c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, shared_ptr<InputSetData>)>(&ChaiscriptInterface::add), readerRef), "add");
     c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, shared_ptr<InputSetData>)>(&ChaiscriptInterface::add), readerRef), "+");
@@ -69,15 +122,28 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(static_cast<shared_ptr<InputChoiceData> (*)(InputReader&, shared_ptr<InputChoiceData>)>(&ChaiscriptInterface::add), readerRef), "+");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, shared_ptr<InputChooserData>)>(&ChaiscriptInterface::add), readerRef), "add");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, shared_ptr<InputChooserData>)>(&ChaiscriptInterface::add), readerRef), "+");
+    c.add(cs::fun(static_cast<ConstraintExpression (*)(InputReader&, ConstraintExpression)>(&ChaiscriptInterface::add), readerRef), "add");
+    c.add(cs::fun(static_cast<ConstraintExpression (*)(InputReader&, ConstraintExpression)>(&ChaiscriptInterface::add), readerRef), "+");
 
+    c.add(cs::fun(&ChaiscriptInterface::cexp_eq), "==");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_neq), "!=");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_lt), "<");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_gt), ">");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_leq), "<=");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_geq), ">=");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_contains), "contains");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_subset), "subsetOf");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_superset), "supersetOf");
+
+    c.add(cs::fun(&ChaiscriptInterface::read_file_string), "readFile");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&, char)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
+
+    c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::optional), "optional");
     c.add(cs::fun(&ChaiscriptInterface::min), "min");
     c.add(cs::fun(&ChaiscriptInterface::max), "max");
     c.add(cs::fun(&ChaiscriptInterface::parts), "parts");
     c.add(cs::fun(&ChaiscriptInterface::bounds), "bounds");
-    c.add(cs::fun(static_cast<Tagged (*)()>(&ChaiscriptInterface::optional)), "optional");
-    c.add(cs::fun(static_cast<Tagged (*)(bool)>(&ChaiscriptInterface::optional)), "optional");
-
-    c.add(cs::fun(&ChaiscriptInterface::add_constraint, readerRef), "add_constraint");
 }
 
 shared_ptr<InputSetData> ChaiscriptInterface::set(InputReader& reader, string const& name)
@@ -189,14 +255,12 @@ shared_ptr<InputChooserData> ChaiscriptInterface::chooser(InputReader& reader, s
         return reader._chooserMap[foundName];
     }
 
-    return chooser(reader, name, {});
+    return chooser(reader, name, vector<int>());
 }
 
 shared_ptr<InputChooserData>
 ChaiscriptInterface::chooser(InputReader& reader, string const& name, vector<int> const& preferences)
 {
-    (void)reader;
-
     return chooser(reader, name, vector<Tagged>{}, preferences);
 }
 
@@ -214,6 +278,25 @@ ChaiscriptInterface::chooser(InputReader& reader, string const& name, vector<Tag
 
     return newChooser;
 }
+
+shared_ptr<InputChooserData>
+ChaiscriptInterface::chooser(InputReader& reader, string const& name, vector<string> const& preferences)
+{
+    return chooser(reader, name, vector<Tagged>{}, parse_ints(preferences));
+}
+
+shared_ptr<InputChooserData>
+ChaiscriptInterface::chooser(InputReader& reader, string const& name, vector<Tagged> const& t,
+                             vector<string> const& preferences)
+{
+    return chooser(reader, name, t, parse_ints(preferences));
+}
+
+ConstraintExpression ChaiscriptInterface::constraint(ConstraintExpression constraintExpression)
+{
+    return constraintExpression;
+}
+
 
 shared_ptr<InputSetData> ChaiscriptInterface::add(InputReader& reader, shared_ptr<InputSetData> set)
 {
@@ -257,6 +340,12 @@ shared_ptr<InputChooserData> ChaiscriptInterface::add(InputReader& reader, share
     return chooser;
 }
 
+ConstraintExpression ChaiscriptInterface::add(InputReader& reader, ConstraintExpression constraintExpression)
+{
+    reader._constraintExpressions.push_back(constraintExpression);
+    return constraintExpression;
+}
+
 Tagged ChaiscriptInterface::min(int min)
 {
     return Tagged(Min, min);
@@ -277,17 +366,195 @@ Tagged ChaiscriptInterface::parts(int parts)
     return Tagged(Parts, parts);
 }
 
-Tagged ChaiscriptInterface::optional()
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputSetData> const& set)
 {
-    return Tagged(Optional, 1);
+    return { .type = Set, .subType = Choice, .name = set->name, .part = 0 };
 }
 
-Tagged ChaiscriptInterface::optional(bool optional)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputChooserData> const& chooser)
 {
-    return Tagged(Optional, optional ? 1 : 0);
+    return { .type = Chooser, .subType = Choice, .name = chooser->name, .part = 0 };
 }
 
-void ChaiscriptInterface::add_constraint(InputReader& reader, string const& constraintStr)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_set(shared_ptr<InputChoiceData> const& choice)
 {
-    reader._constraintStrings.push_back(constraintStr);
+    return cexp_set(choice, 0);
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_set(shared_ptr<InputChoiceData> const& choice, int part)
+{
+    return { .type = Choice, .subType = Set, .name = choice->name, .part = part };
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choosers(shared_ptr<InputChoiceData> const& choice)
+{
+    return cexp_choosers(choice, 0);
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choosers(shared_ptr<InputChoiceData> const& choice, int part)
+{
+    return { .type = Choice, .subType = Chooser, .name = choice->name, .part = part };
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_size(shared_ptr<InputSetData> const& set)
+{
+    return { .type = Set, .subType = Size, .name = set->name, .part = 0 };
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_eq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = REq}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_neq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RNeq}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_lt(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RLt}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_gt(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RGt}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_leq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RLeq}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_geq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RGeq}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_contains(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RContains}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_subset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RSubset}, .right = std::move(right)};
+}
+
+ConstraintExpression ChaiscriptInterface::cexp_superset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RSuperset}, .right = std::move(right)};
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_set_accessor_conversion(InputSetData const& set)
+{
+    return { .type = Set, .subType = NotSet, .name = set.name, .part = 0 };
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choice_accessor_conversion(InputChoiceData const& choice)
+{
+    return { .type = Choice, .subType = NotSet, .name = choice.name, .part = 0 };
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_chooser_accessor_conversion(InputChooserData const& chooser)
+{
+    return { .type = Chooser, .subType = NotSet, .name = chooser.name, .part = 0 };
+}
+
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_integer_accessor_conversion(int const& integer)
+{
+    return { .type = Integer, .subType = NotSet, .name = str(integer), .part = 0 };
+}
+
+int ChaiscriptInterface::int_string_conversion(string const& string)
+{
+    return std::stoi(string);
+}
+
+string ChaiscriptInterface::read_file_string(string const& filename)
+{
+    std::ifstream file(filename);
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+vector<string> ChaiscriptInterface::get_csv_row(rapidcsv::Document const& doc, int index)
+{
+    return doc.GetRow<string>(index);
+}
+
+vector<vector<string>> ChaiscriptInterface::get_csv_rows(rapidcsv::Document const& doc)
+{
+    vector<vector<string>> rows;
+
+    for(int i = 0; i < doc.GetRowCount(); i++)
+    {
+        rows.push_back(doc.GetRow<string>(i));
+    }
+
+    return rows;
+}
+
+shared_ptr<rapidcsv::Document> ChaiscriptInterface::read_file_csv(string const& filename)
+{
+    return read_file_csv(filename, ',');
+}
+
+shared_ptr<rapidcsv::Document> ChaiscriptInterface::read_file_csv(string const& filename, char separator)
+{
+    return std::make_shared<rapidcsv::Document>(filename, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(separator));
+}
+
+vector<string> ChaiscriptInterface::slice(vector<string> const& v, int from, int to)
+{
+    vector<string> slice;
+
+    if(to == end) to = v.size() - 1;
+
+    for(int i = from; i <= to; i++)
+    {
+        slice.push_back(v[i]);
+    }
+
+    return slice;
+}
+
+void ChaiscriptInterface::set_arguments(InputReader& reader, vector<string> args)
+{
+    args.insert(args.begin(), "");
+    vector<char*> ptrVector(args.size());
+    for(int i = 0; i < args.size(); i++)
+    {
+        ptrVector[i] = args[i].data();
+    }
+
+    reader._options->parse_override(args.size(), ptrVector.data());
+}
+
+string ChaiscriptInterface::string_int_conversion(int n)
+{
+    return str(n);
+}
+
+string ChaiscriptInterface::string_int_append(string const& s, int n)
+{
+    return s + str(n);
+}
+
+string ChaiscriptInterface::int_string_append(int n, string const& s)
+{
+    return str(n) + s;
+}
+
+vector<int> ChaiscriptInterface::range(int from, int to)
+{
+    vector<int> res;
+
+    for(int i = from; i <= to; i++)
+    {
+        res.push_back(i);
+    }
+
+    return res;
 }

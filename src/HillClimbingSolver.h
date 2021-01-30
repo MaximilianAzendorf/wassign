@@ -37,9 +37,13 @@ private:
     const_ptr<Options> _options;
     cancel_token _cancellation;
 
+    int _assignmentCount;
+
     AssignmentSolver _assignmentSolver;
 
     int max_neighbor_key();
+
+    shared_ptr<Assignment const> solve_assignment(const_ptr<Scheduling const> const& scheduling);
 
     shared_ptr<Scheduling const> neighbor(shared_ptr<Scheduling const> const& scheduling, int neighborKey);
 
@@ -57,6 +61,9 @@ public:
                        const_ptr<Scoring> scoring,
                        const_ptr<Options> options,
                        cancel_token cancellation = cancel_token());
+
+    [[nodiscard]] int assignment_count() const;
+    [[nodiscard]] int lp_count() const;
 
     Solution solve(const_ptr<Scheduling> const& scheduling);
 };

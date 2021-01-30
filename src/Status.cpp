@@ -17,6 +17,7 @@
 #include "Status.h"
 
 #include <iostream>
+#include <sstream>
 
 bool Status::_output = false;
 

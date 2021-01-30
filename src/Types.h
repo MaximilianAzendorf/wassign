@@ -31,8 +31,6 @@
 #include <thread>
 #include <future>
 
-#include <boost/functional/hash.hpp>
-
 using string = std::string;
 
 template<typename T>
@@ -51,10 +49,10 @@ template<typename T>
 using stack = std::stack<T>;
 
 template<typename TKey, typename TValue>
-using map = std::unordered_map<TKey, TValue, boost::hash<TKey>>;
+using map = std::unordered_map<TKey, TValue>;
 
 template<typename T>
-using set = std::unordered_set<T, boost::hash<T>>;
+using set = std::unordered_set<T>;
 
 template<typename T>
 using ordered_set = std::set<T>;

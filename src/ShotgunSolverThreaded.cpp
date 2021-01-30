@@ -38,6 +38,16 @@ Score ShotgunSolverThreadedProgress::getBestScore() const
     return best_score;
 }
 
+int ShotgunSolverThreadedProgress::getAssignments() const
+{
+    return assignments;
+}
+
+int ShotgunSolverThreadedProgress::getLp() const
+{
+    return lp;
+}
+
 ShotgunSolverThreaded::ShotgunSolverThreaded(const_ptr<InputData> inputData,
                                              const_ptr<CriticalSetAnalysis> csAnalysis,
                                              const_ptr<MipFlowStaticData> staticData,
@@ -53,6 +63,7 @@ ShotgunSolverThreaded::ShotgunSolverThreaded(const_ptr<InputData> inputData,
 
 void ShotgunSolverThreaded::thread_loop(int tid, cancel_token cancellation)
 {
+    _threadStartTimes[tid] = time_now();
     _threadSolvers[tid] = std::make_unique<ShotgunSolver>(_inputData, _csAnalysis, _staticData, _scoring, _options,
                                                           std::move(cancellation));
 
@@ -60,16 +71,12 @@ void ShotgunSolverThreaded::thread_loop(int tid, cancel_token cancellation)
 
     while (startTime + seconds(_options->timeout_seconds()) > time_now())
     {
-        _threadSolvers[tid]->iterate();
+        int iterationsDone = _threadSolvers[tid]->iterate();
 
-        if(_inputData->set_count() == 1)
+        if(_inputData->set_count() == 1 || iterationsDone < 1)
         {
             _threadFinishedEarly[tid] = true;
             break;
-        }
-        else
-        {
-            (void)tid;
         }
     }
 }
@@ -80,7 +87,7 @@ bool ShotgunSolverThreaded::is_running() const
 
     for(int tid = 0; tid < _threads.size(); tid++)
     {
-        if(time_now() > (_threadStartTimes[tid] + seconds(_options->timeout_seconds())) && !_threadFinishedEarly[tid])
+        if(time_now() <= (_threadStartTimes[tid] + seconds(_options->timeout_seconds())) && !_threadFinishedEarly[tid])
         {
             return true;
         }
@@ -134,6 +141,11 @@ void ShotgunSolverThreaded::cancel()
 
 Solution ShotgunSolverThreaded::wait_for_result()
 {
+    if(!is_running())
+    {
+        _cancellationSource.set_value();
+    }
+
     for(int tid = 0; tid < _threads.size(); tid++)
     {
         if(_threads[tid].joinable()) _threads[tid].join();
@@ -153,9 +165,11 @@ ShotgunSolverThreadedProgress ShotgunSolverThreaded::progress() const
 
     for(int tid = 0; tid < _threads.size(); tid++)
     {
+        auto elapsed = (time_now() - _threadStartTimes[tid]);
+        auto remaining = std::chrono::duration_cast<milliseconds>(seconds(_options->timeout_seconds()) - elapsed);
         progress.milliseconds_remaining = std::max(
                 progress.milliseconds_remaining,
-                (long)(milliseconds(_options->timeout_seconds() * 1000) - (time_now() - _threadStartTimes[tid])).count());
+                (long)remaining.count());
 
         ShotgunSolverProgress threadProgress = _threadSolvers[tid]->progress();
 
@@ -166,6 +180,8 @@ ShotgunSolverThreadedProgress ShotgunSolverThreaded::progress() const
         }
 
         progress.iterations += threadProgress.iterations;
+        progress.assignments += threadProgress.assignments;
+        progress.lp += threadProgress.lp;
     }
 
     return progress;

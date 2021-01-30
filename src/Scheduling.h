@@ -45,6 +45,16 @@ public:
     bool operator != (Scheduling const& other) const;
 };
 
-size_t hash_value(Scheduling const& scheduling);
+namespace std
+{
+    template <>
+    struct hash<Scheduling>
+    {
+        size_t operator()(Scheduling const& scheduling) const
+        {
+            return scheduling.get_hash();
+        }
+    };
+}
 
 

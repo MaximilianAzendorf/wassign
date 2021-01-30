@@ -211,10 +211,10 @@ Score Scoring::evaluate(Solution const& solution) const
         return {.major = INFINITY, .minor = INFINITY};
     }
 
-    auto major = (float)evaluate_major(solution);
+    auto major = _options->greedy() ? NAN : (float)evaluate_major(solution);
     auto minor = (float)evaluate_minor(solution);
 
-    if(std::isfinite(major) && std::isfinite(minor))
+    if((std::isfinite(major) || std::isnan(major)) && std::isfinite(minor))
     {
         return {.major = major, .minor = minor};
     }

@@ -19,10 +19,11 @@
 #include "Version.h"
 #include "Options.h"
 #include "Status.h"
-#include "InputReader.h"
 #include "ShotgunSolver.h"
 #include "OutputWriter.h"
-#include "ConstraintParser.h"
+#include "input/InputReader.h"
+#include "input/ConstraintBuilder.h"
+#include "ShotgunSolverThreaded.h"
 
 #include <iostream>
 #include <fstream>
@@ -80,7 +81,6 @@ void output_string(string const& text, string const& fileSuffix, const_ptr<Optio
 
 void signal_handler(int signal)
 {
-    (void)signal;
     Status::error("Abort on user request (signal " + str(signal) + ").");
     exit(signal);
 }
@@ -94,6 +94,26 @@ void set_signal_handler(int signal, sighandler_t handler)
     sigaction(signal, &action, &old_action);
 }
 
+void track_progress(ShotgunSolverThreaded& solver)
+{
+    const auto outputInterval = milliseconds(1000);
+
+    auto lastOutput = time_now();
+    while(solver.is_running())
+    {
+        if(time_now() > lastOutput + outputInterval)
+        {
+            auto progress = solver.progress();
+            string scoreStr = progress.getBestScore().is_finite() ? "Best score: " + progress.getBestScore().to_str() : "No solution yet";
+            Status::info("[Status] " + scoreStr
+            + "; Time remaining: " + str(milliseconds(progress.getMillisecondsRemaining()))
+            + "; Iterations (A/L): " + str(progress.getIterations()) + " (" + str(progress.getAssignments()) + "/" + str(progress.getLp()) + ")");
+            lastOutput = time_now();
+        }
+        std::this_thread::sleep_for(milliseconds(5));
+    }
+}
+
 int main(int argc, char** argv)
 {
     set_signal_handler(SIGINT, signal_handler);
@@ -103,8 +123,8 @@ int main(int argc, char** argv)
     {
         Rng::seed(time_now().time_since_epoch().count());
 
-        const string header = "wassign [Version " WASSIGN_VERSION "]\n(c) 2020 Maximilian Azendorf\n";
-        const_ptr<Options> options = std::make_shared<Options>();
+        const string header = "wassign [Version " WASSIGN_VERSION "]\n(c) 2021 Maximilian Azendorf\n";
+        shared_ptr<Options> options = std::make_shared<Options>();
 
         auto optionsStatus = Options::parse(argc, argv, header, options);
 
@@ -124,19 +144,42 @@ int main(int argc, char** argv)
         }
 
         string inputString = readInputString(options);
-        auto inputData = InputReader::read_input(inputString);
-        inputData->build_constraints(ConstraintParser::parse);
+
+        Status::info("Processing input.");
+        auto inputData = InputReader(options).read_input(inputString);
+
+        Status::info("Read " + str(inputData->set_count()) + " set(s), " + str(inputData->choice_count()) + " choice(s) and " + str(inputData->chooser_count()) + " chooser(s).");
+
+        Status::info("Found " + str(inputData->scheduling_constraints().size()) + " scheduling and "
+            + str(inputData->assignment_constraints().size()) + " assignment constraints.");
 
         if(std::pow((double)inputData->max_preference(), options->preference_exponent()) * inputData->chooser_count() >= (double)LONG_MAX)
         {
             Status::warning("The preference exponent is too large; computations may cause an integer overflow");
         }
 
-        Status::info("Found " + str(inputData->scheduling_constraints().size()) + " scheduling and "
-            + str(inputData->assignment_constraints().size()) + " assignment constraints.");
-
-        // TODO: Implement
         Solution solution = Solution::invalid();
+
+        auto scoring = std::make_shared<Scoring>(inputData, options);
+
+        bool doCsAnalysis = !options->no_critical_sets() && !options->greedy() && inputData->set_count() > 1;
+        Status::info(doCsAnalysis ? "Performing critical set analysis." : "Skipping critical set analysis.");
+        auto csAnalysis = std::make_shared<CriticalSetAnalysis>(inputData, doCsAnalysis);
+
+        if(doCsAnalysis)
+        {
+            Status::info("Critical set analysis gives a preference bound of " + str(csAnalysis->preference_bound()) + ".");
+        }
+
+        Status::info("Generating static data and starting solver.");
+        auto staticData = std::make_shared<MipFlowStaticData>(inputData);
+        ShotgunSolverThreaded solver(inputData, csAnalysis, staticData, scoring, options);
+        solver.start();
+
+        track_progress(solver);
+
+        Status::info("Solver finished, waiting for result.");
+        solution = solver.wait_for_result();
 
         if (solution.is_invalid())
         {
@@ -145,7 +188,7 @@ int main(int argc, char** argv)
         else
         {
             Status::info_important("Solution found.");
-            Status::info("Solution score: " + Scoring(inputData, options).evaluate(solution).to_str());
+            Status::info("Solution score: " + scoring->evaluate(solution).to_str());
             if (inputData->set_count() > 1)
             {
                 string schedulingSolutionString = OutputWriter::write_scheduling_solution(solution);

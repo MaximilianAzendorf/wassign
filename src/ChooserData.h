@@ -18,10 +18,20 @@
 
 #include "Types.h"
 
+/**
+ * Contains the input data of a single chooser.
+ */
 class ChooserData
 {
 public:
+    /**
+     * The name of the chooser.
+     */
     string name;
+
+    /**
+     * The preferences of the chooser.
+     */
     vector<int> preferences;
 
     ChooserData() = default;

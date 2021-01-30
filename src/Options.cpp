@@ -49,10 +49,8 @@ int Options::parse_time(string value)
     return time;
 }
 
-OptionsParseStatus Options::parse(int argc, char **argv, string const& header, const_ptr<Options>& outResult)
+OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, string const& header)
 {
-    shared_ptr<Options> result = Options::default_options();
-
     OptionParser op("Allowed options");
 
     auto helpOpt = op.add<Switch>("h", "help", "Show this help.");
@@ -66,15 +64,16 @@ OptionsParseStatus Options::parse(int argc, char **argv, string const& header, c
     auto csTimeoutOpt = op.add<Value<string>>("m", "cs-timeout", "Sets the timeout for attempting to satisfy critical sets of a certain preference level.");
     auto noCsOpt = op.add<Switch>("", "no-cs", "Do not perform critical set analysis");
     auto threadsOpt = op.add<Value<int>>("j", "threads", "Number of threads to use for computation.");
+    auto greedyOpt = op.add<Switch>("g", "greedy", "Do not use the worst-preference scoring as primary score and just use sum-based scoring instead.");
 
     op.parse(argc, argv);
 
-    if(helpOpt->is_set())
+    if(helpOpt->is_set() && newOpt)
     {
         std::cout << header << std::endl << op << std::endl;
         return EXIT;
     }
-    else if(versionOpt->is_set())
+    else if(versionOpt->is_set() && newOpt)
     {
         std::cout << WASSIGN_VERSION << std::endl;
         return EXIT;
@@ -85,30 +84,49 @@ OptionsParseStatus Options::parse(int argc, char **argv, string const& header, c
     }
     else
     {
-        vector<string> inputFiles;
-        for(int i = 0; i < inputOpt->count(); i++)
+        if(inputOpt->is_set())
         {
-            inputFiles.push_back(inputOpt->value(i));
+            vector<string> inputFiles;
+            for (int i = 0; i < inputOpt->count(); i++)
+            {
+                inputFiles.push_back(inputOpt->value(i));
+            }
+
+            set_input_files(inputFiles);
         }
 
-        result->set_input_files(inputFiles);
-        if(outputOpt->is_set()) result->set_output_file(outputOpt->value());
-        if(verbosityOpt->is_set()) result->set_verbosity(verbosityOpt->value());
-        if(anyOpt->is_set()) result->set_any(true);
-        if(prefExpOpt->is_set()) result->set_preference_exponent(prefExpOpt->value());
-        if(timeoutOpt->is_set()) result->set_timeout_seconds(parse_time(timeoutOpt->value()));
-        if(csTimeoutOpt->is_set()) result->set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
-        if(noCsOpt->is_set()) result->set_no_critical_sets(true);
-        if(threadsOpt->is_set()) result->set_thread_count(threadsOpt->value());
+        if(outputOpt->is_set()) set_output_file(outputOpt->value());
+        if(verbosityOpt->is_set()) set_verbosity(verbosityOpt->value());
+        if(anyOpt->is_set()) set_any(true);
+        if(prefExpOpt->is_set()) set_preference_exponent(prefExpOpt->value());
+        if(timeoutOpt->is_set()) set_timeout_seconds(parse_time(timeoutOpt->value()));
+        if(csTimeoutOpt->is_set()) set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
+        if(noCsOpt->is_set()) set_no_critical_sets(true);
+        if(threadsOpt->is_set()) set_thread_count(threadsOpt->value());
+        if(greedyOpt->is_set()) set_greedy(true);
 
-        if(result->verbosity() > 0)
+        if(verbosity() > 0 && newOpt)
         {
             std::cerr << header << std::endl;
         }
 
-        outResult = result;
         return OK;
     }
+}
+
+OptionsParseStatus Options::parse_override(int argc, char **argv)
+{
+    return parse_base(argc, argv, false, "");
+}
+
+OptionsParseStatus Options::parse(int argc, char **argv, string const& header, shared_ptr<Options>& outResult)
+{
+    shared_ptr<Options> result = Options::default_options();
+
+    auto res = result->parse_base(argc, argv, true, header);
+
+    outResult = result;
+    return res;
 }
 
 shared_ptr<Options> Options::default_options()
@@ -161,6 +179,11 @@ int Options::thread_count() const
     return _threadCount;
 }
 
+bool Options::greedy() const
+{
+    return _greedy;
+}
+
 void Options::set_verbosity(int verbosity)
 {
     _verbosity = verbosity;
@@ -178,7 +201,7 @@ void Options::set_no_critical_sets(bool noCriticalSets)
 
 void Options::set_output_file(string outputFile)
 {
-    _outputFile = outputFile;
+    _outputFile = std::move(outputFile);
 }
 
 void Options::set_timeout_seconds(int timeoutSeconds)
@@ -204,4 +227,9 @@ void Options::set_any(bool any)
 void Options::set_thread_count(int threadCount)
 {
     _threadCount = threadCount;
+}
+
+void Options::set_greedy(bool greedy)
+{
+    _greedy = greedy;
 }

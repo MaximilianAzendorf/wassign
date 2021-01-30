@@ -27,6 +27,8 @@ struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
 
     [[nodiscard]] long getMillisecondsRemaining() const;
     [[nodiscard]] int getIterations() const;
+    [[nodiscard]] int getAssignments() const;
+    [[nodiscard]] int getLp() const;
     [[nodiscard]] Solution getBestSolution() const;
     [[nodiscard]] Score getBestScore() const;
 };

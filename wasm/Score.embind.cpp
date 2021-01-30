@@ -13,37 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#pragma once
 
-#include "../Types.h"
+#include "../src/Score.h"
 
-enum Tag
+#include <emscripten/bind.h>
+using namespace emscripten;
+
+EMSCRIPTEN_BINDINGS(wassign_solverprogress)
 {
-    Null,
-    Ignore,
-
-    Min,
-    Max,
-    Bounds,
-    Parts,
-    Optional,
-};
-
-class Tagged
-{
-private:
-    Tag _tag;
-    vector<int> _values;
-
-    static map<Tag, string> _tagNames;
-
-public:
-    Tagged(Tag tag, int value);
-    Tagged(Tag tag, vector<int> values);
-
-    [[nodiscard]] Tag tag() const;
-    [[nodiscard]] int value(int index = 0) const;
-    [[nodiscard]] vector<int> values() const;
-
-    static string tag_name(Tag tag);
-};
+    class_<Score>("Score")
+            .property("major", &Score::major)
+            .property("minor", &Score::minor);
+}

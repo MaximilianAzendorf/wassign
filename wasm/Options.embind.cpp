@@ -30,5 +30,6 @@ EMSCRIPTEN_BINDINGS(wassign_options)
             .property("noCriticalSets", &Options::no_critical_sets, &Options::set_no_critical_sets)
             .property("preferenceExponent", &Options::preference_exponent, &Options::set_preference_exponent)
             .property("any", &Options::any, &Options::set_any)
-            .property("threadCount", &Options::thread_count, &Options::set_thread_count);
+            .property("threadCount", &Options::thread_count, &Options::set_thread_count)
+            .property("greedy", &Options::greedy, &Options::set_greedy);
 };

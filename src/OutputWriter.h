@@ -17,6 +17,7 @@
 #pragma once
 
 #include "Solution.h"
+#include <iostream>
 
 class OutputWriter
 {

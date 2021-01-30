@@ -16,8 +16,6 @@
 
 #include "FuzzyMatch.h"
 
-#include <boost/algorithm/string.hpp>
-
 vector<int> FuzzyMatch::find_exact(string const& key, vector<string> const& values)
 {
     vector<int> res;
@@ -37,8 +35,17 @@ vector<int> FuzzyMatch::find_by_token(string const& key, vector<string> const& v
     vector<int> res;
     for(int i = 0; i < values.size(); i++)
     {
+        string value = values[i];
+
         vector<string> tokens;
-        boost::split(tokens, values[i], boost::is_any_of(" "));
+        int pos = 0;
+        while((pos = value.find(' ')) != string::npos)
+        {
+            tokens.push_back(value.substr(0, pos));
+            value.erase(0, pos + 1);
+        }
+
+        tokens.push_back(value);
 
         if(onlyFirstToken) tokens.resize(1);
 

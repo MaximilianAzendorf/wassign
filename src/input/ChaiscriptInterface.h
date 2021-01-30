@@ -18,6 +18,9 @@
 #include "../Types.h"
 #include "Tagged.h"
 #include "InputReader.h"
+#include "ConstraintExpression.h"
+
+#include <rapidcsv.h>
 
 class InputReader;
 
@@ -52,19 +55,67 @@ public:
                                                 vector<int> const& preferences);
     static shared_ptr<InputChooserData> chooser(InputReader& reader, string const& name,
                                                 vector<Tagged> const& t, vector<int> const& preferences);
+    static shared_ptr<InputChooserData> chooser(InputReader& reader, string const& name,
+                                                vector<string> const& preferences);
+    static shared_ptr<InputChooserData> chooser(InputReader& reader, string const& name,
+                                                vector<Tagged> const& t, vector<string> const& preferences);
+
+    static ConstraintExpression constraint(ConstraintExpression constraintExpression);
 
     static shared_ptr<InputSetData> add(InputReader& reader, shared_ptr<InputSetData> set);
     static shared_ptr<InputChoiceData> add(InputReader& reader, shared_ptr<InputChoiceData> choice);
     static shared_ptr<InputChooserData> add(InputReader& reader, shared_ptr<InputChooserData> chooser);
+    static ConstraintExpression add(InputReader& reader, ConstraintExpression constraintExpression);
+
+    static ConstraintExpressionAccessor cexp_choices(shared_ptr<InputSetData> const& set);
+    static ConstraintExpressionAccessor cexp_choices(shared_ptr<InputChooserData> const& chooser);
+    static ConstraintExpressionAccessor cexp_set(shared_ptr<InputChoiceData> const& choice);
+    static ConstraintExpressionAccessor cexp_set(shared_ptr<InputChoiceData> const& choice, int part);
+    static ConstraintExpressionAccessor cexp_choosers(shared_ptr<InputChoiceData> const& choice);
+    static ConstraintExpressionAccessor cexp_choosers(shared_ptr<InputChoiceData> const& choice, int part);
+    static ConstraintExpressionAccessor cexp_size(shared_ptr<InputSetData> const& set);
+
+    static ConstraintExpression cexp_eq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_neq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_lt(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_gt(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_leq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_geq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_contains(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_subset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_superset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+
+    static ConstraintExpressionAccessor cexp_set_accessor_conversion(InputSetData const& set);
+    static ConstraintExpressionAccessor cexp_choice_accessor_conversion(InputChoiceData const& choice);
+    static ConstraintExpressionAccessor cexp_chooser_accessor_conversion(InputChooserData const& chooser);
+    static ConstraintExpressionAccessor cexp_integer_accessor_conversion(int const& integer);
+
+    static int int_string_conversion(string const& string);
+    static string string_int_conversion(int n);
+
+    static string string_int_append(string const& s, int n);
+    static string int_string_append(int n, string const& s);
+
+    static vector<int> range(int from, int to);
+
+    static string read_file_string(string const& filename);
+    static shared_ptr<rapidcsv::Document> read_file_csv(string const& filename);
+    static shared_ptr<rapidcsv::Document> read_file_csv(string const& filename, char separator);
+
+    static vector<string> get_csv_row(rapidcsv::Document const& doc, int index);
+    static vector<vector<string>> get_csv_rows(rapidcsv::Document const& doc);
+
+    static inline const int end = INT_MAX;
+    static vector<string> slice(vector<string> const& v, int from, int to);
+
+    static void set_arguments(InputReader& reader, vector<string> args);
+
+    static inline const Tagged optional = Tagged(Optional, 1);
 
     static Tagged min(int min);
     static Tagged max(int max);
     static Tagged bounds(int min, int max);
     static Tagged parts(int parts);
-    static Tagged optional();
-    static Tagged optional(bool optional);
-
-    static void add_constraint(InputReader& reader, string const& constraintStr);
 };
 
 #include "ChaiscriptInterface.ipp"

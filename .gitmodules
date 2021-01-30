@@ -10,3 +10,9 @@
 [submodule "deps/magic_enum"]
 	path = deps/magic_enum
 	url = https://github.com/Neargye/magic_enum
+[submodule "deps/chaiscript_extras"]
+	path = deps/chaiscript_extras
+	url = https://github.com/ChaiScript/ChaiScript_Extras.git
+[submodule "deps/rapidcsv"]
+	path = deps/rapidcsv
+	url = https://github.com/d99kris/rapidcsv.git

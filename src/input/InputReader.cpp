@@ -20,7 +20,8 @@
 
 #include <utility>
 
-InputReader::InputReader()
+InputReader::InputReader(shared_ptr<Options> options)
+    : _options(std::move(options))
 {
     ChaiscriptInterface::register_interface(*this);
 }

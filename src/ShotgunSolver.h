@@ -31,6 +31,8 @@
 struct ShotgunSolverProgress
 {
     int iterations = 0;
+    int assignments = 0;
+    int lp = 0;
     Solution best_solution = Solution::invalid();
     Score best_score = {.major = INFINITY, .minor = INFINITY};
 };
@@ -60,7 +62,7 @@ public:
 
     [[nodiscard]] Solution current_solution() const;
 
-    [[nodiscard]] ShotgunSolverProgress const& progress() const;
+    [[nodiscard]] ShotgunSolverProgress const& progress();
 
     int iterate(int numberOfIterations = 1);
 };

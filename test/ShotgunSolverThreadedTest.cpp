@@ -48,17 +48,20 @@ TEST_CASE(PREFIX "Minimal")
 TEST_CASE(PREFIX "Multiple sets with scheduling constraints")
 {
     auto input = R"(
-+set("s1");
-+set("s2");
-+choice("e1", bounds(3, 3));
-+choice("e2", bounds(1, 3));
-+choice("e3", bounds(2, 3));
-+chooser("p1", [9, 5, 0]);
-+chooser("p2", [5, 9, 5]);
-+chooser("p3", [5, 0, 9]);
-add_constraint("set of [e1] is [s1]");
-)";
++ set("s1");
++ set("s2");
 
++ choice("e1", bounds(3, 3));
++ choice("e2", bounds(1, 3));
++ choice("e3", bounds(2, 3));
+
++ chooser("p1", [9, 5, 0]);
++ chooser("p2", [5, 9, 5]);
++ chooser("p3", [5, 0, 9]);
+
++ constraint(choice("e1").set == set("s1"));
+)";
+    // TODO: Need to implement ConstraintExpression => Constraint conversion in InputReader.
     auto data = parse_data(input);
     auto solution = solve(data);
     expect_assignment(solution, "p1,e1,e2; p2,e1,e3; p3,e1,e3");

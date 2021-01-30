@@ -24,6 +24,8 @@ EMSCRIPTEN_BINDINGS(wassign_solverprogress)
     class_<ShotgunSolverThreadedProgress>("SolverProgress")
             .property("millisecondsRemaining", &ShotgunSolverThreadedProgress::getMillisecondsRemaining)
             .property("iterations", &ShotgunSolverThreadedProgress::getIterations)
+            .property("assignments", &ShotgunSolverThreadedProgress::getAssignments)
+            .property("lp", &ShotgunSolverThreadedProgress::getLp)
             .property("bestSolution", &ShotgunSolverThreadedProgress::getBestSolution)
             .property("bestScore", &ShotgunSolverThreadedProgress::getBestScore);
 }

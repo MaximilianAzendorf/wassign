@@ -1,10 +1,10 @@
 #include "Tagged.h"
-#include <boost/algorithm/string.hpp>
+#include <algorithm>
 #include <magic_enum.hpp>
 
 using namespace magic_enum;
 
-map<Tag, string> Tagged::_tagNames = map<Tag, string>();
+map<Tag, string> Tagged::_tagNames = map<Tag, string>(); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 Tagged::Tagged(Tag tag, int value)
     : _tag(tag),
@@ -35,7 +35,10 @@ string Tagged::tag_name(Tag tag)
     {
         for(auto entry : enum_entries<Tag>())
         {
-            _tagNames[entry.first] = boost::algorithm::to_lower_copy(string{entry.second});
+            string tagName = string{entry.second};
+            std::transform(tagName.begin(), tagName.end(), tagName.begin(),
+                           [](unsigned char c){ return std::tolower(c); });
+            _tagNames[entry.first] = tagName;
         }
     }
 

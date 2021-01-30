@@ -87,6 +87,16 @@ bool Constraint::is_assignment_constraint() const
     return _type >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT && _type != Invalid;
 }
 
+int Constraint::get_hash() const
+{
+    int hash = 0;
+    hash = hash * 101 + _left;
+    hash = hash * 101 + _right;
+    hash = hash * 101 + _extra;
+    hash = hash * 101 + _type;
+    return hash;
+}
+
 bool Constraint::operator==(Constraint const& other) const
 {
     return _type == other._type && _left == other._left && _right == other._right && _extra == other._extra;
@@ -97,12 +107,4 @@ bool Constraint::operator!=(Constraint const& other) const
     return !(*this == other);
 }
 
-size_t hash_value(Constraint const& c)
-{
-    int hash = 0;
-    hash = hash * 101 + c.left();
-    hash = hash * 101 + c.right();
-    hash = hash * 101 + c.extra();
-    hash = hash * 101 + c.type();
-    return hash;
-}
+

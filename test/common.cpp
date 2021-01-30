@@ -17,7 +17,7 @@
 #include "common.h"
 
 #include "../src/input/InputReader.h"
-#include "../src/input/ConstraintParser.h"
+#include "../src/input/ConstraintBuilder.h"
 #include <boost/algorithm/string.hpp>
 #include <utility>
 #include "../src/OutputWriter.h"
@@ -27,7 +27,7 @@ using namespace boost::algorithm;
 
 const_ptr<InputData> parse_data(std::string const& input)
 {
-    auto data = InputReader().read_input(input);
+    auto data = InputReader(Options::default_options()).read_input(input);
 
     return data;
 }

@@ -17,13 +17,30 @@
 #pragma once
 
 #include "Types.h"
-
+/**
+ * Contains the input data of a choice.
+ */
 class ChoiceData
 {
 public:
+    /**
+     * The name of the choice.
+     */
     string name;
+
+    /**
+     * The minimum number of choosers this choice can get.
+     */
     int min;
+
+    /**
+     * The maximum number of choosers this chocie can get.
+     */
     int max;
+
+    /**
+     * Can contain a choice index that is the next part of this chocie (For multi-part choices).
+     */
     optional<int> continuation;
 
     ChoiceData(string name, int min, int max);

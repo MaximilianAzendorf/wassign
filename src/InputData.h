@@ -22,6 +22,8 @@
 #include "SetData.h"
 #include "Constraint.h"
 
+#include <climits>
+
 class InputDataBuilder;
 
 class InputData

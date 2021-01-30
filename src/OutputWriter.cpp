@@ -16,6 +16,8 @@
 
 #include "OutputWriter.h"
 
+#include <sstream>
+
 string OutputWriter::write_scheduling_solution(Solution const& solution)
 {
     using std::endl;

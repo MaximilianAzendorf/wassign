@@ -39,6 +39,9 @@ private:
     int _csTimeout = 3;
     bool _noCs = false;
     int _threadCount = (int)std::thread::hardware_concurrency();
+    bool _greedy = false;
+
+    OptionsParseStatus parse_base(int argc, char** argv, bool newOpt, string const& header);
 
     inline static const map<char, int> _timeMultiplier = {
             {'s', 1},
@@ -53,7 +56,9 @@ private:
 public:
     Options() = default;
 
-    static OptionsParseStatus parse(int argc, char** argv, string const& header, const_ptr<Options>& result);
+    OptionsParseStatus parse_override(int argc, char** argv);
+
+    static OptionsParseStatus parse(int argc, char** argv, string const& header, shared_ptr<Options>& result);
 
     static shared_ptr<Options> default_options();
 
@@ -75,6 +80,8 @@ public:
 
     [[nodiscard]] int thread_count() const;
 
+    [[nodiscard]] bool greedy() const;
+
     void set_verbosity(int verbosity);
 
     void set_input_files(vector<string> inputFiles);
@@ -92,6 +99,8 @@ public:
     void set_any(bool any);
 
     void set_thread_count(int threadCount);
+
+    void set_greedy(bool greedy);
 };
 
 

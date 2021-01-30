@@ -42,22 +42,29 @@ private:
     const_ptr<Options> _options;
     cancel_token _cancellation;
 
+    int _lpCount = 0;
+
     /**
-     * Calculates edges in the flow graph that have to be removed from the flow graph.
+     * Calculates edges in the flow graph that have to be removed from the flow graph. For example, a ChooserIsInChoice
+     * constraint causes all edges except for the one constrained choice to be blocked.
      */
     set<pair<int, int>> get_blocked_constraint_edges(shared_ptr<Scheduling const> const& scheduling);
 
     /**
      * Calculates an optimal assignment for the given scheduling, considering the given preference limit.
      */
-     shared_ptr<Assignment const> solve_with_limit(shared_ptr<Scheduling const> const& scheduling,
-                                                   int preferenceLimit,
-                                                   op::MPSolver& solver);
+    const_ptr<Assignment> solve_with_limit(shared_ptr<Scheduling const> const& scheduling,
+                                                  int preferenceLimit,
+                                                  op::MPSolver& solver);
 public:
     /**
      * Constructor.
      *
-     * @param staticData The static flow graph data for the given input data.
+     * @param inputData The input data for which to calculate an assignment.
+     * @param csAnalysis The critical set analysis to use for calculation.
+     * @param staticData The static flow data to use for calculation.
+     * @param options The options.
+     * @param cancellation An optional cancellation token.
      */
     AssignmentSolver(const_ptr<InputData> inputData,
                      const_ptr<CriticalSetAnalysis> csAnalysis,
@@ -68,7 +75,12 @@ public:
     /**
      * Calculates an optimal assignment for the given scheduling.
      */
-    shared_ptr<Assignment const> solve(shared_ptr<Scheduling const> const& scheduling);
+    const_ptr<Assignment> solve(shared_ptr<Scheduling const> const& scheduling);
+
+    /**
+     * Returns the number of solved LP (or MIP) instances so far.
+     */
+     [[nodiscard]] int lp_count() const;
 };
 
 
