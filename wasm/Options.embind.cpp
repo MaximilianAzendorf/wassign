@@ -22,7 +22,7 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_options)
 {
     class_<Options>("Options")
-            .constructor(&Options::default_options)
+            .smart_ptr_constructor("Options", &Options::default_options)
             //.property("verbosity", &Options::verbosity, &Options::set_verbosity)
             .property("timeout", &Options::timeout_seconds, &Options::set_timeout_seconds)
             .property("criticalSetTimeout",
