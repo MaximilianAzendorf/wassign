@@ -22,6 +22,7 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_scheduling)
 {
     class_<Scheduling>("Scheduling")
+            .smart_ptr<const_ptr<Scheduling>>("Scheduling")
             .property("isFeasible", &Scheduling::is_feasible)
             .function("setOf", &Scheduling::set_of)
             .property("inputData", &Scheduling::input_data);

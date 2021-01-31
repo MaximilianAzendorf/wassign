@@ -22,6 +22,7 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_assignment)
 {
     class_<Assignment>("Assignment")
+            .smart_ptr<const_ptr<Assignment>>("Assignment")
             .function("choiceOf", &Assignment::choice_of)
             .function("choosersOrdered", &Assignment::choosers_ordered)
             .function("choicesOrdered", &Assignment::choices_ordered)

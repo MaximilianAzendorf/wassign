@@ -22,6 +22,7 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_inputdata)
 {
     class_<InputData>("InputData")
+        .smart_ptr<const_ptr<InputData>>("InputData")
         .function("choice", &InputData::choice)
         .function("chooser", &InputData::chooser)
         .function("set", &InputData::set)
