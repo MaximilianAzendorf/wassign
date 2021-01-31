@@ -22,6 +22,6 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_inputreader)
 {
     class_<InputReader>("InputReader")
-            .smart_ptr_constructor<shared_ptr<Options>>("InputReader", &std::make_shared<InputReader>)
+            .smart_ptr_constructor("InputReader", &std::make_shared<InputReader>)
             .function("readInput", &InputReader::read_input);
 };

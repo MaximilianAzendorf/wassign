@@ -23,7 +23,6 @@ EMSCRIPTEN_BINDINGS(wassign_options)
 {
     class_<Options>("Options")
             .smart_ptr_constructor("Options", &Options::default_options)
-            .smart_ptr<shared_ptr<Options>>("Options")
             .smart_ptr<const_ptr<Options>>("Options")
             //.property("verbosity", &Options::verbosity, &Options::set_verbosity)
             .property("timeout", &Options::timeout_seconds, &Options::set_timeout_seconds)
