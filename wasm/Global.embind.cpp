@@ -19,7 +19,13 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
+std::string getExceptionMessage(int exceptionPtr)
+{
+    return std::string(reinterpret_cast<std::exception *>(exceptionPtr)->what());
+}
+
 EMSCRIPTEN_BINDINGS(wassign_global)
 {
     register_vector<int>("VectorInt");
+    function("getExceptionMessage", &getExceptionMessage);
 }
