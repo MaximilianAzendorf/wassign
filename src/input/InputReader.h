@@ -26,6 +26,7 @@
 #include "InputDataBuilder.h"
 #include "ConstraintExpression.h"
 
+#define CHAISCRIPT_NO_DYNLOAD
 #include <chaiscript/chaiscript.hpp>
 
 namespace cs = chaiscript;
