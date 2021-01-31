@@ -40,7 +40,7 @@ public:
 EMSCRIPTEN_BINDINGS(wassign_solver)
 {
     class_<JsSolver>("Solver")
-            .constructor<const_ptr<InputData>, const_ptr<Options>>()
+            .smart_ptr_constructor<const_ptr<InputData>, const_ptr<Options>>(&std::make_shared<JsSolver>)
             .function("start", &JsSolver::start)
             .function("cancel", &JsSolver::cancel)
             .function("isRunning", &JsSolver::is_running)
