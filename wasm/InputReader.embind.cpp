@@ -22,6 +22,6 @@ using namespace emscripten;
 EMSCRIPTEN_BINDINGS(wassign_inputreader)
 {
     class_<SetData>("InputReader")
-            .constructor()
+            .constructor<shared_ptr<Options>>()
             .function("readInput", &InputReader::read_input);
 };
