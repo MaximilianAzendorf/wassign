@@ -19,7 +19,7 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-EMSCRIPTEN_BINDINGS(wassign_solverprogress)
+EMSCRIPTEN_BINDINGS(wassign_score)
 {
     class_<Score>("Score")
             .property("major", &Score::major)

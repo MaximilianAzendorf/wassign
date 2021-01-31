@@ -70,6 +70,8 @@ pushd "$(git rev-parse --show-toplevel)"
                 -I ../deps/popl/include \
                 -I ../deps/magic_enum/include \
                 -I ../deps/chaiscript/include \
+		-I ../deps/chaiscript_extras/include \
+		-I ../deps/rapidcsv/src \
                 -Lor-tools/wasmbuild/install/lib \
                 -lm \
                 -lglog \

@@ -23,6 +23,7 @@
 #include <iomanip>
 #include <chrono>
 #include <future>
+#include <sstream>
 
 template<typename T>
 inline string str(T const& x)

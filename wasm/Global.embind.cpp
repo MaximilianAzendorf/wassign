@@ -19,7 +19,7 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-EMSCRIPTEN_BINDINGS(wassign_assignment)
+EMSCRIPTEN_BINDINGS(wassign_global)
 {
     register_vector<int>("VectorInt");
 }
