@@ -368,6 +368,7 @@ void InputDataBuilder::build_preference_levels(InputReader const& reader)
         }
     }
     _inputData->_preferenceLevels.push_back(_inputData->_maxPreference);
+    _inputData->_preferenceLevels.push_back(0);
 
     std::sort(_inputData->_preferenceLevels.begin(), _inputData->_preferenceLevels.end());
     _inputData->_preferenceLevels.erase(
