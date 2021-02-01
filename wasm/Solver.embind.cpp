@@ -23,29 +23,25 @@
 #include <emscripten/bind.h>
 using namespace emscripten;
 
-class JsSolver : public ShotgunSolverThreaded
+shared_ptr<ShotgunSolverThreaded> construct_solver(const_ptr<InputData> inputData, const_ptr<Options> options)
 {
-public:
-    JsSolver(const_ptr<InputData> inputData, const_ptr<Options> options)
-        : ShotgunSolverThreaded(
-                inputData,
-                std::make_shared<CriticalSetAnalysis>(inputData, inputData->set_count() > 1),
-                std::make_shared<MipFlowStaticData>(inputData),
-                std::make_shared<Scoring>(inputData, options),
-                options)
-    {
-    }
-};
+    return std::make_shared<ShotgunSolverThreaded>(
+            inputData,
+            std::make_shared<CriticalSetAnalysis>(inputData, inputData->set_count() > 1 && !options->no_critical_sets() && !options->greedy()),
+            std::make_shared<MipFlowStaticData>(inputData),
+            std::make_shared<Scoring>(inputData, options),
+            options);
+}
 
 EMSCRIPTEN_BINDINGS(wassign_solver)
 {
-    class_<JsSolver>("Solver")
-            .smart_ptr_constructor("Solver", &std::make_shared<JsSolver, const_ptr<InputData>, const_ptr<Options>>)
-            .function("start", &JsSolver::start)
-            .function("cancel", &JsSolver::cancel)
-            .function("isRunning", &JsSolver::is_running)
-            .function("waitForResult", &JsSolver::wait_for_result)
-            .function("currentSolution", &JsSolver::current_solution)
-            .function("progress", &JsSolver::progress);
+    class_<ShotgunSolverThreaded>("Solver")
+            .smart_ptr_constructor("Solver", &construct_solver)
+            .function("start", &ShotgunSolverThreaded::start)
+            .function("cancel", &ShotgunSolverThreaded::cancel)
+            .function("isRunning", &ShotgunSolverThreaded::is_running)
+            .function("waitForResult", &ShotgunSolverThreaded::wait_for_result)
+            .function("currentSolution", &ShotgunSolverThreaded::current_solution)
+            .function("progress", &ShotgunSolverThreaded::progress);
 };
 
