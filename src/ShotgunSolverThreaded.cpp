@@ -75,10 +75,21 @@ void ShotgunSolverThreaded::thread_loop(int tid, cancel_token cancellation)
 
         if(_inputData->set_count() == 1 || iterationsDone < 1)
         {
-            _threadFinishedEarly[tid] = true;
             break;
         }
     }
+
+    _threadFinished[tid] = true;
+}
+
+void* ShotgunSolverThreaded::thread_pthread_entry(void* argsVoidPtr)
+{
+    auto* argsPtr = reinterpret_cast<PThreadArgs*>(argsVoidPtr);
+
+    argsPtr->solver->thread_loop(argsPtr->tid, argsPtr->cancelToken);
+
+    delete argsPtr;
+    return nullptr;
 }
 
 bool ShotgunSolverThreaded::is_running() const
@@ -87,7 +98,7 @@ bool ShotgunSolverThreaded::is_running() const
 
     for(int tid = 0; tid < _threads.size(); tid++)
     {
-        if(time_now() <= (_threadStartTimes[tid] + seconds(_options->timeout_seconds())) && !_threadFinishedEarly[tid])
+        if(time_now() <= (_threadStartTimes[tid] + seconds(_options->timeout_seconds())) && !_threadFinished[tid])
         {
             return true;
         }
@@ -110,7 +121,7 @@ void ShotgunSolverThreaded::start()
     _threads.resize(numThreads);
     _threadSolvers.resize(numThreads);
     _threadStartTimes.resize(numThreads);
-    _threadFinishedEarly.resize(numThreads);
+    _threadFinished.resize(numThreads);
 
     _cancellationSource = cancel_token_source();
     auto cancellation = _cancellationSource.get_future().share();
@@ -118,7 +129,14 @@ void ShotgunSolverThreaded::start()
     for(int tid = 0; tid < numThreads; tid++)
     {
         _threadStartTimes[tid] = time_never();
-        _threads[tid] = thread([=]() { thread_loop(tid, cancellation); });
+
+        // Will be deleted by thread_pthread_entry.
+        auto* argsPtr = new PThreadArgs();
+        argsPtr->solver = this;
+        argsPtr->tid = tid;
+        argsPtr->cancelToken = cancellation;
+
+        pthread_create(&_threads[tid], nullptr, &ShotgunSolverThreaded::thread_pthread_entry, reinterpret_cast<void*>(argsPtr));
     }
 }
 
@@ -130,13 +148,13 @@ void ShotgunSolverThreaded::cancel()
 
     for(int tid = 0; tid < _threads.size(); tid++)
     {
-        if(_threads[tid].joinable()) _threads[tid].join();
+        pthread_join(_threads[tid], nullptr);
     }
 
     _threads.clear();
     _threadSolvers.clear();
     _threadStartTimes.clear();
-    _threadFinishedEarly.clear();
+    _threadFinished.clear();
 }
 
 Solution ShotgunSolverThreaded::wait_for_result()
@@ -148,7 +166,7 @@ Solution ShotgunSolverThreaded::wait_for_result()
 
     for(int tid = 0; tid < _threads.size(); tid++)
     {
-        if(_threads[tid].joinable()) _threads[tid].join();
+        pthread_join(_threads[tid], nullptr);
     }
 
     return current_solution();

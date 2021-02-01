@@ -28,7 +28,6 @@
 #include <chrono>
 #include <atomic>
 #include <cstddef>
-#include <thread>
 #include <future>
 
 using string = std::string;
@@ -74,8 +73,6 @@ using const_ptr = std::shared_ptr<T const>;
 
 template<typename T>
 using atomic = std::atomic<T>;
-
-using thread = std::thread;
 
 using size_t = std::size_t;
 

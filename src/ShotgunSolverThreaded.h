@@ -19,7 +19,8 @@
 #include "Types.h"
 #include "ShotgunSolver.h"
 
-#include <thread>
+// We use posix threads because C++11 threads are not properly supported by WASM.
+#include <pthread.h>
 
 struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
 {
@@ -36,6 +37,13 @@ struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
 class ShotgunSolverThreaded
 {
 private:
+    struct PThreadArgs
+    {
+        ShotgunSolverThreaded* solver;
+        int tid;
+        cancel_token cancelToken;
+    };
+
     const_ptr<InputData> _inputData;
     const_ptr<Options> _options;
 
@@ -43,14 +51,16 @@ private:
     const_ptr<MipFlowStaticData> _staticData;
     const_ptr<Scoring> _scoring;
 
-    vector<thread> _threads;
+    vector<pthread_t> _threads;
     vector<unique_ptr<ShotgunSolver>> _threadSolvers;
     vector<datetime> _threadStartTimes;
-    vector<bool> _threadFinishedEarly;
+    vector<bool> _threadFinished;
 
     cancel_token_source _cancellationSource;
 
     void thread_loop(int tid, cancel_token cancellation);
+
+    static void* thread_pthread_entry(void* argsVoidPtr);
 
 public:
     ShotgunSolverThreaded(const_ptr<InputData> inputData,
