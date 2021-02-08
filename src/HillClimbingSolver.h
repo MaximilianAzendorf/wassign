@@ -27,6 +27,11 @@
 
 #include <future>
 
+/**
+ * Performs hill climbing, starting with a given scheduling. The search space for the hill climbing is the space of all
+ * valid schedulings (so the scheduling will be mutated over and over again until no better solution can be found this
+ * way).
+ */
 class HillClimbingSolver
 {
 private:
@@ -37,21 +42,33 @@ private:
     const_ptr<Options> _options;
     cancel_token _cancellation;
 
-    int _assignmentCount;
+    int _assignmentCount = 0;
 
     AssignmentSolver _assignmentSolver;
 
+    /**
+     * The maximum number of possible mutations is also the maximum neighbor key.
+     */
     int max_neighbor_key();
 
+    /**
+     * Solves the assignment for a given scheduling using the assignment solver.
+     */
     shared_ptr<Assignment const> solve_assignment(const_ptr<Scheduling const> const& scheduling);
 
+    /**
+     * Returns a single neighbor (a scheduling differing by a single workshop-slot-assignment) of the given scheduling.
+     * Which neighbor is determined by the neighbor key (between 0 and max_neighbor_key). Note that neighbors do not
+     * have to necessarily be valid schedulings.
+     */
     shared_ptr<Scheduling const> neighbor(shared_ptr<Scheduling const> const& scheduling, int neighborKey);
 
+    /**
+     * Returns a list of valid neighbors for the given scheduling.
+     */
     vector<shared_ptr<Scheduling const>> pick_neighbors(shared_ptr<Scheduling const> const& scheduling);
 
 public:
-    inline static const int MaxNeighborsPerIteration = 16;
-
     /**
      * Constructor.
      */
@@ -62,9 +79,19 @@ public:
                        const_ptr<Options> options,
                        cancel_token cancellation = cancel_token());
 
+    /**
+     * Returns the number of times the assignment solver was invoked by this instance so far.
+     */
     [[nodiscard]] int assignment_count() const;
+
+    /**
+     * Returns the number of linear programming instances solved by the assignment solver of this instance so far.
+     */
     [[nodiscard]] int lp_count() const;
 
+    /**
+     * Performs hill climbing on the given scheduling and returns the resulting solution.
+     */
     Solution solve(const_ptr<Scheduling> const& scheduling);
 };
 

@@ -55,6 +55,13 @@ private:
     bool satisfies_scheduling_constraints(int choice, int set, map<int, int> const& decisions);
 
     /**
+     * Checks if the hypothetical decision of putting choice into set would violate any slot size constraints. This
+     * method must only be called when the given hypothetical decision will be the last decision before the scheduling
+     * is complete.
+     */
+    bool check_slot_size_constraints([[maybe_unused]] int choice, int slot, map<int, int> const& decisions);
+
+    /**
      * Tests if the current partial solution has any impossibilities. Impossibilities are sets that contain so few
      * choices that even with all the choices not yet assigned they would not have enough capacity for all
      * choosers.
@@ -72,7 +79,7 @@ private:
      * (smaller score means higher priority). Currently, the score is the sum of the maximum chooser counts of all
      * choices in this set.
      */
-    int set_order_heuristic_score(map<int, int> const& decisions, int set);
+    int slot_order_heuristic_score(map<int, int> const& decisions, int set);
 
     /**
      * Calculates the sets that are feasible for the next choice regarding the current partial solution. A set is
@@ -81,7 +88,7 @@ private:
      *
      * @param lowPrioritySet A list of sets that are low priority (they should be tried last while backtracking).
      */
-    vector<int> calculate_feasible_sets(map<int, int> const& decisions, vector<bool> const& lowPrioritySet, int choice);
+    vector<int> calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySet, int choice);
 
     /**
      * Shuffles the list of choices to randomize the solutions found first. Currently, only auto-generated sets for
@@ -91,9 +98,9 @@ private:
     vector<int> get_choice_scramble();
 
     /**
-     * Generates a vector v where v[n]=true means that n is a low-priority choice.
+     * Generates a vector v where v[n]=true means that n is a low-priority slot.
      */
-    vector<bool> get_low_priority_sets();
+    vector<bool> get_low_priority_slots();
 
     /**
      * Transforms the decision map into list of lists d, where d[n] is the list of choices assigned to set n.

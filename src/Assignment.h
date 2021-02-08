@@ -21,7 +21,7 @@
 
 /**
  * Represents a single assignment solution for the given input data. An assignment is a mapping between choosers
- * and choices
+ * and choices.
  */
 class Assignment
 {
@@ -34,14 +34,14 @@ public:
      * Constructor.
      *
      * @param inputData The input data this instance is an assignment solution for.
-     * @param data A vector of vectors so that chooser x is assigned to choice data[x][y] at set y.
+     * @param data A vector of vectors so that chooser x is assigned to choice data[x][y] at slot y.
      */
     Assignment(const_ptr<InputData> inputData, vector<vector<int>> data);
 
     /**
-     * Returns the choice the given chooser is assigned to at the given set.
+     * Returns the choice the given chooser is assigned to at the given slot.
      */
-    [[nodiscard]] int choice_of(int chooser, int set) const;
+    [[nodiscard]] int choice_of(int chooser, int slot) const;
 
     /**
      *

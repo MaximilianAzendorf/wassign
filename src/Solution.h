@@ -20,6 +20,9 @@
 #include "Scheduling.h"
 #include "Assignment.h"
 
+/**
+ * Represents a complete solution consisting of a scheduling and an assignment.
+ */
 class Solution
 {
 private:

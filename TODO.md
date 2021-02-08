@@ -1,0 +1,4 @@
+- chooser-slot YES-MAYBE-NO system (by having a "not-assigned" choice for each slot)
+- sub- and superset constraints (dependent choices become a graph -> dominating sets for integer variable allocation)
+- SlotHasSize -> SlotCount (counting occurences of elements of a given set)
+- Critical set as bitsets / do you need simplification?

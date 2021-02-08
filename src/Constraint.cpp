@@ -26,13 +26,13 @@ Constraint Constraint::negation()
     Constraint neg = *this;
     switch(_type)
     {
-        case ChoiceIsInSet: neg._type = ChoiceIsNotInSet; break;
-        case ChoiceIsNotInSet: neg._type = ChoiceIsInSet; break;
-        case ChoicesAreInSameSet: neg._type = ChoicesAreNotInSameSet; break;
-        case ChoicesAreNotInSameSet: neg._type = ChoicesAreInSameSet; break;
-        case SetHasLimitedSize: neg._extra = -neg._extra; break;
-        case SetContainsChoice: neg._type = SetNotContainsChoice; break;
-        case SetNotContainsChoice: neg._type = SetContainsChoice; break;
+        case ChoiceIsInSlot: neg._type = ChoiceIsNotInSlot; break;
+        case ChoiceIsNotInSlot: neg._type = ChoiceIsInSlot; break;
+        case ChoicesAreInSameSlot: neg._type = ChoicesAreNotInSameSlot; break;
+        case ChoicesAreNotInSameSlot: neg._type = ChoicesAreInSameSlot; break;
+        case SlotHasLimitedSize: neg._extra = -neg._extra; break;
+        case SlotContainsChoice: neg._type = SlotNotContainsChoice; break;
+        case SlotNotContainsChoice: neg._type = SlotContainsChoice; break;
 
         case ChooserIsInChoice: neg._type = ChooserIsNotInChoice; break;
         case ChooserIsNotInChoice: neg._type = ChooserIsInChoice; break;
@@ -42,7 +42,7 @@ Constraint Constraint::negation()
             // Constraints with no valid negation
         case Invalid:
         case ChoicesHaveOffset:
-        case SetsHaveSameChoices:
+        case SlotsHaveSameChoices:
         case ChoicesHaveSameChoosers:
         case ChoosersHaveSameChoices:
             neg._type = Invalid;

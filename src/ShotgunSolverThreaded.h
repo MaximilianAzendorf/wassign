@@ -19,7 +19,7 @@
 #include "Types.h"
 #include "ShotgunSolver.h"
 
-// We use posix threads because C++11 threads are not properly supported by WASM.
+// TODO: Switch to C++11 threads.
 #include <pthread.h>
 
 struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
@@ -34,6 +34,10 @@ struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
     [[nodiscard]] Score getBestScore() const;
 };
 
+/**
+ * Performs shotgun hill climbing just like the ShotgunSolver class, but multi-threaded (with each thread having its own
+ * ShotgunSolver instance).
+ */
 class ShotgunSolverThreaded
 {
 private:

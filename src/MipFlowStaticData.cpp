@@ -17,7 +17,7 @@
 #include "MipFlowStaticData.h"
 #include "InputData.h"
 
-#define SET_ID_HIGH (INT_MAX / 2)
+#define SLOT_ID_HIGH (INT_MAX / 2)
 #define CHOICE_ID_HIGH (INT_MAX / 2 - 1)
 
 /*
@@ -25,7 +25,7 @@
  */
 flowid MipFlowStaticData::make_long(int high, int low) { return ((flowid)high << 32U) | ((flowid)low & 0xFFFFFFFFUL); }
 flowid MipFlowStaticData::node_chooser(int p, int s) { return make_long(p, s); }
-flowid MipFlowStaticData::node_set(int s) { return make_long(SET_ID_HIGH, s); }
+flowid MipFlowStaticData::node_slot(int s) { return make_long(SLOT_ID_HIGH, s); }
 flowid MipFlowStaticData::node_choice(int w) { return make_long(CHOICE_ID_HIGH, w); }
 flowid MipFlowStaticData::edge_id(int from, int to) { return make_long(from, to); }
 
@@ -33,7 +33,7 @@ MipFlowStaticData::MipFlowStaticData(const_ptr<InputData> inputData)
 {
     for(int p = 0; p < inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < inputData->set_count(); s++)
+        for(int s = 0; s < inputData->slot_count(); s++)
         {
             baseFlow.add_node(node_chooser(p, s));
         }
@@ -44,9 +44,9 @@ MipFlowStaticData::MipFlowStaticData(const_ptr<InputData> inputData)
         baseFlow.add_node(node_choice(w));
     }
 
-    for(int s = 0; s < inputData->set_count(); s++)
+    for(int s = 0; s < inputData->slot_count(); s++)
     {
-        baseFlow.add_node(node_set(s));
+        baseFlow.add_node(node_slot(s));
     }
 
     constraints = inputData->assignment_constraints();

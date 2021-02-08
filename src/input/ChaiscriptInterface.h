@@ -35,8 +35,8 @@ private:
 public:
     static void register_interface(InputReader& reader);
 
-    static shared_ptr<InputSetData> set(InputReader& reader, string const& name);
-    static shared_ptr<InputSetData> set(InputReader& reader, string const& name, vector<Tagged> const& t);
+    static shared_ptr<InputSlotData> slot(InputReader& reader, string const& name);
+    static shared_ptr<InputSlotData> slot(InputReader& reader, string const& name, vector<Tagged> const& t);
 
     static shared_ptr<InputChoiceData> choice(InputReader& reader, string const& name);
     static shared_ptr<InputChoiceData> choice(InputReader& reader, string const& name,
@@ -62,18 +62,18 @@ public:
 
     static ConstraintExpression constraint(ConstraintExpression constraintExpression);
 
-    static shared_ptr<InputSetData> add(InputReader& reader, shared_ptr<InputSetData> set);
+    static shared_ptr<InputSlotData> add(InputReader& reader, shared_ptr<InputSlotData> slot);
     static shared_ptr<InputChoiceData> add(InputReader& reader, shared_ptr<InputChoiceData> choice);
     static shared_ptr<InputChooserData> add(InputReader& reader, shared_ptr<InputChooserData> chooser);
     static ConstraintExpression add(InputReader& reader, ConstraintExpression constraintExpression);
 
-    static ConstraintExpressionAccessor cexp_choices(shared_ptr<InputSetData> const& set);
+    static ConstraintExpressionAccessor cexp_choices(shared_ptr<InputSlotData> const& slot);
     static ConstraintExpressionAccessor cexp_choices(shared_ptr<InputChooserData> const& chooser);
-    static ConstraintExpressionAccessor cexp_set(shared_ptr<InputChoiceData> const& choice);
-    static ConstraintExpressionAccessor cexp_set(shared_ptr<InputChoiceData> const& choice, int part);
+    static ConstraintExpressionAccessor cexp_slot(shared_ptr<InputChoiceData> const& choice);
+    static ConstraintExpressionAccessor cexp_slot(shared_ptr<InputChoiceData> const& choice, int part);
     static ConstraintExpressionAccessor cexp_choosers(shared_ptr<InputChoiceData> const& choice);
     static ConstraintExpressionAccessor cexp_choosers(shared_ptr<InputChoiceData> const& choice, int part);
-    static ConstraintExpressionAccessor cexp_size(shared_ptr<InputSetData> const& set);
+    static ConstraintExpressionAccessor cexp_size(shared_ptr<InputSlotData> const& slot);
 
     static ConstraintExpression cexp_eq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
     static ConstraintExpression cexp_neq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
@@ -82,10 +82,11 @@ public:
     static ConstraintExpression cexp_leq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
     static ConstraintExpression cexp_geq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
     static ConstraintExpression cexp_contains(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
+    static ConstraintExpression cexp_contains_not(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
     static ConstraintExpression cexp_subset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
     static ConstraintExpression cexp_superset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right);
 
-    static ConstraintExpressionAccessor cexp_set_accessor_conversion(InputSetData const& set);
+    static ConstraintExpressionAccessor cexp_slot_accessor_conversion(InputSlotData const& set);
     static ConstraintExpressionAccessor cexp_choice_accessor_conversion(InputChoiceData const& choice);
     static ConstraintExpressionAccessor cexp_chooser_accessor_conversion(InputChooserData const& chooser);
     static ConstraintExpressionAccessor cexp_integer_accessor_conversion(int const& integer);

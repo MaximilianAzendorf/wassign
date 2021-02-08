@@ -39,7 +39,7 @@ int MipFlow<NodeKey, EdgeKey>::add_node(NodeKey key)
 }
 
 template<typename NodeKey, typename EdgeKey>
-void MipFlow<NodeKey, EdgeKey>::add_supply(int node, int supply)
+void MipFlow<NodeKey, EdgeKey>::set_supply(int node, int supply)
 {
     _solution.clear();
     _supply[node] = supply;

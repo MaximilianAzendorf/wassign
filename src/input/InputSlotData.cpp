@@ -13,17 +13,4 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-#include "../src/Scheduling.h"
-
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-EMSCRIPTEN_BINDINGS(wassign_scheduling)
-{
-    class_<Scheduling>("Scheduling")
-            .smart_ptr<const_ptr<Scheduling>>("Scheduling")
-            .property("isFeasible", &Scheduling::is_feasible)
-            .function("setOf", &Scheduling::set_of)
-            .property("inputData", &Scheduling::input_data);
-};
+#include "InputSlotData.h"

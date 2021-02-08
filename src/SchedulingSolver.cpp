@@ -36,27 +36,27 @@ int SchedulingSolver::calculate_available_max_push(vector<int> const& choiceScra
 
 bool SchedulingSolver::satisfies_critical_sets(map<int, int> const& decisions, vector<CriticalSet> const& criticalSets)
 {
-    set<int> coveredSets;
+    set<int> coveredSlots;
     for(CriticalSet const& set : criticalSets)
     {
-        coveredSets.clear();
+        coveredSlots.clear();
         int missing = 0;
 
         for(int element : set.elements())
         {
-            auto setIt = decisions.find(element);
+            auto slotIt = decisions.find(element);
 
-            if(setIt == decisions.end())
+            if(slotIt == decisions.end())
             {
                 missing++;
             }
             else
             {
-                coveredSets.insert(setIt->second);
+                coveredSlots.insert(slotIt->second);
             }
         }
 
-        if(coveredSets.size() + missing < _inputData->set_count())
+        if(coveredSlots.size() + missing < _inputData->slot_count())
         {
             return false;
         }
@@ -65,31 +65,31 @@ bool SchedulingSolver::satisfies_critical_sets(map<int, int> const& decisions, v
     return true;
 }
 
-bool SchedulingSolver::satisfies_scheduling_constraints(int choice, int set, map<int, int> const& decisions)
+bool SchedulingSolver::satisfies_scheduling_constraints(int choice, int slot, map<int, int> const& decisions)
 {
     for(Constraint constraint : _inputData->scheduling_constraints(choice))
     {
         switch(constraint.type())
         {
-            case ChoiceIsInSet: if(set != constraint.right()) return false; break;
-            case ChoiceIsNotInSet: if(set == constraint.right()) return false; break;
+            case ChoiceIsInSlot: if(slot != constraint.right()) return false; break;
+            case ChoiceIsNotInSlot: if(slot == constraint.right()) return false; break;
 
-            case ChoicesAreInSameSet:
+            case ChoicesAreInSameSlot:
             {
                 int other = constraint.left() == choice ? constraint.right() : constraint.left();
-                auto otherSetIt = decisions.find(other);
-                if(otherSetIt != decisions.end() && otherSetIt->second != set)
+                auto otherSlotIt = decisions.find(other);
+                if(otherSlotIt != decisions.end() && otherSlotIt->second != slot)
                 {
                     return false;
                 }
                 break;
             }
 
-            case ChoicesAreNotInSameSet:
+            case ChoicesAreNotInSameSlot:
             {
                 int other = constraint.left() == choice ? constraint.right() : constraint.left();
-                auto otherSetIt = decisions.find(other);
-                if(otherSetIt != decisions.end() && otherSetIt->second == set)
+                auto otherSlotIt = decisions.find(other);
+                if(otherSlotIt != decisions.end() && otherSlotIt->second == slot)
                 {
                     return false;
                 }
@@ -100,31 +100,33 @@ bool SchedulingSolver::satisfies_scheduling_constraints(int choice, int set, map
             {
                 int other = constraint.left() == choice ? constraint.right() : constraint.left();
                 int offset = other == constraint.left() ? -constraint.extra() : constraint.extra();
-                auto otherSetIt = decisions.find(other);
-                if(otherSetIt != decisions.end() && otherSetIt->second - set != offset)
+                auto otherSlotIt = decisions.find(other);
+                if(otherSlotIt != decisions.end() && otherSlotIt->second - slot != offset)
                 {
                     return false;
                 }
 
-                int minSet = std::max(0, 0 - offset);
-                int maxSet = std::min(_inputData->set_count(), _inputData->set_count() - offset);
+                int minSlot = std::max(0, 0 - offset);
+                int maxSlot = std::min(_inputData->slot_count(), _inputData->slot_count() - offset);
 
-                if(set < minSet || set >= maxSet) return false;
+                if(slot < minSlot || slot >= maxSlot) return false;
                 break;
             }
 
-            case SetHasLimitedSize:
+            case SlotHasLimitedSize:
             {
-                // Todo: Implement better constraint infeasibility detection for this constraint type.
+                if(constraint.left() != slot) continue;
+
+                // These will only be checked at the end of the backtracking (for now).
+                // Todo: Maybe implement earlier constraint infeasibility detection Gt and Geq.
                 //
-                if(constraint.left() != set) continue;
                 if(constraint.extra() == Neq || constraint.extra() == Gt || constraint.extra() == Geq) break;
 
-                int limit = constraint.left() - (constraint.extra() == Lt ? 1 : 0);
+                int limit = constraint.right() - (constraint.extra() == Lt ? 1 : 0);
 
                 for(auto const& decision : decisions)
                 {
-                    if(decision.second == set) limit--;
+                    if(decision.second == slot) limit--;
                 }
 
                 if(limit < 0) return false;
@@ -136,12 +138,59 @@ bool SchedulingSolver::satisfies_scheduling_constraints(int choice, int set, map
         }
     }
 
+    if(decisions.size() + 1 == _inputData->choice_count())
+    {
+        // This is the last decision to be made, time to check slot size constraints.
+        //
+        return check_slot_size_constraints(choice, slot, decisions);
+    }
+    else
+    {
+        return true;
+    }
+}
+
+bool SchedulingSolver::check_slot_size_constraints([[maybe_unused]] int choice, int slot, map<int, int> const& decisions)
+{
+    // these will be counted lazily so we don't have to compute slot sizes if there are no slot size constraints.
+    //
+    vector<int> slotSizes;
+
+    for(Constraint constraint : _inputData->scheduling_constraints())
+    {
+        if(constraint.type() != SlotHasLimitedSize) continue;
+
+        if(slotSizes.empty())
+        {
+            slotSizes.resize(_inputData->slot_count());
+            slotSizes[slot]++;
+            for(int w = 0; w < _inputData->choice_count(); w++)
+            {
+                if(choice == w) continue;
+                slotSizes[decisions.at(w)]++;
+            }
+        }
+
+        bool valid = false;
+        switch(constraint.extra())
+        {
+            case Eq: valid = slotSizes[constraint.left()] == constraint.right(); break;
+            case Neq: valid = slotSizes[constraint.left()] != constraint.right(); break;
+            case Lt: valid = slotSizes[constraint.left()] < constraint.right(); break;
+            case Leq: valid = slotSizes[constraint.left()] <= constraint.right(); break;
+            case Gt: valid = slotSizes[constraint.left()] > constraint.right(); break;
+            case Geq: valid = slotSizes[constraint.left()] >= constraint.right(); break;
+        }
+
+        if(!valid) return false;
+    }
+
     return true;
 }
 
 bool SchedulingSolver::has_impossibilities(map<int, int> const& decisions, int availableMaxPush)
 {
-    for(int s = 0; s < _inputData->set_count(); s++)
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
         int sum = availableMaxPush;
         for(auto const& decision : decisions)
@@ -164,7 +213,7 @@ SchedulingSolver::calculate_critical_sets(map<int, int> const& decisions, int av
 {
     vector<int> criticalSets;
 
-    for(int s = 0; s < _inputData->set_count(); s++)
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
         int sum = availableMaxPush - _inputData->choice(choice).max;
         for(auto const& decision : decisions)
@@ -184,7 +233,7 @@ SchedulingSolver::calculate_critical_sets(map<int, int> const& decisions, int av
     return criticalSets;
 }
 
-int SchedulingSolver::set_order_heuristic_score(map<int, int> const& decisions, int set)
+int SchedulingSolver::slot_order_heuristic_score(map<int, int> const& decisions, int set)
 {
     int score = 0;
     for(auto const& decision : decisions)
@@ -197,20 +246,20 @@ int SchedulingSolver::set_order_heuristic_score(map<int, int> const& decisions, 
 }
 
 vector<int>
-SchedulingSolver::calculate_feasible_sets(map<int, int> const& decisions, vector<bool> const& lowPrioritySet, int choice)
+SchedulingSolver::calculate_feasible_slots(map<int, int> const& decisions, vector<bool> const& lowPrioritySlot, int choice)
 {
-    // Feasible sets are all sets for which adding the current choice would not cause the
-    // minimal chooser number of this set to exceed the total chooser count.
+    // Feasible slots are all slots for which adding the current choice would not cause the
+    // minimal chooser number of this slot to exceed the total chooser count.
     //
-    // We then have to filter the feasible set by all additional constraints.
+    // We then have to filter the feasible slots by all additional constraints.
     //
-    // We order the feasible sets by the maximal chooser number as a heuristic to get more
+    // We order the feasible slots by the maximal chooser number as a heuristic to get more
     // balanced schedulings.
     //
-    vector<int> normalSets, lowSets;
-    vector<int> setScore(_inputData->set_count(), INT_MIN);
+    vector<int> normalSlots, lowSlots;
+    vector<int> slotScore(_inputData->slot_count(), INT_MIN);
 
-    for(int s = 0; s < _inputData->set_count(); s++)
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
         int sum = _inputData->choice(choice).min;
         for(auto const& decision : decisions)
@@ -224,21 +273,21 @@ SchedulingSolver::calculate_feasible_sets(map<int, int> const& decisions, vector
             continue;
         }
 
-        if (lowPrioritySet[s])
+        if (lowPrioritySlot[s])
         {
-            lowSets.push_back(s);
+            lowSlots.push_back(s);
         }
         else
         {
-            normalSets.push_back(s);
-            setScore[s] = set_order_heuristic_score(decisions, s);
+            normalSlots.push_back(s);
+            slotScore[s] = slot_order_heuristic_score(decisions, s);
         }
     }
 
-    std::sort(normalSets.begin(), normalSets.end(),
-              [&](int const& s1, int const& s2) { return setScore[s1] < setScore[s2]; });
+    std::sort(normalSlots.begin(), normalSlots.end(),
+              [&](int const& s1, int const& s2) { return slotScore[s1] < slotScore[s2]; });
 
-    return riffle_shuffle(normalSets, lowSets);
+    return riffle_shuffle(normalSlots, lowSlots);
 }
 
 vector<int> SchedulingSolver::get_choice_scramble()
@@ -254,12 +303,12 @@ vector<int> SchedulingSolver::get_choice_scramble()
     return choiceScramble;
 }
 
-vector<bool> SchedulingSolver::get_low_priority_sets()
+vector<bool> SchedulingSolver::get_low_priority_slots()
 {
-    vector<bool> lowPrioritySet(_inputData->set_count());
-    for(int s = 0; s < _inputData->set_count(); s++)
+    vector<bool> lowPrioritySet(_inputData->slot_count());
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
-        lowPrioritySet[s] = _inputData->set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0;
+        lowPrioritySet[s] = _inputData->slot(s).name.rfind(InputData::NotScheduledSlotPrefix, 0) == 0;
     }
 
     return lowPrioritySet;
@@ -267,7 +316,7 @@ vector<bool> SchedulingSolver::get_low_priority_sets()
 
 vector<vector<int>> SchedulingSolver::convert_decisions(map<int, int> const& decisions)
 {
-    vector<vector<int>> res(_inputData->set_count());
+    vector<vector<int>> res(_inputData->slot_count());
     for(auto const& decision : decisions)
     {
         res[decision.second].push_back(decision.first);
@@ -279,15 +328,14 @@ vector<vector<int>> SchedulingSolver::convert_decisions(map<int, int> const& dec
 vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const& criticalSets, datetime timeLimit)
 {
     vector<int> choiceScramble = get_choice_scramble();
-    vector<bool> lowPrioritySet = get_low_priority_sets();
+    vector<bool> lowPrioritySet = get_low_priority_slots();
 
     map<int, int> decisions;
     stack<vector<int>> backtracking;
 
     for(int depth = 0; depth < choiceScramble.size();)
     {
-        if(is_set(_cancellation)) return {};
-        if(time_now() > timeLimit)
+        if(time_now() > timeLimit || is_set(_cancellation))
         {
             return {};
         }
@@ -315,7 +363,7 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
                 //      Set 2:    ... D .......
                 //      Set 3:    .............
                 //      Set 4:    .............
-                //   Not assigned: ... B, E ....
+                //  Not assigned: ... B, E ....
                 //
                 // Would not be feasible, because the critical set can not be covered anymore (we would need at
                 // least 2 open choices in the critical set to cover Set 3 and 4).
@@ -338,7 +386,7 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
                     }
                     else
                     {
-                        vector<int> feasibleSets = calculate_feasible_sets(decisions, lowPrioritySet, choice);
+                        vector<int> feasibleSets = calculate_feasible_slots(decisions, lowPrioritySet, choice);
                         backtracking.push(feasibleSets);
                     }
                 }

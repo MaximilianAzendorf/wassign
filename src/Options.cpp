@@ -61,9 +61,10 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
     auto anyOpt = op.add<Switch>("a", "any", "Stop after the first found solution.");
     auto prefExpOpt = op.add<Value<double>>("p", "pref-exp", "The preference exponent.");
     auto timeoutOpt = op.add<Value<string>>("t", "timeout", "Sets the optimization timeout.");
-    auto csTimeoutOpt = op.add<Value<string>>("m", "cs-timeout", "Sets the timeout for attempting to satisfy critical sets of a certain preference level.");
+    auto csTimeoutOpt = op.add<Value<string>>("", "cs-timeout", "Sets the timeout for attempting to satisfy critical sets of a certain preference level.");
     auto noCsOpt = op.add<Switch>("", "no-cs", "Do not perform critical set analysis");
     auto threadsOpt = op.add<Value<int>>("j", "threads", "Number of threads to use for computation.");
+    auto maxNeighborsOpt = op.add<Value<int>>("n", "max-neighbors", "Maximum number of neighbor schedulings that will be explored per hill climbing iteration.");
     auto greedyOpt = op.add<Switch>("g", "greedy", "Do not use the worst-preference scoring as primary score and just use sum-based scoring instead.");
 
     op.parse(argc, argv);
@@ -184,6 +185,11 @@ bool Options::greedy() const
     return _greedy;
 }
 
+int Options::max_neighbors() const
+{
+    return _maxNeighbors;
+}
+
 void Options::set_verbosity(int verbosity)
 {
     _verbosity = verbosity;
@@ -232,4 +238,9 @@ void Options::set_thread_count(int threadCount)
 void Options::set_greedy(bool greedy)
 {
     _greedy = greedy;
+}
+
+void Options::set_max_neighbors(int maxNeighbors)
+{
+    _maxNeighbors = maxNeighbors;
 }

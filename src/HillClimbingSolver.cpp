@@ -21,7 +21,7 @@
 
 int HillClimbingSolver::max_neighbor_key()
 {
-    return _inputData->choice_count() * (_inputData->set_count() - 1);
+    return _inputData->choice_count() * (_inputData->slot_count() - 1);
 }
 
 shared_ptr<Assignment const> HillClimbingSolver::solve_assignment(const_ptr<Scheduling const> const& scheduling)
@@ -38,15 +38,13 @@ shared_ptr<Scheduling const> HillClimbingSolver::neighbor(shared_ptr<Scheduling 
     int s = neighborKey / _inputData->choice_count();
     int w = neighborKey % _inputData->choice_count();
 
-    if(s >= scheduling->set_of(w))
+    if(s >= scheduling->slot_of(w))
     {
         s += 1;
     }
 
-    int origs = data[w];
     data[w] = s;
     auto newScheduling = std::make_shared<Scheduling const>(_inputData, data);
-    data[w] = origs;
 
     return newScheduling;
 }
@@ -58,19 +56,22 @@ vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_p
     vector<int> neighborKeys(max_neighbor_key());
     std::iota(neighborKeys.begin(), neighborKeys.end(), 0);
 
-    if(max_neighbor_key() > MaxNeighborsPerIteration)
+    if(max_neighbor_key() > _options->max_neighbors())
     {
         std::shuffle(neighborKeys.begin(), neighborKeys.end(), Rng::engine());
     }
 
-    for(int neighborKey : neighborKeys)
+    for(int keyIdx = 0; keyIdx < neighborKeys.size(); keyIdx++)
     {
+        if(keyIdx > _options->max_neighbors() * 32) break;
+
+        int neighborKey = neighborKeys[keyIdx];
         auto nextNeighbor = neighbor(scheduling, neighborKey);
         if(!nextNeighbor->is_feasible()) continue;
 
         result.push_back(nextNeighbor);
 
-        if(result.size() >= MaxNeighborsPerIteration)
+        if(result.size() >= _options->max_neighbors())
         {
             break;
         }

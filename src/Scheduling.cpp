@@ -32,18 +32,18 @@ Scheduling::Scheduling(const_ptr<InputData> inputData, vector<int> data)
 
 bool Scheduling::is_feasible() const
 {
-    vector<int> setMin(_inputData->set_count(), 0);
-    vector<int> setMax(_inputData->set_count(), 0);
+    vector<int> slotMin(_inputData->slot_count(), 0);
+    vector<int> slotMax(_inputData->slot_count(), 0);
 
     for(int i = 0; i < _data.size(); i++)
     {
-        setMin[_data[i]] += _inputData->choice(i).min;
-        setMax[_data[i]] += _inputData->choice(i).max;
+        slotMin[_data[i]] += _inputData->choice(i).min;
+        slotMax[_data[i]] += _inputData->choice(i).max;
     }
 
-    for(int i = 0; i < _inputData->set_count(); i++)
+    for(int i = 0; i < _inputData->slot_count(); i++)
     {
-        if(setMin[i] > _inputData->chooser_count() || setMax[i] < _inputData->chooser_count())
+        if(slotMin[i] > _inputData->chooser_count() || slotMax[i] < _inputData->chooser_count())
         {
             return false;
         }
@@ -52,7 +52,7 @@ bool Scheduling::is_feasible() const
     return true;
 }
 
-int Scheduling::set_of(int choice) const
+int Scheduling::slot_of(int choice) const
 {
     return _data[choice];
 }

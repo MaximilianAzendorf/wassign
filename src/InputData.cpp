@@ -26,6 +26,7 @@
 
 int InputData::preference_after(int preference) const
 {
+    // TODO: Maybe do this with binary search.
     for(int i = 0; i < _preferenceLevels.size(); i++)
     {
         if(_preferenceLevels[i] > preference)
@@ -67,9 +68,9 @@ vector<ChooserData> const& InputData::choosers() const
     return _choosers;
 }
 
-vector<SetData> const& InputData::sets() const
+vector<SlotData> const& InputData::slots() const
 {
-    return _sets;
+    return _slots;
 }
 
 ChoiceData const& InputData::choice(int index) const
@@ -82,9 +83,9 @@ ChooserData const& InputData::chooser(int index) const
     return _choosers[index];
 }
 
-SetData const& InputData::set(int index) const
+SlotData const& InputData::slot(int index) const
 {
-    return _sets[index];
+    return _slots[index];
 }
 
 vector<vector<int>> const& InputData::dependent_choice_groups() const
@@ -112,7 +113,7 @@ int InputData::chooser_count() const
     return _choosers.size();
 }
 
-int InputData::set_count() const
+int InputData::slot_count() const
 {
-    return _sets.size();
+    return _slots.size();
 }

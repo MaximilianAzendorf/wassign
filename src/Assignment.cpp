@@ -28,13 +28,13 @@ Assignment::Assignment(const_ptr<InputData> inputData, vector<vector<int>> data)
 
     for(vector<int> const& i : _data)
     {
-        assert(i.size() == _inputData->set_count());
+        assert(i.size() == _inputData->slot_count());
     }
 }
 
-int Assignment::choice_of(int chooser, int set) const
+int Assignment::choice_of(int chooser, int slot) const
 {
-    return _data[chooser][set];
+    return _data[chooser][slot];
 }
 
 vector<int> Assignment::choosers_ordered(int choice) const
@@ -42,7 +42,7 @@ vector<int> Assignment::choosers_ordered(int choice) const
     vector<int> choosers;
     for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->set_count(); s++)
+        for(int s = 0; s < _inputData->slot_count(); s++)
         {
             if(choice_of(p, s) == choice)
             {
@@ -58,7 +58,7 @@ vector<int> Assignment::choosers_ordered(int choice) const
 vector<int> Assignment::choices_ordered(int chooser) const
 {
     vector<int> choices;
-    for(int s = 0; s < _inputData->set_count(); s++)
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
         choices.push_back(choice_of(chooser, s));
     }
@@ -69,7 +69,7 @@ vector<int> Assignment::choices_ordered(int chooser) const
 
 bool Assignment::is_in_choice(int chooser, int choice) const
 {
-    for(int s = 0; s < _inputData->set_count(); s++)
+    for(int s = 0; s < _inputData->slot_count(); s++)
     {
         if(choice_of(chooser, s) == choice) return true;
     }
@@ -82,7 +82,7 @@ int Assignment::max_used_preference() const
     int c = INT_MIN;
     for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->set_count(); s++)
+        for(int s = 0; s < _inputData->slot_count(); s++)
         {
             c = std::max(_inputData->chooser(p).preferences[choice_of(p, s)], c);
         }
@@ -102,7 +102,7 @@ bool Assignment::operator==(Assignment const& other) const
 
     for(int p = 0; p < _inputData->chooser_count(); p++)
     {
-        for(int s = 0; s < _inputData->set_count(); s++)
+        for(int s = 0; s < _inputData->slot_count(); s++)
         {
             if(choice_of(p, s) != other.choice_of(p, s))
             {

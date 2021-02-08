@@ -20,7 +20,7 @@
 #include "Options.h"
 #include "Status.h"
 #include "ShotgunSolver.h"
-#include "OutputWriter.h"
+#include "OutputFormatter.h"
 #include "input/InputReader.h"
 #include "input/ConstraintBuilder.h"
 #include "ShotgunSolverThreaded.h"
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
         Status::info("Processing input.");
         auto inputData = InputReader(options).read_input(inputString);
 
-        Status::info("Read " + str(inputData->set_count()) + " set(s), " + str(inputData->choice_count()) + " choice(s) and " + str(inputData->chooser_count()) + " chooser(s).");
+        Status::info("Read " + str(inputData->slot_count()) + " slot(s), " + str(inputData->choice_count()) + " choice(s) and " + str(inputData->chooser_count()) + " chooser(s).");
 
         Status::info("Found " + str(inputData->scheduling_constraints().size()) + " scheduling and "
             + str(inputData->assignment_constraints().size()) + " assignment constraints.");
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
 
         auto scoring = std::make_shared<Scoring>(inputData, options);
 
-        bool doCsAnalysis = !options->no_critical_sets() && !options->greedy() && inputData->set_count() > 1;
+        bool doCsAnalysis = !options->no_critical_sets() && !options->greedy() && inputData->slot_count() > 1;
         Status::info(doCsAnalysis ? "Performing critical set analysis." : "Skipping critical set analysis.");
         auto csAnalysis = std::make_shared<CriticalSetAnalysis>(inputData, doCsAnalysis);
 
@@ -189,13 +189,13 @@ int main(int argc, char** argv)
         {
             Status::info_important("Solution found.");
             Status::info("Solution score: " + scoring->evaluate(solution).to_str());
-            if (inputData->set_count() > 1)
+            if (inputData->slot_count() > 1)
             {
-                string schedulingSolutionString = OutputWriter::write_scheduling_solution(solution);
+                string schedulingSolutionString = OutputFormatter::write_scheduling_solution(solution);
                 output_string(schedulingSolutionString, ".scheduling.csv", options);
             }
 
-            string assignmentSolutionString = OutputWriter::write_assignment_solution(solution);
+            string assignmentSolutionString = OutputFormatter::write_assignment_solution(solution);
             output_string(assignmentSolutionString, ".assignment.csv", options);
         }
     }

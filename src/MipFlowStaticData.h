@@ -22,6 +22,10 @@
 
 typedef uint64_t flowid;
 
+/**
+ * Contains some static data that is the same across all MipFlow instances and therefore do not have to be generated
+ * every time.
+ */
 class MipFlowStaticData
 {
 private:
@@ -34,11 +38,11 @@ public:
 
     static flowid make_long(int high, int low);
     static flowid node_chooser(int p, int s);
-    static flowid node_set(int s);
+    static flowid node_slot(int s);
     static flowid node_choice(int w);
     static flowid edge_id(int from, int to);
 
-    MipFlowStaticData(const_ptr<InputData> inputData);
+    explicit MipFlowStaticData(const_ptr<InputData> inputData);
 };
 
 

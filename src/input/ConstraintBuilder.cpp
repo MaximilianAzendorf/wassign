@@ -21,7 +21,7 @@ int ConstraintBuilder::resolve_accessor(InputData const& data, ConstraintExpress
 {
     switch(accessor.type)
     {
-        case Set: return find_name(accessor.name, data.sets());
+        case Slot: return find_name(accessor.name, data.slots());
         case Chooser: return find_name(accessor.name, data.choosers());
         case Choice:
         {
@@ -37,6 +37,7 @@ int ConstraintBuilder::resolve_accessor(InputData const& data, ConstraintExpress
             }
             return w;
         }
+        case Integer: return std::stoi(accessor.name);
 
         default: throw std::logic_error("Unexpected accessor type.");
     }
@@ -61,13 +62,13 @@ vector<Constraint> ConstraintBuilder::build(InputData const& data, ConstraintExp
     {
         switch (key(expression.left.type, expression.left.subType, expression.relation.type, expression.right.type, expression.right.subType))
         {
-            case key(Choice, Set, REq, Set, NotSet): add(ChoiceIsInSet); break;
-            case key(Choice, Set, RNeq, Set, NotSet): add(ChoiceIsNotInSet); break;
-            case key(Choice, Set, REq, Choice, Set): add(ChoicesAreInSameSet); break;
-            case key(Choice, Set, RNeq, Choice, Set): add(ChoicesAreNotInSameSet); break;
-            case key(Set, Choice, RContains, Choice, NotSet): add(SetContainsChoice); break;
-            case key(Set, Choice, RNotContains, Choice, NotSet): add(SetNotContainsChoice); break;
-            case key(Set, Choice, REq, Set, Choice): add(SetsHaveSameChoices); break;
+            case key(Choice, Slot, REq, Slot, NotSet): add(ChoiceIsInSlot); break;
+            case key(Choice, Slot, RNeq, Slot, NotSet): add(ChoiceIsNotInSlot); break;
+            case key(Choice, Slot, REq, Choice, Slot): add(ChoicesAreInSameSlot); break;
+            case key(Choice, Slot, RNeq, Choice, Slot): add(ChoicesAreNotInSameSlot); break;
+            case key(Slot, Choice, RContains, Choice, NotSet): add(SlotContainsChoice); break;
+            case key(Slot, Choice, RNotContains, Choice, NotSet): add(SlotNotContainsChoice); break;
+            case key(Slot, Choice, REq, Slot, Choice): add(SlotsHaveSameChoices); break;
 
             case key(Choice, Chooser, REq, Choice, Chooser): add(ChoicesHaveSameChoosers); break;
             case key(Chooser, Choice, RContains, Choice, NotSet): add(ChooserIsInChoice); break;
@@ -76,14 +77,14 @@ vector<Constraint> ConstraintBuilder::build(InputData const& data, ConstraintExp
             case key(Choice, Chooser, RContains, Chooser, NotSet): add(ChoiceContainsChooser); break;
             case key(Choice, Chooser, RNotContains, Chooser, NotSet): add(ChoiceNotContainsChooser); break;
 
-            case key(Set, Size, REq, Integer, NotSet):
-            case key(Set, Size, RNeq, Integer, NotSet):
-            case key(Set, Size, RGt, Integer, NotSet):
-            case key(Set, Size, RLt, Integer, NotSet):
-            case key(Set, Size, RGeq, Integer, NotSet):
-            case key(Set, Size, RLeq, Integer, NotSet):
+            case key(Slot, Size, REq, Integer, NotSet):
+            case key(Slot, Size, RNeq, Integer, NotSet):
+            case key(Slot, Size, RGt, Integer, NotSet):
+            case key(Slot, Size, RLt, Integer, NotSet):
+            case key(Slot, Size, RGeq, Integer, NotSet):
+            case key(Slot, Size, RLeq, Integer, NotSet):
             {
-                add(SetHasLimitedSize, (SetSizeLimitOp)expression.relation.type);
+                add(SlotHasLimitedSize, (SlotSizeLimitOp)expression.relation.type);
                 break;
             }
 

@@ -30,15 +30,15 @@ enum ConstraintType
 {
     Invalid = 0,
 
-    ChoiceIsInSet = 1,
-    ChoiceIsNotInSet,
-    ChoicesAreInSameSet,
-    ChoicesAreNotInSameSet,
+    ChoiceIsInSlot = 1,
+    ChoiceIsNotInSlot,
+    ChoicesAreInSameSlot,
+    ChoicesAreNotInSameSlot,
     ChoicesHaveOffset,
-    SetHasLimitedSize,
-    SetContainsChoice,  // reduced
-    SetNotContainsChoice,  // reduced
-    SetsHaveSameChoices,  // reduced
+    SlotHasLimitedSize,
+    SlotContainsChoice,  // reduced
+    SlotNotContainsChoice,  // reduced
+    SlotsHaveSameChoices,  // reduced
 
     ChoicesHaveSameChoosers = CONSTRAINT_TYPE_DISCRIMINATION_LIMIT,
     ChooserIsInChoice,
@@ -49,9 +49,9 @@ enum ConstraintType
 };
 
 /**
- * Relation operators supported by the SetHasLimitedSize constraint.
+ * Relation operators supported by the SlotHasLimitedSize constraint.
  */
-enum SetSizeLimitOp
+enum SlotSizeLimitOp
 {
     Eq = 1,
     Gt = 2,

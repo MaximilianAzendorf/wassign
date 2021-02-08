@@ -51,9 +51,14 @@ private:
     set<pair<int, int>> get_blocked_constraint_edges(shared_ptr<Scheduling const> const& scheduling);
 
     /**
+     * Creates edge groups for dependent choices and ChoosersHaveSameChoices constraints.
+     */
+    void create_edge_groups(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+
+    /**
      * Calculates an optimal assignment for the given scheduling, considering the given preference limit.
      */
-    const_ptr<Assignment> solve_with_limit(shared_ptr<Scheduling const> const& scheduling,
+    const_ptr<Assignment> solve_with_limit(const_ptr<Scheduling> const& scheduling,
                                                   int preferenceLimit,
                                                   op::MPSolver& solver);
 public:

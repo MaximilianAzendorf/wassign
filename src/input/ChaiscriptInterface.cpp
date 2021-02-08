@@ -57,9 +57,9 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::user_type<ConstraintExpression>(), "__cexp");
     c.add(cs::user_type<ConstraintExpressionAccessor>(), "__cexpAccessor");
 
-    c.add(cs::user_type<InputSetData>(), "set");
-    c.add(cs::user_type<SetData>(), "rawSet");
-    c.add(cs::fun(&SetData::name), "name");
+    c.add(cs::user_type<InputSlotData>(), "slot");
+    c.add(cs::user_type<SlotData>(), "rawSlot");
+    c.add(cs::fun(&SlotData::name), "name");
 
     c.add(cs::user_type<InputChoiceData>(), "choice");
     c.add(cs::user_type<ProtoChoiceData>(), "rawChoice");
@@ -79,19 +79,19 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChaiscriptInterface::get_csv_row), "row");
     c.add(cs::fun(&ChaiscriptInterface::get_csv_row), "[]");
 
-    c.add(cs::base_class<SetData, InputSetData>());
+    c.add(cs::base_class<SlotData, InputSlotData>());
     c.add(cs::base_class<ProtoChoiceData, InputChoiceData>());
     c.add(cs::base_class<ChooserData, InputChooserData>());
 
-    c.add(cs::type_conversion<InputSetData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_set_accessor_conversion));
+    c.add(cs::type_conversion<InputSlotData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_slot_accessor_conversion));
     c.add(cs::type_conversion<InputChoiceData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_choice_accessor_conversion));
     c.add(cs::type_conversion<InputChooserData, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_chooser_accessor_conversion));
     c.add(cs::type_conversion<int, ConstraintExpressionAccessor>(&ChaiscriptInterface::cexp_integer_accessor_conversion));
     c.add(cs::type_conversion<string, int>(&ChaiscriptInterface::int_string_conversion));
     c.add(cs::type_conversion<int, string>(&ChaiscriptInterface::string_int_conversion));
 
-    c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, string const&)>(&ChaiscriptInterface::set), readerRef), "set");
-    c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, string const&, vector<Tagged> const&)>(&ChaiscriptInterface::set), readerRef), "set");
+    c.add(cs::fun(static_cast<shared_ptr<InputSlotData> (*)(InputReader&, string const&)>(&ChaiscriptInterface::slot), readerRef), "slot");
+    c.add(cs::fun(static_cast<shared_ptr<InputSlotData> (*)(InputReader&, string const&, vector<Tagged> const&)>(&ChaiscriptInterface::slot), readerRef), "slot");
 
     c.add(cs::fun(static_cast<shared_ptr<InputChoiceData> (*)(InputReader&, string const&)>(&ChaiscriptInterface::choice), readerRef), "choice");
     c.add(cs::fun(static_cast<shared_ptr<InputChoiceData> (*)(InputReader&, string const&, vector<Tagged> const&)>(&ChaiscriptInterface::choice), readerRef), "choice");
@@ -106,18 +106,18 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<string> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, string const&, vector<Tagged> const& t, vector<string> const&)>(&ChaiscriptInterface::chooser), readerRef), "chooser");
 
-    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSetData> const&)>(&ChaiscriptInterface::cexp_choices)), "choices");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSlotData> const&)>(&ChaiscriptInterface::cexp_choices)), "choices");
     c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChooserData> const&)>(&ChaiscriptInterface::cexp_choices)), "choices");
-    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&)>(&ChaiscriptInterface::cexp_set)), "set");
-    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&, int)>(&ChaiscriptInterface::cexp_set)), "set");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&)>(&ChaiscriptInterface::cexp_slot)), "slot");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&, int)>(&ChaiscriptInterface::cexp_slot)), "slot");
     c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&)>(&ChaiscriptInterface::cexp_choosers)), "choosers");
     c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputChoiceData> const&, int)>(&ChaiscriptInterface::cexp_choosers)), "choosers");
-    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSetData> const&)>(&ChaiscriptInterface::cexp_size)), "size");
+    c.add(cs::fun(static_cast<ConstraintExpressionAccessor (*)(shared_ptr<InputSlotData> const&)>(&ChaiscriptInterface::cexp_size)), "size");
 
     c.add(cs::fun(&ChaiscriptInterface::constraint), "constraint");
 
-    c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, shared_ptr<InputSetData>)>(&ChaiscriptInterface::add), readerRef), "add");
-    c.add(cs::fun(static_cast<shared_ptr<InputSetData> (*)(InputReader&, shared_ptr<InputSetData>)>(&ChaiscriptInterface::add), readerRef), "+");
+    c.add(cs::fun(static_cast<shared_ptr<InputSlotData> (*)(InputReader&, shared_ptr<InputSlotData>)>(&ChaiscriptInterface::add), readerRef), "add");
+    c.add(cs::fun(static_cast<shared_ptr<InputSlotData> (*)(InputReader&, shared_ptr<InputSlotData>)>(&ChaiscriptInterface::add), readerRef), "+");
     c.add(cs::fun(static_cast<shared_ptr<InputChoiceData> (*)(InputReader&, shared_ptr<InputChoiceData>)>(&ChaiscriptInterface::add), readerRef), "add");
     c.add(cs::fun(static_cast<shared_ptr<InputChoiceData> (*)(InputReader&, shared_ptr<InputChoiceData>)>(&ChaiscriptInterface::add), readerRef), "+");
     c.add(cs::fun(static_cast<shared_ptr<InputChooserData> (*)(InputReader&, shared_ptr<InputChooserData>)>(&ChaiscriptInterface::add), readerRef), "add");
@@ -132,6 +132,7 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChaiscriptInterface::cexp_leq), "<=");
     c.add(cs::fun(&ChaiscriptInterface::cexp_geq), ">=");
     c.add(cs::fun(&ChaiscriptInterface::cexp_contains), "contains");
+    c.add(cs::fun(&ChaiscriptInterface::cexp_contains_not), "contains_not");
     c.add(cs::fun(&ChaiscriptInterface::cexp_subset), "subsetOf");
     c.add(cs::fun(&ChaiscriptInterface::cexp_superset), "supersetOf");
 
@@ -146,7 +147,7 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChaiscriptInterface::bounds), "bounds");
 }
 
-shared_ptr<InputSetData> ChaiscriptInterface::set(InputReader& reader, string const& name)
+shared_ptr<InputSlotData> ChaiscriptInterface::slot(InputReader& reader, string const& name)
 {
     string foundName = find_by_name(name, reader._setMap);
 
@@ -155,12 +156,12 @@ shared_ptr<InputSetData> ChaiscriptInterface::set(InputReader& reader, string co
         return reader._setMap[foundName];
     }
 
-    return set(reader, name, {});
+    return slot(reader, name, {});
 }
 
-shared_ptr<InputSetData> ChaiscriptInterface::set(InputReader& reader, string const& name, vector<Tagged> const& t)
+shared_ptr<InputSlotData> ChaiscriptInterface::slot(InputReader& reader, string const& name, vector<Tagged> const& t)
 {
-    auto newSet = std::make_shared<InputSetData>();
+    auto newSet = std::make_shared<InputSlotData>();
     newSet->registered = false;
     newSet->name = name;
     reader._inputObjects.push_back(newSet);
@@ -189,6 +190,10 @@ shared_ptr<InputChoiceData> ChaiscriptInterface::choice(InputReader& reader,
     auto newChoice = std::make_shared<InputChoiceData>();
     newChoice->registered = false;
     newChoice->name = name;
+    newChoice->parts = 1;
+    newChoice->min = 1;
+    newChoice->max = 1;
+    newChoice->optional = false;
     reader._inputObjects.push_back(newChoice);
 
     for(auto const& tagged : t)
@@ -298,7 +303,7 @@ ConstraintExpression ChaiscriptInterface::constraint(ConstraintExpression constr
 }
 
 
-shared_ptr<InputSetData> ChaiscriptInterface::add(InputReader& reader, shared_ptr<InputSetData> set)
+shared_ptr<InputSlotData> ChaiscriptInterface::add(InputReader& reader, shared_ptr<InputSlotData> set)
 {
     if(reader._setMap.find(set->name) != reader._setMap.end())
     {
@@ -366,9 +371,9 @@ Tagged ChaiscriptInterface::parts(int parts)
     return Tagged(Parts, parts);
 }
 
-ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputSetData> const& set)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputSlotData> const& set)
 {
-    return { .type = Set, .subType = Choice, .name = set->name, .part = 0 };
+    return { .type = Slot, .subType = Choice, .name = set->name, .part = 0 };
 }
 
 ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputChooserData> const& chooser)
@@ -376,14 +381,14 @@ ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputC
     return { .type = Chooser, .subType = Choice, .name = chooser->name, .part = 0 };
 }
 
-ConstraintExpressionAccessor ChaiscriptInterface::cexp_set(shared_ptr<InputChoiceData> const& choice)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_slot(shared_ptr<InputChoiceData> const& choice)
 {
-    return cexp_set(choice, 0);
+    return cexp_slot(choice, 0);
 }
 
-ConstraintExpressionAccessor ChaiscriptInterface::cexp_set(shared_ptr<InputChoiceData> const& choice, int part)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_slot(shared_ptr<InputChoiceData> const& choice, int part)
 {
-    return { .type = Choice, .subType = Set, .name = choice->name, .part = part };
+    return { .type = Choice, .subType = Slot, .name = choice->name, .part = part };
 }
 
 ConstraintExpressionAccessor ChaiscriptInterface::cexp_choosers(shared_ptr<InputChoiceData> const& choice)
@@ -396,9 +401,9 @@ ConstraintExpressionAccessor ChaiscriptInterface::cexp_choosers(shared_ptr<Input
     return { .type = Choice, .subType = Chooser, .name = choice->name, .part = part };
 }
 
-ConstraintExpressionAccessor ChaiscriptInterface::cexp_size(shared_ptr<InputSetData> const& set)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_size(shared_ptr<InputSlotData> const& set)
 {
-    return { .type = Set, .subType = Size, .name = set->name, .part = 0 };
+    return { .type = Slot, .subType = Size, .name = set->name, .part = 0 };
 }
 
 ConstraintExpression ChaiscriptInterface::cexp_eq(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
@@ -436,6 +441,11 @@ ConstraintExpression ChaiscriptInterface::cexp_contains(ConstraintExpressionAcce
     return {.left = std::move(left), .relation = {.type = RContains}, .right = std::move(right)};
 }
 
+ConstraintExpression ChaiscriptInterface::cexp_contains_not(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
+{
+    return {.left = std::move(left), .relation = {.type = RNotContains}, .right = std::move(right)};
+}
+
 ConstraintExpression ChaiscriptInterface::cexp_subset(ConstraintExpressionAccessor left, ConstraintExpressionAccessor right)
 {
     return {.left = std::move(left), .relation = {.type = RSubset}, .right = std::move(right)};
@@ -446,9 +456,9 @@ ConstraintExpression ChaiscriptInterface::cexp_superset(ConstraintExpressionAcce
     return {.left = std::move(left), .relation = {.type = RSuperset}, .right = std::move(right)};
 }
 
-ConstraintExpressionAccessor ChaiscriptInterface::cexp_set_accessor_conversion(InputSetData const& set)
+ConstraintExpressionAccessor ChaiscriptInterface::cexp_slot_accessor_conversion(InputSlotData const& set)
 {
-    return { .type = Set, .subType = NotSet, .name = set.name, .part = 0 };
+    return { .type = Slot, .subType = NotSet, .name = set.name, .part = 0 };
 }
 
 ConstraintExpressionAccessor ChaiscriptInterface::cexp_choice_accessor_conversion(InputChoiceData const& choice)

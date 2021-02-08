@@ -22,6 +22,9 @@
 #include "Solution.h"
 #include "Score.h"
 
+/**
+ * Calculates the score of a given solution.
+ */
 class Scoring
 {
 private:
@@ -42,8 +45,14 @@ private:
 public:
     Scoring(const_ptr<InputData> inputData, const_ptr<Options> options);
 
+    /**
+     * Determines if the given solution is valid.
+     */
     [[nodiscard]] virtual bool is_feasible(Solution const& solution) const;
 
+    /**
+     * Calculates the score of the given solution.
+     */
     [[nodiscard]] virtual Score evaluate(Solution const& solution) const;
 };
 

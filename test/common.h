@@ -50,3 +50,5 @@ std::string scheduling_str(Solution const& solution);
 void expect_assignment(Solution const& solution, std::string expectation);
 
 void expect_scheduling(Solution const& solution, std::string expectation);
+
+Solution solve(const_ptr<InputData> data, int timeout = 1);

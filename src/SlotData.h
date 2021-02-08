@@ -4,9 +4,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-#include "../src/ChooserData.h"
+#pragma once
 
-#include <emscripten/bind.h>
-using namespace emscripten;
+#include "Types.h"
 
-EMSCRIPTEN_BINDINGS(wassign_chooserdata)
+/**
+ * Contains the input data of a single slot.
+ */
+class SlotData
 {
-    class_<ChooserData>("ChooserData")
-            .property("name", &ChooserData::name)
-            .property("preferences", &ChooserData::preferences);
+public:
+    string name;
+
+    SlotData() = default;
+    explicit SlotData(string name);
 };

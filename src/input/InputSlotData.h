@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
-#include "../src/input/InputReader.h"
+#include "../Types.h"
+#include "../SlotData.h"
+#include "InputObject.h"
 
-#include <emscripten/bind.h>
-using namespace emscripten;
-
-EMSCRIPTEN_BINDINGS(wassign_inputreader)
+class InputSlotData : public SlotData, public InputObject
 {
-    class_<InputReader>("InputReader")
-            .smart_ptr_constructor("InputReader", &std::make_shared<InputReader, shared_ptr<Options>>)
-            .function("readInput", &InputReader::read_input);
 };
+
+

@@ -20,6 +20,10 @@
 #include "CriticalSet.h"
 #include "InputData.h"
 
+/**
+ * Critical set analysis is used as a heuristic by the scheduling solver to produce schedulings that are more likely
+ * to produce a better solution. For more details see the documentation.
+ */
 class CriticalSetAnalysis
 {
 private:
@@ -27,19 +31,47 @@ private:
     const_ptr<InputData> _inputData;
     int preferenceBound;
 
+    /**
+     * Performs the analysis.
+     */
     void analyze();
 
 public:
+    /**
+     * After this amount of time, progress updates will be printed to the output while analyzing.
+     */
     inline static const seconds ProgressInterval = seconds(3);
 
-    CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze = true);
+    /**
+     * Do not print progress updates ever if this is set to true.
+     */
+    bool quiet = false;
 
+    /**
+     * Constructor.
+     * @param inputData The input data to analyze.
+     * @param analyze If this is set to false, no analysis will be performed and this instance will only hold dummy data.
+     */
+    explicit CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze = true);
+
+    /**
+     * Returns all critical sets relevant for the given preference bound.
+     */
     [[nodiscard]] vector<CriticalSet> for_preference(int preference) const;
 
+    /**
+     * Returns all critical sets.
+     */
     [[nodiscard]] vector<CriticalSet> const& sets() const;
 
+    /**
+     * Returns an upper bound for the lowest preference a solution can have.
+     */
     [[nodiscard]] int preference_bound() const;
 
+    /**
+     * Calls the constructor with analyze = false.
+     */
     [[nodiscard]] static CriticalSetAnalysis empty(const_ptr<InputData> inputData);
 };
 

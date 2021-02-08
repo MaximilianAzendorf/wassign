@@ -28,7 +28,7 @@ private:
     Constraints() = default;
 
     /**
-     * Returns critical sets that have to be satisfied because they imply fixed assignments
+     * Returns critical sets that have to be satisfied because else the solution would not satisfy some fixed assignments
      * (specified by ChooserIsInChoice constraints).
      */
     static vector<vector<int>> get_mandatory_critical_sets(vector<Constraint> const& constraints);
@@ -42,7 +42,7 @@ public:
     static vector<vector<int>> get_dependent_choices(vector<Constraint> const& constraints, int choiceCount);
 
     /**
-     * Replaces some constraint types with their dual type (e.g. SetContainsChoice becomes ChoiceIsInSet) and removes
+     * Replaces some constraint types with their dual type (e.g. SlotContainsChoice becomes ChoiceIsInSlot) and removes
      * constraints that are a tautology. If there are constraints that represent a contradiction, isInfeasible will be
      * set to true.
      */

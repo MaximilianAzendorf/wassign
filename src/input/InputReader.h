@@ -19,7 +19,7 @@
 #include "../Options.h"
 #include "../MutableInputData.h"
 #include "../InputData.h"
-#include "InputSetData.h"
+#include "InputSlotData.h"
 #include "InputChoiceData.h"
 #include "InputChooserData.h"
 #include "ChaiscriptInterface.h"
@@ -44,11 +44,11 @@ private:
 
     shared_ptr<Options> _options;
 
-    map<string, shared_ptr<InputSetData>> _setMap;
+    map<string, shared_ptr<InputSlotData>> _setMap;
     map<string, shared_ptr<InputChoiceData>> _choiceMap;
     map<string, shared_ptr<InputChooserData>> _chooserMap;
 
-    vector<shared_ptr<InputSetData>> _sets;
+    vector<shared_ptr<InputSlotData>> _sets;
     vector<shared_ptr<InputChoiceData>> _choices;
     vector<shared_ptr<InputChooserData>> _choosers;
     vector<shared_ptr<InputObject>> _inputObjects;

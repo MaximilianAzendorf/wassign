@@ -19,7 +19,7 @@
 #include "Types.h"
 #include "ChoiceData.h"
 #include "ChooserData.h"
-#include "SetData.h"
+#include "SlotData.h"
 #include "Constraint.h"
 #include "input/ProtoChoiceData.h"
 
@@ -34,7 +34,7 @@ struct MutableInputData
     vector<ChoiceData> choices;
     vector<ProtoChoiceData> preChoices;
     vector<ChooserData> choosers;
-    vector<SetData> sets;
+    vector<SlotData> slots;
     vector<string> constraintStrings;
     vector<Constraint> constraints;
     vector<MutableInputDataConductorData> conductors;

@@ -20,8 +20,9 @@
 #include "../src/input/ConstraintBuilder.h"
 #include <boost/algorithm/string.hpp>
 #include <utility>
-#include "../src/OutputWriter.h"
+#include "../src/OutputFormatter.h"
 #include "../src/Status.h"
+#include "../src/ShotgunSolverThreaded.h"
 
 using namespace boost::algorithm;
 
@@ -34,7 +35,7 @@ const_ptr<InputData> parse_data(std::string const& input)
 
 std::string assignment_str(Solution const& solution)
 {
-    std::string solutionStr = OutputWriter::write_assignment_solution(solution);
+    std::string solutionStr = OutputFormatter::write_assignment_solution(solution);
     solutionStr = replace_all_copy(solutionStr, " ", "");
     solutionStr = replace_all_copy(solutionStr, "\"", "");
     solutionStr.erase(0, solutionStr.find('\n') + 1);
@@ -47,7 +48,7 @@ std::string assignment_str(Solution const& solution)
 
 std::string scheduling_str(Solution const& solution)
 {
-    std::string solutionStr = OutputWriter::write_scheduling_solution(solution);
+    std::string solutionStr = OutputFormatter::write_scheduling_solution(solution);
     solutionStr = replace_all_copy(solutionStr, " ", "");
     solutionStr = replace_all_copy(solutionStr, "\"", "");
     solutionStr.erase(0, solutionStr.find('\n') + 1);
@@ -123,4 +124,19 @@ Solution sol(const_ptr<Assignment> assignment)
 Solution sol(const_ptr<Scheduling> scheduling, const_ptr<Assignment> assignment)
 {
     return Solution(std::move(scheduling), std::move(assignment));
+}
+
+Solution solve(const_ptr<InputData> data, int timeout)
+{
+    auto options = default_options();
+    options->set_timeout_seconds(timeout);
+
+    ShotgunSolverThreaded solver(data, csa(data), sd(data), scoring(data, options), options);
+    solver.start();
+
+    Solution sol = solver.wait_for_result();
+
+    Status::info("Iterations calculated: " + str(solver.progress().iterations));
+
+    return sol;
 }

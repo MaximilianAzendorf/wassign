@@ -30,38 +30,38 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
 
         switch(constraint.type())
         {
-            case ChoiceIsInSet:
-                if(solution.scheduling()->set_of(l) != r) return false;
+            case ChoiceIsInSlot:
+                if(solution.scheduling()->slot_of(l) != r) return false;
                 break;
 
-            case ChoiceIsNotInSet:
-                if(solution.scheduling()->set_of(l) == r) return false;
+            case ChoiceIsNotInSlot:
+                if(solution.scheduling()->slot_of(l) == r) return false;
                 break;
 
-            case ChoicesAreInSameSet:
-                if(solution.scheduling()->set_of(l) != solution.scheduling()->set_of(r)) return false;
+            case ChoicesAreInSameSlot:
+                if(solution.scheduling()->slot_of(l) != solution.scheduling()->slot_of(r)) return false;
                 break;
 
-            case ChoicesAreNotInSameSet:
-                if(solution.scheduling()->set_of(l) == solution.scheduling()->set_of(r)) return false;
+            case ChoicesAreNotInSameSlot:
+                if(solution.scheduling()->slot_of(l) == solution.scheduling()->slot_of(r)) return false;
                 break;
 
             case ChoicesHaveOffset:
-                if(solution.scheduling()->set_of(r) - solution.scheduling()->set_of(l) != e) return false;
+                if(solution.scheduling()->slot_of(r) - solution.scheduling()->slot_of(l) != e) return false;
                 break;
 
-            case SetHasLimitedSize:
+            case SlotHasLimitedSize:
             {
                 int count = 0;
                 for(int w = 0; w < solution.input_data().choice_count(); w++)
                 {
-                    if(solution.scheduling()->set_of(w) == constraint.left())
+                    if(solution.scheduling()->slot_of(w) == constraint.left())
                     {
                         count++;
                     }
                 }
 
-                switch((SetSizeLimitOp)e)
+                switch((SlotSizeLimitOp)e)
                 {
                     case Eq: if(count != r) return false; break;
                     case Neq: if(count == r) return false; break;
@@ -69,7 +69,7 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
                     case Lt: if(count >= r) return false; break;
                     case Geq: if(count < r) return false; break;
                     case Leq: if(count > r) return false; break;
-                    default: throw std::logic_error("Unknown set size limit operator " + str(e) + ".");
+                    default: throw std::logic_error("Unknown slot size limit operator " + str(e) + ".");
                 }
                 break;
             }
@@ -122,10 +122,10 @@ bool Scoring::satisfies_constraints(Solution const& solution) const
 int Scoring::evaluate_major(Solution const& solution) const
 {
     int m = 0;
-    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->slot_count(); i++)
     {
-        int p = i / _inputData->set_count();
-        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
+        int p = i / _inputData->slot_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->slot_count());
         m = std::max(m, _inputData->chooser(p).preferences[ws]);
     }
 
@@ -141,10 +141,10 @@ float Scoring::evaluate_minor(Solution const& solution) const
 
     vector<int> prefCount(_inputData->max_preference() + 1);
 
-    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->slot_count(); i++)
     {
-        int p = i / _inputData->set_count();
-        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
+        int p = i / _inputData->slot_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->slot_count());
         prefCount[_inputData->chooser(p).preferences[ws]]++;
     }
 
@@ -167,8 +167,8 @@ Scoring::Scoring(const_ptr<InputData> inputData, const_ptr<Options> options)
 bool Scoring::is_feasible(Solution const& solution) const
 {
     vector<int> partCounts(_inputData->choice_count());
-    vector<vector<bool>> isInSet(_inputData->chooser_count(), vector<bool>(_inputData->set_count()));
-    vector<int> sets(_inputData->choice_count());
+    vector<vector<bool>> isInSlot(_inputData->chooser_count(), vector<bool>(_inputData->slot_count()));
+    vector<int> slots(_inputData->choice_count());
 
     if(!satisfies_constraints(solution))
     {
@@ -177,19 +177,19 @@ bool Scoring::is_feasible(Solution const& solution) const
 
     for(int i = 0; i < _inputData->choice_count(); i++)
     {
-        sets[i] = solution.scheduling()->set_of(i);
+        slots[i] = solution.scheduling()->slot_of(i);
     }
 
-    for(int i = 0; i < _inputData->chooser_count() * _inputData->set_count(); i++)
+    for(int i = 0; i < _inputData->chooser_count() * _inputData->slot_count(); i++)
     {
-        int p = i / _inputData->set_count();
-        int ws = solution.assignment()->choice_of(p, i % _inputData->set_count());
-        if(isInSet[p][sets[ws]])
+        int p = i / _inputData->slot_count();
+        int ws = solution.assignment()->choice_of(p, i % _inputData->slot_count());
+        if(isInSlot[p][slots[ws]])
         {
             return false;
         }
 
-        isInSet[p][sets[ws]] = true;
+        isInSlot[p][slots[ws]] = true;
         partCounts[ws]++;
     }
 

@@ -25,8 +25,9 @@ class ProtoChoiceData
 {
 public:
     string name;
-    vector<string> cond;
-    int min, max, parts;
+    int min;
+    int max;
+    int parts;
     bool optional;
 };
 

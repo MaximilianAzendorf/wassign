@@ -27,6 +27,9 @@ enum OptionsParseStatus
     ERROR
 };
 
+/**
+ * Contains and parses the command line options given to wassign.
+ */
 class Options
 {
 private:
@@ -39,6 +42,7 @@ private:
     int _csTimeout = 3;
     bool _noCs = false;
     int _threadCount = (int)std::thread::hardware_concurrency();
+    int _maxNeighbors = 16;
     bool _greedy = false;
 
     OptionsParseStatus parse_base(int argc, char** argv, bool newOpt, string const& header);
@@ -80,6 +84,8 @@ public:
 
     [[nodiscard]] int thread_count() const;
 
+    [[nodiscard]] int max_neighbors() const;
+
     [[nodiscard]] bool greedy() const;
 
     void set_verbosity(int verbosity);
@@ -99,6 +105,8 @@ public:
     void set_any(bool any);
 
     void set_thread_count(int threadCount);
+
+    void set_max_neighbors(int maxNeighbors);
 
     void set_greedy(bool greedy);
 };

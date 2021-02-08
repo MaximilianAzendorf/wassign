@@ -23,12 +23,8 @@ enum AccessorType
 
     Chooser,
     Choice,
-    Set,
+    Slot,
     Size,
-    ChoosersOfChoice,
-    ChoicesOfChooser,
-    ChoicesOfSet,
-    SetOfChoice,
     Integer,
 };
 
@@ -42,10 +38,11 @@ enum RelationType
     RLeq = Leq,
 
     RContains = 1U << 16,
+    RNotContains = -RContains,
+
+    // TODO: Implement support for sub- and superset relations
     RSubset,
     RSuperset,
-
-    RNotContains = -RContains,
 };
 
 struct ConstraintExpressionAccessor

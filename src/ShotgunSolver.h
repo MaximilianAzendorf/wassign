@@ -37,6 +37,10 @@ struct ShotgunSolverProgress
     Score best_score = {.major = INFINITY, .minor = INFINITY};
 };
 
+/**
+ * Performs shotgun hill climbing on the input data (combining the HillClimbingSolver and SchedulingSolver classes).
+ * Every iteration, a scheduling gets calculated and then hill climbing is performed on it.
+ */
 class ShotgunSolver
 {
 private:

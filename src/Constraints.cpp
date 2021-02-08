@@ -55,7 +55,7 @@ vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> 
             {
                 for(int j = i + 1; j < group.size(); j++)
                 {
-                    res.push_back(Constraint(ChoicesAreNotInSameSet, group[i], group[j]));
+                    res.push_back(Constraint(ChoicesAreNotInSameSlot, group[i], group[j]));
                 }
             }
         }
@@ -120,12 +120,12 @@ Constraints::reduce_and_optimize(vector<Constraint> const& constraints, int choi
 
         switch(c.type())
         {
-            case SetContainsChoice: newType = ChoiceIsInSet; break;
-            case SetNotContainsChoice: newType = ChoiceIsNotInSet; break;
+            case SlotContainsChoice: newType = ChoiceIsInSlot; break;
+            case SlotNotContainsChoice: newType = ChoiceIsNotInSlot; break;
             case ChoiceContainsChooser: newType = ChooserIsInChoice; break;
             case ChoiceNotContainsChooser: newType = ChooserIsNotInChoice; break;
 
-            case SetsHaveSameChoices:
+            case SlotsHaveSameChoices:
             {
                 // This constraint is always either a tautology or a contradiction.
                 //

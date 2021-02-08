@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-#include "OutputWriter.h"
+#include "OutputFormatter.h"
 
 #include <sstream>
 
-string OutputWriter::write_scheduling_solution(Solution const& solution)
+string OutputFormatter::write_scheduling_solution(Solution const& solution)
 {
     using std::endl;
     std::stringstream str;
 
-    str << R"("Choice", "Set")" << endl;
+    str << R"("Choice", "Slot")" << endl;
 
     for(int w = 0; w < solution.input_data().choice_count(); w++)
     {
-        int s = solution.scheduling()->set_of(w);
+        int s = solution.scheduling()->slot_of(w);
         string wName = solution.input_data().choice(w).name;
         if(wName.rfind(InputData::HiddenChoicePrefix, 0) == 0)
         {
             continue;
         }
 
-        string sName = solution.input_data().set(s).name;
-        if(sName.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
+        string sName = solution.input_data().slot(s).name;
+        if(sName.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
         {
             sName = "not scheduled";
         }
@@ -51,37 +51,37 @@ string OutputWriter::write_scheduling_solution(Solution const& solution)
     return str.str();
 }
 
-string OutputWriter::write_assignment_solution(Solution const& solution)
+string OutputFormatter::write_assignment_solution(Solution const& solution)
 {
     using std::endl;
     std::stringstream str;
 
     str << "\"Choice\"";
 
-    for(int s = 0; s < solution.input_data().set_count(); s++)
+    for(int s = 0; s < solution.input_data().slot_count(); s++)
     {
-        if(solution.input_data().set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
+        if(solution.input_data().slot(s).name.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
         {
             continue;
         }
 
-        str << ", \"" << solution.input_data().set(s).name << '"';
+        str << ", \"" << solution.input_data().slot(s).name << '"';
     }
 
     for(int p = 0; p < solution.input_data().chooser_count(); p++)
     {
-vector<int> choices(solution.input_data().set_count());
-        for(int s = 0; s < solution.input_data().set_count(); s++)
+vector<int> choices(solution.input_data().slot_count());
+        for(int s = 0; s < solution.input_data().slot_count(); s++)
         {
             int ws = solution.assignment()->choice_of(p, s);
-            choices[solution.scheduling()->set_of(ws)] = ws;
+            choices[solution.scheduling()->slot_of(ws)] = ws;
         }
 
         str << endl << '"' << solution.input_data().chooser(p).name << '"';
 
-        for(int s = 0; s < solution.input_data().set_count(); s++)
+        for(int s = 0; s < solution.input_data().slot_count(); s++)
         {
-            if(solution.input_data().set(s).name.rfind(InputData::NotScheduledSetPrefix, 0) == 0)
+            if(solution.input_data().slot(s).name.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
             {
                 continue;
             }

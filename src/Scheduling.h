@@ -19,6 +19,10 @@
 #include "Types.h"
 #include "InputData.h"
 
+/**
+ * Represents a single scheduling solution for the given input data. A scheduling is a mapping between choices
+ * and slots.
+ */
 class Scheduling
 {
 private:
@@ -26,22 +30,40 @@ private:
     vector<int> _data;
 
 public:
+    /**
+     * Constructor.
+     */
     explicit Scheduling(const_ptr<InputData> inputData);
 
+    /**
+     * Constructor
+     *
+     * @param data A vector v of integers where v[w] is the slot of w.
+     */
     Scheduling(const_ptr<InputData> inputData, vector<int> data);
 
+    /**
+     * Returns true if a solution is possible with this scheduling.
+     */
     [[nodiscard]] bool is_feasible() const;
 
-    [[nodiscard]] int set_of(int choice) const;
+    /**
+     * Returns the slot of the given choice in this scheduling.
+     */
+    [[nodiscard]] int slot_of(int choice) const;
 
+    /**
+     * Returns the input data this scheduling is based on.
+     */
     [[nodiscard]] InputData const& input_data() const;
 
+    /**
+     * Returns the raw data vector of this scheduling.
+     */
     [[nodiscard]] vector<int> const& raw_data() const;
 
     [[nodiscard]] int get_hash() const;
-
     bool operator == (Scheduling const& other) const;
-
     bool operator != (Scheduling const& other) const;
 };
 

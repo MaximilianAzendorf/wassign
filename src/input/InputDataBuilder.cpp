@@ -119,14 +119,14 @@ void InputDataBuilder::build_constraint_maps()
     {
         switch(constraint.type())
         {
-            case ChoiceIsInSet:
-            case ChoiceIsNotInSet:
+            case ChoiceIsInSlot:
+            case ChoiceIsNotInSlot:
             {
                 _inputData->_choiceConstraintMap[constraint.left()].push_back(constraint);
                 break;
             }
-            case ChoicesAreInSameSet:
-            case ChoicesAreNotInSameSet:
+            case ChoicesAreInSameSlot:
+            case ChoicesAreNotInSameSlot:
             case ChoicesHaveOffset:
             {
                 _inputData->_choiceConstraintMap[constraint.left()].push_back(constraint);
@@ -153,7 +153,7 @@ void InputDataBuilder::build_constraint_maps()
                 }
                 break;
             }
-            case SetHasLimitedSize:
+            case SlotHasLimitedSize:
             {
                 for(int i = 0; i < _inputData->_choices.size(); i++)
                 {
@@ -170,7 +170,7 @@ void InputDataBuilder::copy_data(InputReader const& reader)
 {
     for(auto const& set : reader._sets)
     {
-        _inputData->_sets.push_back(*set);
+        _inputData->_slots.push_back(*set);
     }
 
     for(auto const& chooser : reader._choosers)
@@ -222,7 +222,7 @@ void InputDataBuilder::compile_choices(InputReader const& reader)
     }
 }
 
-void InputDataBuilder::generate_extra_sets(InputReader const& reader)
+void InputDataBuilder::generate_extra_slots(InputReader const& reader)
 {
     int optMin = 0;
     bool hasOpt = false;
@@ -238,14 +238,14 @@ void InputDataBuilder::generate_extra_sets(InputReader const& reader)
 
     for(int i = 0; i < numExtraSets; i++)
     {
-        string extraSet = InputData::NotScheduledSetPrefix + str(i);
+        string extraSet = InputData::NotScheduledSlotPrefix + str(i);
         string extraChoice = InputData::HiddenChoicePrefix + "unassigned_" + str(i);
 
-        int s = _inputData->_sets.size();
+        int s = _inputData->_slots.size();
 
-        _inputData->_sets.push_back(SetData(extraSet));
+        _inputData->_slots.push_back(SlotData(extraSet));
         _inputData->_choices.push_back(ChoiceData(extraChoice, 0, _inputData->_choosers.size() + 1));
-        _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsInSet, _inputData->_choices.size() - 1, s));
+        _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsInSlot, _inputData->_choices.size() - 1, s));
 
         for(int p = 0; p < _inputData->_choosers.size(); p++)
         {
@@ -264,7 +264,7 @@ void InputDataBuilder::generate_extra_sets(InputReader const& reader)
                 if(_inputData->_choices[w].name == pw->name) break;
             }
 
-            _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsNotInSet, w, s));
+            _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsNotInSlot, w, s));
         }
     }
 }
@@ -380,7 +380,7 @@ void InputDataBuilder::process_input_reader(InputReader const& reader)
 {
     if(reader._sets.empty())
     {
-        _inputData->_sets.push_back(SetData(InputData::GeneratedSetName));
+        _inputData->_slots.push_back(SlotData(InputData::GeneratedSlotName));
     }
 
     copy_data(reader);
@@ -389,7 +389,7 @@ void InputDataBuilder::process_input_reader(InputReader const& reader)
     build_preference_levels(reader);
 
     compile_choices(reader);
-    generate_extra_sets(reader);
+    generate_extra_slots(reader);
     build_constraints(reader);
     build_constraint_maps();
 }

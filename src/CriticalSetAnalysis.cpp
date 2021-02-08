@@ -33,13 +33,13 @@ void CriticalSetAnalysis::analyze()
         int pref = *prefIt;
         for(int p = 0; p < _inputData->chooser_count(); p++)
         {
-            if(time_now() > nextOutput)
+            if(time_now() > nextOutput && !quiet)
             {
                 float progress = (float)prefIdx / (float)_inputData->preference_levels().size()
                                  + (1.0f / _inputData->preference_levels().size())
                                    * ((float)p / (float)_inputData->chooser_count());
 
-                Status::info("    " + str(100 * progress, 2)
+                Status::info(str(100 * progress, 2)
                              + "% (pref. " + str(pref) + "/" + str(_inputData->preference_levels().size())
                              + ", chooser " + str(p) + "/" + str(_inputData->chooser_count()) + "); "
                              + str(_sets.size()) + " sets so far.");
@@ -59,7 +59,7 @@ void CriticalSetAnalysis::analyze()
                 }
             }
 
-            if(minCount > _inputData->chooser_count() * (_inputData->set_count() - 1))
+            if(minCount > _inputData->chooser_count() * (_inputData->slot_count() - 1))
             {
                 // It is impossible that this critical set is not fulfilled by any solution.
                 continue;
@@ -67,8 +67,10 @@ void CriticalSetAnalysis::analyze()
 
             CriticalSet c(pref, newSet);
 
-            // Clang (and thus emcc) does not support parallel execution algorithms.
+            // Clang does not support parallel execution algorithms.
+            // TODO: Is there some more efficient way to do this step (and the simplification below)?
             // TODO: Implement some multi-threaded solution that clang supports.
+            // TODO: Find a way to obey the number of threads set by options.
 #if defined(__clang__) || (defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__))
             bool isCovered = std::any_of(_sets.begin(), _sets.end(),
                                          [&](CriticalSet const& other){ return c.is_covered_by(other); });
@@ -134,7 +136,7 @@ CriticalSetAnalysis::CriticalSetAnalysis(const_ptr<InputData> inputData, bool an
         for(int prefLevel : _inputData->preference_levels())
         {
             auto subset = for_preference(prefLevel);
-            if(!subset.empty() && subset.front().size() >= _inputData->set_count())
+            if(!subset.empty() && subset.front().size() >= _inputData->slot_count())
             {
                 preferenceBound = std::min(preferenceBound, prefLevel);
             }
@@ -157,6 +159,7 @@ vector<CriticalSet> CriticalSetAnalysis::for_preference(int preference) const
         }
     }
 
+    // TODO: Cache this method so we don't have to do this simplification step (and the sort below) every time.
     bool changed = true;
     while(changed)
     {
@@ -177,6 +180,8 @@ vector<CriticalSet> CriticalSetAnalysis::for_preference(int preference) const
         }
     }
 
+    // We sort the critical sets by size so that the important ones (the most restricting ones) are checked first.
+    //
     vector<CriticalSet> res(relevantSets.begin(), relevantSets.end());
     std::sort(res.begin(), res.end(), [](CriticalSet const& c1, CriticalSet const& c2)
     {
