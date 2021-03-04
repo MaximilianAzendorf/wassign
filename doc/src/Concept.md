@@ -120,7 +120,7 @@ There are multiple heuristics at play to improve the performance of the scheduli
 
 When we want to compute an assignment $\Ass$ based on a given scheduling $\Sched$, we want to assign each chooser to exactly one choice per slot (so for every pair of a slot $s$ and a chooser $p$, there is exactly one choice $\Ass(s, p)$).
 
-We also want the resultion solution $\Sol=(\Sched, \Ass)$ to be the "best" one for the given scheduling, but we first have to define a metric for how "good" a solution is in order to be able to compare it to other assignments.
+We also want the resultion solution $\Sol=(\Sched, \Ass)$ to be the "best" one for the given scheduling, but we first have to define a metric for how "good" a solution is in order to be able to compare it to other solutions.
 
 ### Solution scoring
 
@@ -138,7 +138,9 @@ We may also look at the two components of the scoring function separately. We th
 
 ### Algorithm
 
-We calculate the optimal assignment for a given scheduling by modelling the problem as a [minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem) instance like in this example:
+#### Minimum-cost flow network
+
+We calculate the optimal assignment for a given scheduling by modelling the problem as a [minimum-cost flow problem](https://en.wikipedia.org/wiki/Minimum-cost_flow_problem) instance like in this example with 2 slots, 3 choices and 4 choosers and a scheduling $\InvSched(s_1)=\{w_1, w_2\}$, $\InvSched(s_2)=\{w_3\}$:
 
 ``` {.tikz additionalPackages="\usepackage{adjustbox}"}
 \usetikzlibrary{positioning, arrows}
@@ -183,7 +185,7 @@ We calculate the optimal assignment for a given scheduling by modelling the prob
     (7.8,1) node[draw=none, anchor=west, align=left] (x1) {$\text{capacity}=1$ \\ $\text{cost}=\text{preference}^\gamma$}
     (7.8,2.4) node[draw=none, anchor=west, align=left] (x1) {$\text{capacity}=\text{\#choosers}-\min$ \\ $\text{cost}=0$};
 
-    \draw 
+    \draw[->] 
     (q11) edge (w1) (q11) edge (w2)
     (q21) edge (w1) (q21) edge (w2)
     (q31) edge (w1) (q31) edge (w2)
@@ -214,7 +216,58 @@ We calculate the optimal assignment for a given scheduling by modelling the prob
 \end{tikzpicture}
 ```
 
-blab
+Or more formally: Given a scheduling $\Sched$, we can construct a minimum-cost flow network $N=(V,E,z,c,a)$ with
+
+ - $V=\Slots\cup\Choices\cup\left\{q^p_s\mid p\in\Choosers,s\in\Slots\right\}$ with a supply function $z:V\to\mathbb{Z}$ having the following values:
+   - $z\left(q^p_s\right)=1$.
+   - $z(w)=-\min(w)$.
+   - $z(s)=-|\Choosers|+\sum_{w\in\InvSched(s)}\min(w)$.
+
+ - $E=\{(w,s)\mid \Sched(w)=s\}\cup\left\{\left(q^p_s, w\right)\mid\Sched(w)=s \wedge q\in\Choosers\right\}$ with a capacity function $c:E\to\Nat$ and a cost function $a:E\to\Nat$ having the following values:
+   - $c(w,s)=\max(w)-\min(w)$
+   - $a(w,s)=0$.
+   - $c(q^p_s, w)=1$.
+   - $a(q^p_s, w)=\pref_p(w)^\gamma$.
+
+The optimal flow $f$ of $N$ then is also directly the optimal assignment $\Ass$ with the following conversion:
+$$f(q^p_s, w)=1 \Leftrightarrow \Ass(p, s) = w \text{ .}$$
+Note that due to the flow integrality theorem, the resulting optimal flow is guaranteed to have integer flow values for every edge.
+
+Furthermore, because how we defined our edge costs, the total cost of the flow is also the minor score $F_\min((\Sched, \Ass))$ of the resulting solution.
+
+#### Handling inter-edge constraints
+
+To model many kinds of additional assignment constraints one may want the solution to adhere to, we need to expand the standard model of a minimum-cost flow problem by what we from here on call the set of *edge implications* $I\subseteq E^2$ that have the following semantics:
+$$ (u,v)\in I \Leftrightarrow f(u)\leq f(v) $$
+So, if $(u,v)\in I$, a flow of $f(u)=1$ *implies* a flow of $f(v)=1$ on the other edge.
+
+Because such a modified network $N=(V,E,I,z,c,a)$ is not a regular minimu-cost flow instance when $I\neq\emptyset$ and we have to make sure that the flow we are computing still is integer, we are going to translate the network into an [mixed integer programming](https://en.wikipedia.org/wiki/Integer_programming) instance (where each edge is a variable and constraints are based on flow conservation in flow networks) and solve it using a general MIP solver instead.
+
+#### Implication graph
+
+Because we gave to make sure that the flow we are calculating still consists of integer values when $I$ is not empty, we have to declare some variables in our MIP problem as integer variables. The naive approach to this would be to simply make every variable an integer variable, but because integer variables are the main hurdle for finding solutions to an MIP problem fast, we generally want to minimize the number of integer variables we have to introduce.
+
+To find out which variables we need to make integer we can view the pair $(E, I)$ as a directed graph (called the *implication graph*). Note that the edges of the flow network (or equivalently the variables of the respective MIP instance) are the *vertices* of the implication graph and every implication is a directed edge. To avoid confusion, we will from now on call the vertices of the implication graph $variables$ and the edges $implications$.
+
+We then can calculate which variables we need to declare as integer variables so that the whole optimal flow stays integer in a two-step process.
+
+The first step becomes obvious if we observe that all variables in a [strongly connected components](https://en.wikipedia.org/wiki/Strongly_connected_component) (abbreviated as SCC) of the implication graph have to have the same value ([proof](#proof-scc-eq)). This means that for every SCC, we have to make one arbitrary variable in the SCC an integer variable in order for every variable in the SCC to become integer too. Let the set of these variables be $D_1$.
+
+The second step is based on the observation that for an implication $(u,v)$, it is sufficient that either $v$ or $w$ are integer variables (because then the implication becomes a normal integer constraint in each subproblem inside the branch-and-cut process of the MIP solver which does not violate the prerequisites of the integrality theorem). To use this fact, we just have to look at the remaining implication graph $(E', I')$ where we removed
+
+ - all variables (and incident implications) that were part of a SCC (because we already have "dealt" with them in the first step) and in turn
+ - all variables with degree zero, because they either 
+   - are not affected by any implications to begin with or 
+   - they were adjacent to one or more SCCs in the original implication graph (so such particular variable $v$ is only affected by some implications $v\leq w$ or $v\geq w$ where $w$ is already guaranteed to be integer).
+
+We then calculate a [dominating set](https://en.wikipedia.org/wiki/Dominating_set) $D_2$ of $(E', I')$. Because finding the minimal dominating set is an NP-hard problem we can resort to a simple [greedy algorithm](https://en.wikipedia.org/wiki/Set_cover_problem#Greedy_algorithm).
+
+This whole process gives us a set of variables $D=D_1\cup D_2$ that we have to declare as integer variables in order for the optimal flow to be also integer.
+
+
+#### Binary search through preference levels
+
+So far, we are only optimizing by the minor score $F_\min$. In order to find the optimal solution by $F$, we just do binary search to find the minimum $F_\maj$ for which there exists a solution.
 
 ## Critical set analysis
 

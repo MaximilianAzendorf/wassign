@@ -4,6 +4,7 @@ build/
 build-*/
 debug-input/
 debug-output/
+doc/media/
 
 # User-specific stuff
 .idea/workspace.xml
