@@ -24,4 +24,4 @@ Building on Windows is currently untested.
 
 ## Building the documentation
 
-You can build this documentation using pandoc and the respective makefile.
+You can build this documentation using [pandoc](https://pandoc.org/) and the respective makefile. Some figures require a LaTeX distribution, inkscape and ghostscript.

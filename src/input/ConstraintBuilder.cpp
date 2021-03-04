@@ -84,7 +84,7 @@ vector<Constraint> ConstraintBuilder::build(InputData const& data, ConstraintExp
             case key(Slot, Size, RGeq, Integer, NotSet):
             case key(Slot, Size, RLeq, Integer, NotSet):
             {
-                add(SlotHasLimitedSize, (SlotSizeLimitOp)expression.relation.type);
+                add(SlotHasLimitedSize, (RelationOp)expression.relation.type);
                 break;
             }
 

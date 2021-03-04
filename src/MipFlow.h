@@ -17,6 +17,7 @@
 #pragma once
 
 #include "Types.h"
+#include "ImplicationGraph.h"
 
 #include <ortools/linear_solver/linear_solver.h>
 
@@ -37,10 +38,11 @@ private:
     vector<vector<int>> _incoming;
     vector<int> _edgesMax;
     vector<long> _edgesCost;
-    vector<vector<int>> _edgeGroups;
-    vector<int> _blockedEdges;
+    set<int> _blockedEdges;
     vector<int> _solution;
+    ImplicationGraph _implGraph;
 
+    bool is_blocked(int edge);
 
 public:
     /**
@@ -69,12 +71,20 @@ public:
     int add_edge(EdgeKey key, int fromNode, int toNode, int max, long unitCost);
 
     /**
-     * Creates an edge group (a set of edges that have to have the same flow). If some of the given edges are already
-     * blocked (so they do not exist in this instance anymore), the given edges will also be blocked instead (because
-     * they also have to have a flow of zero).
+     * Blocks the given edge so that it has value 0 in the solution.
+     */
+    void block_edge(int edge);
+
+    /**
+     * Adds an implication to the implication graph.
+     */
+    void add_implication(int fromEdge, int toEdge);
+
+    /**
+     * Adds implications to the implication graph so that all edges given will be equal.
      */
     template<typename EdgeKeyIterator>
-    void create_edge_group_or_block_edges(EdgeKeyIterator begin, EdgeKeyIterator end);
+    void make_edges_equal(EdgeKeyIterator begin, EdgeKeyIterator end);
 
     /**
      * Solves this instance with the given MIP solver instance.

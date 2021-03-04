@@ -130,7 +130,6 @@ bool SchedulingSolver::satisfies_scheduling_constraints(int choice, int slot, ma
                 }
 
                 if(limit < 0) return false;
-
                 break;
             }
 

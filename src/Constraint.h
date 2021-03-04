@@ -24,7 +24,7 @@
 const int CONSTRAINT_TYPE_DISCRIMINATION_LIMIT = 1u << 16u;
 
 /**
- * All valid constraint types.
+ * All valid constraint types. Some types get reduced to other types in Constraints::reduce_and_optimize.
  */
 enum ConstraintType
 {
@@ -40,18 +40,18 @@ enum ConstraintType
     SlotNotContainsChoice,  // reduced
     SlotsHaveSameChoices,  // reduced
 
-    ChoicesHaveSameChoosers = CONSTRAINT_TYPE_DISCRIMINATION_LIMIT,
+    ChoosersOfChoicesRelation = CONSTRAINT_TYPE_DISCRIMINATION_LIMIT,
     ChooserIsInChoice,
     ChooserIsNotInChoice,
-    ChoosersHaveSameChoices,
+    ChoicesOfChoosersRelation,
     ChoiceContainsChooser,  // reduced
     ChoiceNotContainsChooser,  // reduced
 };
 
 /**
- * Relation operators supported by the SlotHasLimitedSize constraint.
+ * Relation operators supported by various constraint.
  */
-enum SlotSizeLimitOp
+enum RelationOp
 {
     Eq = 1,
     Gt = 2,
@@ -59,6 +59,8 @@ enum SlotSizeLimitOp
     Neq = -Eq,
     Leq = -Gt,
     Lt = -Geq,
+    Subset,
+    Superset,
 };
 
 /**
@@ -67,6 +69,8 @@ enum SlotSizeLimitOp
 class Constraint
 {
 private:
+    static map<ConstraintType, string> _typeNames;
+
     ConstraintType _type;
     int _left;
     int _right;
@@ -87,11 +91,6 @@ public:
      * @param extra Extra data (may be irrelevant depending on the type).
      */
     Constraint(ConstraintType type, int left, int right, int extra = 0);
-
-    /**
-     * Returns the negation of this constraint.
-     */
-    Constraint negation();
 
     /**
      * The constraint type.
@@ -132,6 +131,11 @@ public:
 
     bool operator == (Constraint const& other) const;
     bool operator != (Constraint const& other) const;
+
+    /**
+     * Returns the name of the given constraint type
+     */
+     static string type_name(ConstraintType type);
 };
 
 namespace std

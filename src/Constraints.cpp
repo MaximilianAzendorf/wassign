@@ -42,68 +42,58 @@ vector<Constraint> Constraints::expand_dependent_constraints(vector<Constraint> 
 {
     vector<Constraint> res;
 
-    vector<vector<int>> dependentChoices = get_dependent_choices(constraints, choiceCount);
-    vector<vector<int>> mandatoryCritSets = get_mandatory_critical_sets(constraints);
-
-    auto allGroups = {dependentChoices, mandatoryCritSets};
-
-    for(auto const& groupList : allGroups)
-    {
-        for (vector<int> const& group : groupList)
-        {
-            for(int i = 0; i < group.size(); i++)
-            {
-                for(int j = i + 1; j < group.size(); j++)
-                {
-                    res.push_back(Constraint(ChoicesAreNotInSameSlot, group[i], group[j]));
-                }
-            }
-        }
-    }
-
-    for(Constraint const& constraint : constraints)
-    {
-        if(constraint.type() != ChooserIsInChoice && constraint.type() != ChooserIsNotInChoice) continue;
-
-        vector<int> group;
-        for(vector<int> const& depGroup : dependentChoices)
-        {
-            if(std::find(depGroup.begin(), depGroup.end(), constraint.right()) != depGroup.end())
-            {
-                group = depGroup;
-                break;
-            }
-        }
-
-        if(group.empty()) continue;
-
-        for(int w : group)
-        {
-            if(w == constraint.right()) continue;
-            res.push_back(Constraint(constraint.type(), constraint.left(), w));
-        }
-    }
-
     for(Constraint constraint : constraints)
     {
         res.push_back(constraint);
+    }
+
+
+    for (auto const& dependance : get_dependent_choices(constraints, choiceCount))
+    {
+        res.push_back(Constraint(ChoicesAreNotInSameSlot, dependance.first, dependance.second));
     }
 
     res.erase(std::unique(res.begin(), res.end()), res.end());
     return res;
 }
 
-vector<vector<int>> Constraints::get_dependent_choices(vector<Constraint> const& constraints, int choiceCount)
+vector<pair<int, int>> Constraints::get_dependent_choices(vector<Constraint> const& constraints, int choiceCount)
 {
+    vector<pair<int, int>> result;
     UnionFind<int> choiceGroups(choiceCount);
 
     for(Constraint const& constraint : constraints)
     {
-        if(constraint.type() != ChoicesHaveSameChoosers) continue;
-        choiceGroups.join(constraint.left(), constraint.right());
+        if(constraint.type() != ChoosersOfChoicesRelation && constraint.extra() != Eq) continue;
+        switch(constraint.extra())
+        {
+            case Eq:
+                choiceGroups.join(constraint.left(), constraint.right());
+                break;
+            case Subset:
+            case Superset:
+                result.push_back(std::make_pair(constraint.left(), constraint.right()));
+                break;
+            default:
+                throw std::logic_error("Unsupported operation " + str(constraint.extra()) + ".");
+        }
     }
 
-    return choiceGroups.groups();
+    for(auto const& groupList : {choiceGroups.groups(), get_mandatory_critical_sets(constraints)})
+    {
+        for (auto const& group : choiceGroups.groups())
+        {
+            for (int i = 0; i < group.size(); i++)
+            {
+                for (int j = i + 1; j < group.size(); j++)
+                {
+                    result.push_back(std::make_pair(group[i], group[j]));
+                }
+            }
+        }
+    }
+
+    return result;
 }
 
 vector<Constraint>

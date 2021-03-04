@@ -37,12 +37,12 @@ enum RelationType
     RGeq = Geq,
     RLeq = Leq,
 
+    // TODO: Implement support for sub- and superset relations
+    RSubset = Subset,
+    RSuperset = Superset,
+
     RContains = 1U << 16,
     RNotContains = -RContains,
-
-    // TODO: Implement support for sub- and superset relations
-    RSubset,
-    RSuperset,
 };
 
 struct ConstraintExpressionAccessor

@@ -23,6 +23,7 @@
 #include "MipFlowStaticData.h"
 #include "Score.h"
 #include "MipFlowStaticData.h"
+#include "ConstraintHandler.h"
 
 #include <future>
 #include <climits>
@@ -42,7 +43,22 @@ private:
     const_ptr<Options> _options;
     cancel_token _cancellation;
 
+    void handle_choosers_of_choices_relation(Constraint constraint, const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+    void handle_choices_of_choosers_relation(Constraint constraint, const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+    void handle_chooser_is_in_choice(Constraint constraint, const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+    void handle_chooser_is_not_in_choice(Constraint constraint, const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+
+    static inline const ConstraintHandler<void, AssignmentSolver, const_ptr<Scheduling> const&, MipFlow<flowid, flowid>&> handler =
+    {
+        {ChoosersOfChoicesRelation, &AssignmentSolver::handle_choosers_of_choices_relation},
+        {ChoicesOfChoosersRelation, &AssignmentSolver::handle_choices_of_choosers_relation},
+        {ChooserIsInChoice, &AssignmentSolver::handle_chooser_is_in_choice},
+        {ChooserIsNotInChoice, &AssignmentSolver::handle_chooser_is_not_in_choice}
+    };
+
     int _lpCount = 0;
+
+    typedef void (&HandlerFunction)(const_ptr<Scheduling> const&, MipFlow<flowid, flowid>);
 
     /**
      * Calculates edges in the flow graph that have to be removed from the flow graph. For example, a ChooserIsInChoice
@@ -53,7 +69,7 @@ private:
     /**
      * Creates edge groups for dependent choices and ChoosersHaveSameChoices constraints.
      */
-    void create_edge_groups(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
+    void create_implications(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow);
 
     /**
      * Calculates an optimal assignment for the given scheduling, considering the given preference limit.

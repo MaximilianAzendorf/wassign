@@ -35,16 +35,17 @@ private:
 
     static vector<Constraint> expand_dependent_constraints(vector<Constraint> const& constraints, int choiceCount);
 
-public:
     /**
-     * Returns all choices grouped together when they are connected with a ChoicesHaveSameChoosers constraint.
+     * Returns all pairs of choices that have to be in different slots or else no valid solution would exist.
      */
-    static vector<vector<int>> get_dependent_choices(vector<Constraint> const& constraints, int choiceCount);
+    static vector<pair<int, int>> get_dependent_choices(vector<Constraint> const& constraints, int choiceCount);
+
+public:
 
     /**
-     * Replaces some constraint types with their dual type (e.g. SlotContainsChoice becomes ChoiceIsInSlot) and removes
-     * constraints that are a tautology. If there are constraints that represent a contradiction, isInfeasible will be
-     * set to true.
+     * Replaces some constraint types with their dual type (e.g. SlotContainsChoice becomes ChoiceIsInSlot), creates
+     * some new constraints that are implied by other constraints and removes constraints that are a tautology. If there
+     * are constraints that represent a contradiction, isInfeasible will be set to true.
      */
     static vector<Constraint> reduce_and_optimize(vector<Constraint> const& constraints,
                                                   int choiceCount,

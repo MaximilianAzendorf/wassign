@@ -28,3 +28,10 @@ Then, because $C$ is not satisfied by $\Sched$, there is a slot $s\in\Slots\setm
 $$\min\left\{\pref_p(w)\mid w\in\InvSched(s)\right\} > \pref$$
 and therefore $\pref_p\left(\Ass(p, s)\right) > \pref$, so $\prefm(\Sol)>\pref$ and $\Sol$ can not be a $\pref$-solution. 
 <span class="qed"></span>
+
+## Proof: All variables in a SCC of the implication graph have to have the same value {- #proof-scc-eq}
+
+Given are the variables $V=\{v_1, v_2, ..., v_n\}$ in a strongly connected component of an implication graph $G=(V, I)$. For each pair of variables $u,v\in V$, we know that $v$ is reachable from $u$ and vice versa in $G$ through some paths $(u, a_1, ..., a_i, v)$ and $(v, b_1, ..., b_j, u)$. Applying the semantics of an implication graph, this is equivalent to
+$$ u \leq a_1 \leq ... \leq a_i \leq v \;\wedge\; v \leq b_1 \leq ... \leq b_j \leq u $$
+which (by transitivity and antisymmetry) implies $u=v$.
+<span class="qed"></span>

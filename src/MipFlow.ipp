@@ -21,6 +21,12 @@
 #include "Util.h"
 
 template<typename NodeKey, typename EdgeKey>
+bool MipFlow<NodeKey, EdgeKey>::is_blocked(int edge)
+{
+    return _edgeMap.find(edge) == _edgeMap.end() || _blockedEdges.find(edge) != _blockedEdges.end();
+}
+
+template<typename NodeKey, typename EdgeKey>
 int MipFlow<NodeKey, EdgeKey>::add_node()
 {
     _solution.clear();
@@ -68,23 +74,35 @@ int MipFlow<NodeKey, EdgeKey>::add_edge(EdgeKey key, int fromNode, int toNode, i
 }
 
 template<typename NodeKey, typename EdgeKey>
+void MipFlow<NodeKey, EdgeKey>::add_implication(int fromEdge, int toEdge)
+{
+    if(is_blocked(toEdge))
+    {
+        // This implication can not be satisfied.
+        _blockedEdges.insert(fromEdge);
+    }
+    else
+    {
+        _implGraph.add_implication(fromEdge, toEdge);
+    }
+}
+
+template<typename NodeKey, typename EdgeKey>
 template<typename EdgeKeyIterator>
-void MipFlow<NodeKey, EdgeKey>::create_edge_group_or_block_edges(EdgeKeyIterator begin, EdgeKeyIterator end)
+void MipFlow<NodeKey, EdgeKey>::make_edges_equal(EdgeKeyIterator begin, EdgeKeyIterator end)
 {
     vector<int> edges;
     bool blocked = false;
 
     for(; begin != end; begin++)
     {
-        auto edgeIt = _edgeMap.find(*begin);
-
-        if(edgeIt == _edgeMap.end())
+        if(is_blocked(*begin))
         {
             blocked = true;
         }
         else
         {
-            edges.push_back(edgeIt->second);
+            edges.push_back(_edgeMap[*begin]);
         }
     }
 
@@ -92,12 +110,16 @@ void MipFlow<NodeKey, EdgeKey>::create_edge_group_or_block_edges(EdgeKeyIterator
     {
         for(int edge : edges)
         {
-            _blockedEdges.push_back(edge);
+            _blockedEdges.insert(edge);
         }
     }
     else
     {
-        _edgeGroups.push_back(edges);
+        for(int i = 1; i < edges.size(); i++)
+        {
+            _implGraph.add_implication(edges[0], edges[i]);
+            _implGraph.add_implication(edges[i], edges[0]);
+        }
     }
 }
 
@@ -108,23 +130,22 @@ bool MipFlow<NodeKey, EdgeKey>::solve(op::MPSolver& solver)
     vector<op::MPVariable*> edgeVariables(edge_count());
     op::MPObjective* minTerm = solver.MutableObjective();
 
+    set<int> intVars = _implGraph.get_integer_variables();
+
     for(int i = 0; i < edge_count(); i++)
     {
-        edgeVariables[i] = solver.MakeNumVar(0, _edgesMax[i], "v" + str(i));
+        edgeVariables[i] = intVars.find(i) != intVars.end()
+                ? solver.MakeBoolVar("vb" + str(i))
+                : solver.MakeNumVar(0, _edgesMax[i], "v" + str(i));
 
         minTerm->SetCoefficient(edgeVariables[i], _edgesCost[i]);
     }
 
-    for(int i = 0; i < _edgeGroups.size(); i++)
+    for(auto const& impl : _implGraph.get_implications())
     {
-        op::MPVariable* switchVar = solver.MakeBoolVar("s" + str(i));
-
-        for(int e : _edgeGroups[i])
-        {
-            op::MPConstraint* eqConst = solver.MakeRowConstraint(0, 0);
-            eqConst->SetCoefficient(edgeVariables[e], 1);
-            eqConst->SetCoefficient(switchVar, -1);
-        }
+        op::MPConstraint* implConstraint = solver.MakeRowConstraint(0, 1);
+        implConstraint->SetCoefficient(edgeVariables[impl.first], -1);
+        implConstraint->SetCoefficient(edgeVariables[impl.second], 1);
     }
 
     for(int edge : _blockedEdges)
@@ -203,4 +224,10 @@ template<typename NodeKey, typename EdgeKey>
 int MipFlow<NodeKey, EdgeKey>::edge_count() const
 {
     return _edgesMax.size();
+}
+
+template<typename NodeKey, typename EdgeKey>
+void MipFlow<NodeKey, EdgeKey>::block_edge(int edge)
+{
+    _blockedEdges.insert(edge);
 }

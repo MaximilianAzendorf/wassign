@@ -25,60 +25,24 @@
 
 #include <utility>
 
-set<pair<int, int>> AssignmentSolver::get_blocked_constraint_edges(shared_ptr<Scheduling const> const& scheduling)
+void AssignmentSolver::create_implications(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow)
 {
-    set<pair<int, int>> blockedEdges;
-
-    for(Constraint constraint : _staticData->constraints)
-    {
-        switch(constraint.type())
-        {
-            case ChooserIsInChoice:
-            {
-                int s = scheduling->slot_of(constraint.right());
-                int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
-
-                for(int w = 0; w < _inputData->choice_count(); w++)
-                {
-                    if(constraint.right() == w || scheduling->slot_of(w) != s) continue;
-
-                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(w));
-                    blockedEdges.insert(std::make_pair(from, to));
-                }
-                break;
-            }
-            case ChooserIsNotInChoice:
-            {
-                for(int s = 0; s < _inputData->slot_count(); s++)
-                {
-                    int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
-                    int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(constraint.right()));
-                    blockedEdges.insert(std::make_pair(from, to));
-                }
-                break;
-            }
-            case ChoicesHaveSameChoosers: // This is handled in create_edge_groups with Constraints::get_dependent_choices.
-            case ChoosersHaveSameChoices: // This is also handled in create_edge_groups.
-            {
-                break;
-            }
-            default:
-            {
-                throw std::logic_error("This kind of constraint is not compatible with the min cost flow solver.");
-            }
-        }
-    }
-
-    return blockedEdges;
-}
-
-void AssignmentSolver::create_edge_groups(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow)
-{
-    // Edge groups for ChoosersHaveSameChoices
-    //
     for(Constraint constraint : _inputData->assignment_constraints())
     {
         if(constraint.type() != ChoosersHaveSameChoices) continue;
+
+        switch(constraint.type())
+        {
+            case ChoosersOfChoicesRelation:
+            {
+                break;
+            }
+            case ChoicesOfChoosersRelation:
+            {
+                break;
+            }
+            default: continue;
+        }
 
         for (int s = 0; s < _inputData->slot_count(); s++)
         {
@@ -90,7 +54,7 @@ void AssignmentSolver::create_edge_groups(const_ptr<Scheduling> const& schedulin
                 int to2 = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(w));
 
                 vector<flowid> edgeGroup { MipFlowStaticData::edge_id(from1, to1), MipFlowStaticData::edge_id(from2, to2) };
-                flow.create_edge_group_or_block_edges(edgeGroup.begin(), edgeGroup.end());
+                flow.make_edges_equal(edgeGroup.begin(), edgeGroup.end());
             }
         }
     }
@@ -114,7 +78,7 @@ void AssignmentSolver::create_edge_groups(const_ptr<Scheduling> const& schedulin
                 edgeGroup.push_back(MipFlowStaticData::edge_id(from, to));
             }
 
-            flow.create_edge_group_or_block_edges(edgeGroup.begin(), edgeGroup.end());
+            flow.make_edges_equal(edgeGroup.begin(), edgeGroup.end());
         }
     }
 }
@@ -123,18 +87,18 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
                                                                 int preferenceLimit,
                                                                 op::MPSolver& solver)
 {
-    MipFlow<flowid, flowid> flow(_staticData->baseFlow);http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+    MipFlow<flowid, flowid> flow(_staticData->baseFlow);
 
-    for(int p = 0; p < _inputData->chooser_count(); p++)http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
-    {http://localhost:8080/media/17c556e72a3b5b57d0b3ce38502038def14fe8d5.svg
+    for(int p = 0; p < _inputData->chooser_count(); p++)
+    {
         for(int s = 0; s < _inputData->slot_count(); s++)
         {
-            flow.set_supply(flow.nodes().at(MipFlowStaticData::node_chooser(p, s)), 1);http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+            flow.set_supply(flow.nodes().at(MipFlowStaticData::node_chooser(p, s)), 1);
         }
     }
 
-    for(int w = 0; w < _inputData->choice_count(); w++)http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
-    {http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+    for(int w = 0; w < _inputData->choice_count(); w++)
+    {
         flow.set_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min);
     }
 
@@ -218,7 +182,7 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
 
     // Create edge groups
     //
-    create_edge_groups(scheduling, flow);
+    create_implications(scheduling, flow);
 
     // ... and solve this instance
     //
@@ -312,4 +276,73 @@ AssignmentSolver::AssignmentSolver(const_ptr<InputData> inputData,
 int AssignmentSolver::lp_count() const
 {
     return _lpCount;
+}
+
+void AssignmentSolver::handle_chooser_is_in_choice(Constraint constraint, const_ptr<Scheduling> const& scheduling,
+                                                   MipFlow<flowid, flowid>& flow)
+{
+    int s = scheduling->slot_of(constraint.right());
+    int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
+
+    for(int w = 0; w < _inputData->choice_count(); w++)
+    {
+        if(constraint.right() == w || scheduling->slot_of(w) != s) continue;
+
+        int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(w));
+        flow.block_edge(MipFlowStaticData::edge_id(from, to));
+    }
+}
+
+void AssignmentSolver::handle_chooser_is_not_in_choice(Constraint constraint, const_ptr<Scheduling> const& scheduling,
+                                                       MipFlow<flowid, flowid>& flow)
+{
+    for(int s = 0; s < _inputData->slot_count(); s++)
+    {
+        int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
+        int to = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_choice(constraint.right()));
+        flow.block_edge(MipFlowStaticData::edge_id(from, to));
+    }
+}
+
+void AssignmentSolver::handle_choices_of_choosers_relation(Constraint constraint,
+                                                           const_ptr<Scheduling> const& scheduling,
+                                                           MipFlow<flowid, flowid>& flow)
+{
+    for(int s = 0; s < _inputData->slot_count(); s++)
+    {
+        int fromLeft = MipFlowStaticData::node_chooser(constraint.left(), s);
+        int fromRight = MipFlowStaticData::node_chooser(constraint.right(), s);
+
+        for(int w = 0; w < _inputData->choice_count(); w++)
+        {
+            int to = MipFlowStaticData::node_choice(w);
+            int fromEdge = flow.edges().at(MipFlowStaticData::edge_id(fromLeft, to));
+            int toEdge = flow.edges().at(MipFlowStaticData::edge_id(fromRight, to));
+
+            switch(constraint.extra())
+            {
+                case Subset:
+                    flow.add_implication(fromEdge, toEdge);
+                    break;
+                case Superset:
+                    flow.add_implication(toEdge, fromEdge);
+                    break;
+                case Eq:
+                    flow.add_implication(fromEdge, toEdge);
+                    flow.add_implication(toEdge, fromEdge);
+                    break;
+            }
+        }
+    }
+}
+
+void AssignmentSolver::handle_choosers_of_choices_relation(Constraint constraint,
+                                                           const_ptr<Scheduling> const& scheduling,
+                                                      MipFlow<flowid, flowid>& flow)
+{
+    for(int )
+}
+
+void AssignmentSolver::handle_constraints(const_ptr<Scheduling> const& scheduling, MipFlow<flowid, flowid>& flow)
+{
 }

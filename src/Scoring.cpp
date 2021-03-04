@@ -61,7 +61,7 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
                     }
                 }
 
-                switch((SlotSizeLimitOp)e)
+                switch((RelationOp)e)
                 {
                     case Eq: if(count != r) return false; break;
                     case Neq: if(count == r) return false; break;

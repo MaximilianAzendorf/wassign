@@ -15,41 +15,15 @@
  */
 
 #include "Constraint.h"
+#include <magic_enum.hpp>
+
+using namespace magic_enum;
+
+auto Constraint::_typeNames = map<ConstraintType, string>();
 
 Constraint::Constraint(ConstraintType type, int left, int right, int extra)
         : _type(type), _left(left), _right(right), _extra(extra)
 {
-}
-
-Constraint Constraint::negation()
-{
-    Constraint neg = *this;
-    switch(_type)
-    {
-        case ChoiceIsInSlot: neg._type = ChoiceIsNotInSlot; break;
-        case ChoiceIsNotInSlot: neg._type = ChoiceIsInSlot; break;
-        case ChoicesAreInSameSlot: neg._type = ChoicesAreNotInSameSlot; break;
-        case ChoicesAreNotInSameSlot: neg._type = ChoicesAreInSameSlot; break;
-        case SlotHasLimitedSize: neg._extra = -neg._extra; break;
-        case SlotContainsChoice: neg._type = SlotNotContainsChoice; break;
-        case SlotNotContainsChoice: neg._type = SlotContainsChoice; break;
-
-        case ChooserIsInChoice: neg._type = ChooserIsNotInChoice; break;
-        case ChooserIsNotInChoice: neg._type = ChooserIsInChoice; break;
-        case ChoiceContainsChooser: neg._type = ChoiceNotContainsChooser; break;
-        case ChoiceNotContainsChooser: neg._type = ChoiceContainsChooser; break;
-
-            // Constraints with no valid negation
-        case Invalid:
-        case ChoicesHaveOffset:
-        case SlotsHaveSameChoices:
-        case ChoicesHaveSameChoosers:
-        case ChoosersHaveSameChoices:
-            neg._type = Invalid;
-            break;
-    }
-
-    return neg;
 }
 
 ConstraintType Constraint::type() const
@@ -105,6 +79,19 @@ bool Constraint::operator==(Constraint const& other) const
 bool Constraint::operator!=(Constraint const& other) const
 {
     return !(*this == other);
+}
+
+string Constraint::type_name(ConstraintType type)
+{
+    if(_typeNames.empty())
+    {
+        for(auto entry : enum_entries<ConstraintType>())
+        {
+            _typeNames[entry.first] = string{entry.second};
+        }
+    }
+
+    return _typeNames.at(type);
 }
 
 
