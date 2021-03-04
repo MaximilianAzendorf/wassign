@@ -123,18 +123,18 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
                                                                 int preferenceLimit,
                                                                 op::MPSolver& solver)
 {
-    MipFlow<flowid, flowid> flow(_staticData->baseFlow);http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+    MipFlow<flowid, flowid> flow(_staticData->baseFlow);
 
-    for(int p = 0; p < _inputData->chooser_count(); p++)http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
-    {http://localhost:8080/media/17c556e72a3b5b57d0b3ce38502038def14fe8d5.svg
+    for(int p = 0; p < _inputData->chooser_count(); p++)
+    {
         for(int s = 0; s < _inputData->slot_count(); s++)
         {
-            flow.set_supply(flow.nodes().at(MipFlowStaticData::node_chooser(p, s)), 1);http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+            flow.set_supply(flow.nodes().at(MipFlowStaticData::node_chooser(p, s)), 1);
         }
     }
 
-    for(int w = 0; w < _inputData->choice_count(); w++)http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
-    {http://localhost:8080/media/fd7ef49556c322028d9d58d24080e5aa30b26e79.svg
+    for(int w = 0; w < _inputData->choice_count(); w++)
+    {
         flow.set_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min);
     }
 
