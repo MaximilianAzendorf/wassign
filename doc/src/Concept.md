@@ -9,7 +9,7 @@ The algorithm is based on [shotgun hill climbing](https://en.wikipedia.org/wiki/
    
 1. [Solving the scheduling](#solving-schedulings): Find a possible scheduling using a randomized depth-first search.
    
-2. [Solving the assignment](#solving-assignments): Find the best possible assignment for the given scheduling by constructing a corresponding linear optimization or (depending on the given extra constraints) mixed integer programming problem and solving it using an MIP solver.
+2. [Solving the assignment](#solving-assignments): Find the best possible assignment for the given scheduling by constructing a corresponding linear optimization or (depending on the given extra constraints) mixed integer programming problem instance and solving it using an MIP solver.
    
 3. [Perfoming hill climbing](#hill-climbing): Find a "neighbor scheduling" of the given scheduling (by moving a single event to another slot, if possible) and solve the assignment again. Repeat this until the solution of the neighbor scheduling is worse than the one before (this is the *hill climbing* part).
    
@@ -71,7 +71,7 @@ This part of the manual is rather theory-heavy, so we have to introduce some com
 
 *It is very important to note* that throughout this section, preferences are "mirrored", meaning a lower preference given by a chooser to a choice means that the chooser "likes" the choice more. This is because
 
- - We are minimizing our solution score and this naturally lends to lower preferences being better, and therefore
+ - The forumla used to score solutions does not work the other way around, and therefore
  - the program also handles preferences this way (they are converted after the input is read).
 
 So, for example, if a chooser has the preferences
@@ -318,8 +318,16 @@ $$\CSets(\pref)=\left\{C\in\CSets\mid\pref_C\geq\pref\right\} \text{ .}$$
 
 ## Hill climbing
 
-tbd
+So far, we only optimize the solution *for a given scheduling*. In order to find a locally optimal scheduling (and the corresponding optimal assignment), we perform [first-choice hill climbing](https://en.wikipedia.org/wiki/Hill_climbing) by first finding any valid scheduling $S$ (using the [scheduling solving algorithm](#solving-schedulings) as described above) and then modifying this scheduling by moving a single event to a different slot (we call this scheduling a neighbor of $S$) until we can not find any neighbors of $S$ that has a better solution than $S$ itself.
+
+Because the number of neighbors can be very large (and solving the assignment is quite expensive), we limit the number of neighbors that get considered as the next step.
 
 ### Shotgun hill climbing
 
-tbd
+We now optimize to a local optimum. To find the global optimum (or at least a very good local one), we simply repeat the hill climbing process over and over and choose the best solution found after a certain timeout; this is also called shotgun hill climbing or random-restart hill climbing.
+
+This (very simple) approach has three main advantages over other optimization methods:
+
+1. It is very easy to implement,
+2. It is trivial to parallelize,
+3. It is quite effective.
