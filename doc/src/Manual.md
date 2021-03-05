@@ -2,6 +2,8 @@
 
 tbd
 
+## Input syntax
+
 ## Program options
 
 ### Preference exponent 
