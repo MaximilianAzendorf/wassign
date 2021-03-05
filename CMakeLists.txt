@@ -18,6 +18,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+set(GFLAGS_USE_TARGET_NAMESPACE ON)
+
+find_package(TBB REQUIRED)
+set(BUILD_DEPS ON)
+set(BUILD_EXAMPLES ON)
+set(USE_SCIP OFF)
+add_subdirectory(deps/or-tools)
+
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
