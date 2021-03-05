@@ -10,7 +10,7 @@ To build wassign under Linux, you need the following prerequisites:
 
 After making sure all prerequisites are met you can build wassign:
 
-1. `git clone https://github.com/MaximilianAzendorf/wassign`
+1. `git clone --recurse-submodule https://github.com/MaximilianAzendorf/wassign`
 2. `cd wassign`
 3. `mkdir build && cd build`
 4. `cmake ..`
