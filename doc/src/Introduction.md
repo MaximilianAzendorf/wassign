@@ -132,18 +132,18 @@ A file called `output-file.scheduling.csv`
 describing the scheduling of the workshops into the slots and a file called `output-file.assignment.csv`
 
 ```
-"Choice", "Workshops I",                              "Workshops II"
+"Chooser", "Workshops I",                              "Workshops II"
 
-"Ethan",  "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
-"Fanny",  "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
-"Gavin",  "Should you invest in bitcoin now?",        "How to become famous"
-"Hanna",  "Should you invest in bitcoin now?",        "How to become famous"
-"Isaac",  "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
-"July",   "Should you invest in bitcoin now?",        "How to become famous"
-"Kevin",  "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
-"Lily",   "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
-"Mark",   "Left-handed scissors: A critical review",  "How to become famous"
-"Norah",  "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
+"Ethan",   "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
+"Fanny",   "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
+"Gavin",   "Should you invest in bitcoin now?",        "How to become famous"
+"Hanna",   "Should you invest in bitcoin now?",        "How to become famous"
+"Isaac",   "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
+"July",    "Should you invest in bitcoin now?",        "How to become famous"
+"Kevin",   "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
+"Lily",    "Left-handed scissors: A critical review",  "Paleo cooking for beginners"
+"Mark",    "Left-handed scissors: A critical review",  "How to become famous"
+"Norah",   "Should you invest in bitcoin now?",        "Paleo cooking for beginners"
 ```
 
 describing the assignment of the participants into the workshops.

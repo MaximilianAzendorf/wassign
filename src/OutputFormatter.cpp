@@ -56,7 +56,7 @@ string OutputFormatter::write_assignment_solution(Solution const& solution)
     using std::endl;
     std::stringstream str;
 
-    str << "\"Choice\"";
+    str << "\"Chooser\"";
 
     for(int s = 0; s < solution.input_data().slot_count(); s++)
     {
