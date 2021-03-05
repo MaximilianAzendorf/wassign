@@ -2,7 +2,6 @@ include_directories("/usr/local/include")
 
 set(GFLAGS_USE_TARGET_NAMESPACE ON)
 
-find_package(TBB REQUIRED)
 find_package(ortools CONFIG REQUIRED)
 
 file(GLOB_RECURSE SOURCE_CPP *.cpp)

@@ -4,7 +4,7 @@ We will use the following scenario throughout this introduction in order to intr
 
 ## A simple example
 
-You are planning a convetion where every participant has given preferences to different workshops that will be held at this convention. There are four events:
+You are planning a convention where every participant has given preferences to different workshops that will be held at this convention. There are four events:
 
  - Workshop A: *How to become famous* (between 1 and 4 participants)
  - Workshop B: *Paleo cooking for beginners* (2--9 participants)
@@ -21,12 +21,12 @@ C   0     0     1     0     5     0    10    6    0    1
 D   5     4     7     10    10    10   0     5    0    10
 --- ----- ----- ----- ----- ----- ---- ----- ---- ---- -----
 
-We now want to assign our 10 participants to the four events using wassign. To do this, we first have to translate our problem into terms that wassign can understand. We can use two core concepts of wassign to solve our example problem:
+We now want to assign each of our 10 participants to one of the four events using wassign. To do this, we first have to translate our problem into terms that wassign can understand. We can use two core concepts of wassign to solve our example problem:
 
- - *choices* are things that can be choosen by
- - *choosers* which have defined a preference for every choice.
+ - *choices* are things that can be chosen by choosers.
+ - *choosers* are things that have defined a preference for every choice.
 
-You can see that in our example, the workshops are the choices and our participants are the choosers. We now have to put our data into an input file that wassign understands. For our example, a basic input file would look like this:
+You can see that in our example, the workshops are the *choices* and our participants are the *choosers*. We now have to put our data into an input file that wassign understands. For our example, a basic input file would look like this:
 
 ```
 +choice("How to become famous",                    bounds(1, 4));
@@ -46,7 +46,7 @@ You can see that in our example, the workshops are the choices and our participa
 +chooser("Norah", [9, 5, 1, 10]);
 ```
 
-The details of the required syntax of these input files (and other neat features like reading things from CSV files so you don't have to type all these lines by hand) can be found in the [manual](#using-wassign). If we put this input file through wassign with
+The details of the syntax required for these input files (and other neat features like reading things from CSV files so you don't have to type all these lines by yourself) can be found in the [manual](#using-wassign). If we put this input file through wassign with
 
 ```
 wassign -i our-input-file.txt -o output-file
@@ -80,7 +80,7 @@ You may note the "Generated Slot" column header in the output file. This is pres
 
 ## Getting more complicated with slots
 
-Lets say that the time schedule of our convention (which is held on a single day) looks as follows:
+Lets say that the time schedule of our convention (which is held in a single day) looks as follows:
 
 -------------- ----------------------
 10:00 -- 11:00 Welcome speech
