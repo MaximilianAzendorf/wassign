@@ -23,6 +23,7 @@ set(GFLAGS_USE_TARGET_NAMESPACE ON)
 find_package(TBB REQUIRED)
 set(BUILD_DEPS ON)
 set(BUILD_EXAMPLES OFF)
+set(BUILD_SAMPLES OFF)
 set(USE_SCIP OFF)
 add_subdirectory(deps/or-tools)
 

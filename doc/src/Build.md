@@ -6,7 +6,7 @@ To build wassign under Linux, you need the following prerequisites:
 
 * CMake (> 3.15)
 * A C++ compiler that supports C++17 (tested with GCC)
-* Intel TBB 
+* Intel TBB (this is provided as a package in most linux distributions)
 
 After making sure all prerequisites are met you can build wassign:
 
@@ -16,7 +16,7 @@ After making sure all prerequisites are met you can build wassign:
 4. `cmake ..`
 5. `make`
 
-Binaries will be written into the directory `bin`. If you want to execute the tests you can run the `wassign-test` executable.
+Binaries will be written into the directory `build/bin`. If you want to execute the tests you can run the `wassign-test` executable.
 
 ## Windows
 
