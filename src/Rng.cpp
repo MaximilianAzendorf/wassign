@@ -19,7 +19,7 @@
 int Rng::next()
 {
     _mutex.lock();
-    int ret = _dist(_mt);
+    int ret = (*_dist)(*_mt);
     _mutex.unlock();
 
     return ret;
@@ -33,11 +33,12 @@ int Rng::next(int min, int max)
 void Rng::seed(int seed)
 {
     _mutex.lock();
-    _mt = std::mt19937(seed);
+    _mt = std::make_unique<std::mt19937>(seed);
+    _dist = std::make_unique<std::uniform_int_distribution<int>>();
     _mutex.unlock();
 }
 
-std::mt19937 Rng::engine()
+std::mt19937& Rng::engine()
 {
-    return _mt;
+    return *_mt;
 }

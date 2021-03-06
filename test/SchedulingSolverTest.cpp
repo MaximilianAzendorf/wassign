@@ -36,6 +36,8 @@ void common_check(const_ptr<Scheduling> scheduling)
 
 TEST_CASE(PREFIX "Minimal")
 {
+    Rng::seed(12);
+
     auto data = parse_data(INPUT_MINIMAL);
     SchedulingSolver solver(data, csa(data, false), default_options());
 
@@ -47,6 +49,8 @@ TEST_CASE(PREFIX "Minimal")
 
 TEST_CASE(PREFIX "Works without constraints")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -71,6 +75,8 @@ var p = [1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint ChoiceIsInSlot works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -102,6 +108,8 @@ var p = [1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint ChoiceIsNotInSlot works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -133,6 +141,8 @@ var p = [1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint ChoicesAreInSameSlot works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -164,6 +174,8 @@ var p = [1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint ChoicesAreNotInSameSlot works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -195,6 +207,8 @@ var p = [1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint ChoicesHaveOffset works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -224,6 +238,8 @@ var p = [1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (==) works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -262,6 +278,8 @@ var p = [1, 1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (!=) works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -300,6 +318,8 @@ var p = [1, 1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (<) works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -338,6 +358,8 @@ var p = [1, 1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (<=) works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -376,6 +398,8 @@ var p = [1, 1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (>) works")
 {
+    Rng::seed(12);
+
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
@@ -414,6 +438,8 @@ var p = [1, 1, 1, 1, 1];
 
 TEST_CASE(PREFIX "Constraint SlotHasLimitedSize (>=) works")
 {
+    Rng::seed(12);
+    
     auto data = parse_data(R"(
 +slot("s1");
 +slot("s2");
