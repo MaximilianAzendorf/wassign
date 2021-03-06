@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "Types.h"
 #include <random>
 #include <mutex>
 
@@ -23,8 +24,8 @@ class Rng
 {
 private:
     inline static std::mutex _mutex;
-    inline static std::mt19937 _mt;
-    inline static std::uniform_int_distribution _dist = std::uniform_int_distribution();
+    inline static unique_ptr<std::mt19937> _mt;
+    inline static unique_ptr<std::uniform_int_distribution<int>> _dist;
 
     Rng() = default;
 
@@ -35,7 +36,7 @@ public:
 
     static void seed(int seed);
 
-    static std::mt19937 engine();
+    static std::mt19937& engine();
 };
 
 
