@@ -5,7 +5,7 @@
 To build wassign under Linux, you need the following prerequisites:
 
 * CMake (> 3.15)
-* A C++ compiler that supports C++17 (tested with GCC)
+* A C++ compiler that supports C++17 (tested with GCC, where GCC < 9.1 is not supported)
 * Intel TBB (this is provided as a package in most linux distributions)
 
 After making sure all prerequisites are met you can build wassign:
