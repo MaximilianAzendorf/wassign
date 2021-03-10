@@ -137,8 +137,8 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChaiscriptInterface::cexp_superset), "supersetOf");
 
     c.add(cs::fun(&ChaiscriptInterface::read_file_string), "readFile");
-    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
-    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&, char)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&)>(&ChaiscriptInterface::read_file_csv)), "read_csv");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&, char)>(&ChaiscriptInterface::read_file_csv)), "read_csv");
 
     c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::optional), "optional");
     c.add(cs::fun(&ChaiscriptInterface::min), "min");
