@@ -111,12 +111,13 @@ public:
 
     static void set_arguments(InputReader& reader, vector<string> args);
 
-    static inline const Tagged optional = Tagged(Optional, 1);
+    static inline const Tagged optional_obj = Tagged(Optional, 1);
 
     static Tagged min(int min);
     static Tagged max(int max);
     static Tagged bounds(int min, int max);
     static Tagged parts(int parts);
+    static Tagged optional(bool value);
 };
 
 #include "ChaiscriptInterface.ipp"

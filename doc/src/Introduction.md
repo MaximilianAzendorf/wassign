@@ -148,11 +148,11 @@ describing the scheduling of the workshops into the slots and a file called `out
 
 describing the assignment of the participants into the workshops.
 
-As you can see, we got exactly what we were looking for: wassign tells us which workshop should go into which time slot and at the same time gives uns the corresponding assignment for the participants.
+As you can see, we got exactly what we were looking for: wassign tells us which workshop should go into which time slot and at the same time gives us the corresponding assignment for the participants.
 
 ## Specifying custom constraints
 
-We now assume that Lily called us and told us that she can't attend the paleo cooking workshop because she is a vegetarian. We can use another feature of wassign called *constraints* to tell wassign that Lily must not be assigned to the paleo workshop under any circumstance. We do this by adding the following line to our input file:
+We now assume that Lily called us beforehand and told us that she can't attend the paleo cooking workshop because she is a vegetarian. We can use another feature of wassign called *constraints* to tell wassign that Lily must not be assigned to the paleo workshop under any circumstance. We do this by adding the following line to our input file:
 
 ```
 +constraint( chooser("Lily").choices.contains_not(choice("Paleo")) );

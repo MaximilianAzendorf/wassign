@@ -21,7 +21,7 @@ build/doc.html: $(sources) $(headerin) filter/* order.txt style.css Makefile
 		--standalone \
 		--lua-filter ./filter/diagram-generator.lua \
 		--toc \
-		--toc-depth=4 \
+		--toc-depth=3 \
 		--section-divs \
 		--number-sections \
 		--css=style.css \

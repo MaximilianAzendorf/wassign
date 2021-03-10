@@ -20,7 +20,7 @@ body {
   hyphens: auto;
 }
 
-td:first-child {
+td:first-child:not(:only-child) {
   width: 1px;
   white-space: nowrap;
 }
@@ -216,6 +216,7 @@ table {
   border-right: 1px solid #ddd;
   border-spacing: 0;
   border-collapse: collapse;
+  min-width: 100%; 
 }
 
 table th {
