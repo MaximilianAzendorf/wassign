@@ -20,6 +20,16 @@ body {
   hyphens: auto;
 }
 
+td:first-child {
+  width: 1px;
+  white-space: nowrap;
+}
+
+td code {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 a {
   color: #0645ad;
   text-decoration: none;
