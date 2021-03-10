@@ -86,7 +86,7 @@ We can then use this file to generate choices for our input as follows:
 var file = read_csv("workshops.csv");
 for(row : file.rows.slice(1, end))
 {
-    +choice(row[0], bounds(row[1], row[2]), optional(row[3] == "yes"));
+    +choice(row[0], bounds(row[1], row[2]), optional_if(row[3] == "yes"));
 }
 ```
 
