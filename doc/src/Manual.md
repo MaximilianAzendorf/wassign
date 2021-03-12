@@ -9,30 +9,30 @@ Input files are [chaiscript scripts](http://chaiscript.com/), so all typical pro
 ### Adding slots, choices and choosers
 
 +---+
-| `add(arg)`<br>`+arg` (operator) |
-+===+
-| Adds the given argument `arg` (a newly created slot, choice or chooser) to the input. |
-+---+ 
-
-+---+
 | `slot(name)` |
 +===+
-| Creates a new slot with the given name or returns the slot with the given name if a slot with such name was already created. Note that if you create a new slot, you still have to add it to the input with `add` or `+`. |
+| Creates a new slot with the given name or returns the slot with the given name if a slot with such name was already created. Note that if you create a new slot you still have to add it to the input with `add` or `+`. |
 +---+ 
 
 +---+
 | `choice(name)`<br>`choice(name, args...)` |
 +===+
-| Creates a new choice with the given name and arguments (see [choice arguments](#choice-arguments) for more information) or returns the choice with the given name if a choice with such name was already created. Note that if you create a new choice, you still have to add it to the input with `add` or `+`. |
+| Creates a new choice with the given name and arguments (see [choice arguments](#choice-arguments) for more information) or (if just a name is given) returns the choice with the given name if a choice with such name was already created. Note that if you create a new choice you still have to add it to the input with `add` or `+`. |
 +---+ 
 
 +---+
 | `chooser(name)`<br>`chooser(name, preferences)` |
 +===+
-| Creates a new chooser with the given name and preference list (e.g. `chooser("Karl", [100, 50, 0])`) or returns the chooser with the given name if a chooser with such name was already created. The preferences have to be in the same order in which the corresponding choices were added to the input. Note that if you create a new choice, you still have to add it to the input with `add` or `+`. |
+| Creates a new chooser with the given name and preference list (e.g. `chooser("Karl", [100, 50, 0])`) or (if just a name is given) returns the chooser with the given name if a chooser with such name was already created. The preferences have to be in the same order in which the corresponding choices were added to the input. Note that if you create a new choice you still have to add it to the input with `add` or `+`. |
 +---+ 
 
-#### Choice arguments
++---+
+| `add(arg)`<br>`+arg` (operator) |
++===+
+| Adds the given argument `arg` (a newly created slot, choice or chooser) to the input. |
++---+ 
+
+### Choice arguments
 
 ---------------- ---
 `min(x)`         The choice must have at least `x` participants (e.g. `+choice("Foo", min(5))`). The default is 1.
@@ -84,9 +84,11 @@ We can then use this file to generate choices for our input as follows:
 
 ```
 var file = read_csv("workshops.csv");
+
 for(row : file.rows.slice(1, end))
 {
     +choice(row[0], bounds(row[1], row[2]), optional_if(row[3] == "yes"));
+    // or add(choice(...))
 }
 ```
 
@@ -97,7 +99,7 @@ Note that we have to skip the first row (with `.slice(1, end)`) because it conta
 +---+
 | `LIST.slice(x, y)` |
 +===+
-| Returns a list that only contains the element between `x` (inclusive) and `y` (inclusive). Note that index numbering starts at 0. You can give `end` as the value for `y` as a replacement for `LIST.length - 1`. |
+| Returns a list that only contains the element of the list `LIST` with indices between `x` (inclusive) and `y` (inclusive). Note that index numbering starts at 0. You can give `end` as the value for `y` as a replacement for `LIST.length - 1`. |
 +---+
 
 +---+
@@ -113,7 +115,7 @@ Note that we have to skip the first row (with `.slice(1, end)`) because it conta
 `--version`                         Show the current version of wassign.
 `-i [file]`, `--input [file]`       Read the input from the specified file(s). If this option is present more than once, all files will be read in the order they were given.
 `-o [prefix]`, `--output [prefix]`  Write the output to files starting with the given prefix. The files generated will be named `[prefix].assignment.csv` and `[prefix].scheduling.csv`.
-`-v [n]`, `--verbosity [n]`         A number `n` between 0 and 3 indicating how much status information should be given.
+`-v [n]`, `--verbosity [n]`         A number `n` between 0 and 3 indicating how much status information should be output.
 `-a`, `--any`                       If this option is given, wassign will not optimize any solution and will just return the first solution it finds.
 `-p [exp]`, `--pref-exp [exp]`      Sets the preference exponent to the given value. See the [respective section](#preference-exponent) for more information.
 `-t [time]`, `--timeout [time]`     Sets the optimization timeout. The syntax for this argument is described under the [respective section](#time-format).
