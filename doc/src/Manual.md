@@ -6,7 +6,7 @@ The following section contains the complete documentation of all wassign feature
 
 Input files are [chaiscript scripts](http://chaiscript.com/), so all typical programming constructs like variables (`var x = ...`), loops (`for(...)`), conditionals (`if(...)`) and others are available to construct the input. In addition, the following API is used to interact with wassign.
 
-### Adding slots, choices and choosers
+### Adding slots, choices choosers and constraints
 
 +---+
 | `slot(name)` |
@@ -27,9 +27,15 @@ Input files are [chaiscript scripts](http://chaiscript.com/), so all typical pro
 +---+ 
 
 +---+
+| `constraint(expression)` |
++===+
+| Creates a new constraint from the given expression. For more information on how to construct constraint expressions, see the [respective section](#constraints) Note that if you create a new constraint you still have to add it to the input with `add` or `+`. |
++---+ 
+
++---+
 | `add(arg)`<br>`+arg` (operator) |
 +===+
-| Adds the given argument `arg` (a newly created slot, choice or chooser) to the input. |
+| Adds the given argument `arg` (a newly created slot, choice, chooser or constraint) to the input. |
 +---+ 
 
 ### Choice arguments
@@ -48,6 +54,69 @@ As an example, a choice named `Foo` that must have between 5 and 12 participants
 ```
 +choice("Foo", bounds(5, 12), parts(3), optional);
 ```
+
+### Constraints
+
+#### Constraint objects
+
+Constraints are relations between two *constaint objects*. All slots, choices and choosers are *simple* constraint objects. In addition to them, the following derived constraint objects can be used to construct constraints:
+
++---+
+| `SLOT.choices`
++===+
+| A *list* constraint object describing all choices that are scheduled to the slot `SLOT`. |
++---+ 
+
++---+
+| `SLOT.size`
++===+
+| A *numerical* constraint object describing the number of choices that are scheduled to the slot `SLOT`. |
++---+ 
+
++---+
+| `CHOICE.slot`<br>
+| `CHOICE.slot(part)`
++===+
+| A *simple* constraint object describing the the slot to which choice `CHOICE` is scheduled to. You can specify a part index (starting at 0) to refer to a specific part of the choice; by default, `part=0`. |
++---+ 
+
++---+
+| `CHOICE.choosers`
++===+
+| A *list* constraint object describing the the list of choosers that are assigned to the choice `CHOICE`. |
++---+ 
+
++---+
+| `CHOOSER.choices`
++===+
+| A *list* constraint object describing the the list of choices that the chooser `CHOOSER` is assigned to. |
++---+ 
+
+#### Relational operators
+
++---+
+| Relations between simple constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)
++===+
+| States that the simple constraint object `left` must be equal (or inequal) to the simple constraint object `right`. |
++---+ 
+
++---+
+| Relations between numerical constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)<br>`left > right` (greater-than)<br>`left >= right` (greater-or-equal-than)<br>`left < right` (less-than)<br>`left <= right` (less-or-equal-than) |
++===+
+| States that the given relation must hold true between the numerical constraint object `left` and the numerical constraint object `right`. Note that `right` can also be a numerical constant. |
++---+ 
+
++---+
+| Relations between list constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)<br>`left.contains(right)` (contains-relation)<br>`left.contains_not(right)` (contains-not-relation) |
++===+
+| States that the given relation must hold true between the list constraint object `left` and the list constraint object `right`, or (in the case of `contains` and `contains_not`) the *simple* constraint object `right`. |
++---+ 
+
+#### Examples
+
+ - `choice("X").slot != slot("Y")`: Choice "X" must not be in slot "Y".
+ - `slot("Y").size <= 5`: Slot "Y" must have 5 or less choices scheduled to it.
+ - `chooser("X").choices.contains_not(choice("Y"))`: Chooser "Y" must not be assigned to choice "Y".
 
 ### Reading from CSV files
 
