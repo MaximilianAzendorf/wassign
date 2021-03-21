@@ -4,7 +4,7 @@ informat  := markdown+raw_tex
 headerin  := src/Header.md
 headerout := build/header.html
 
-build/doc.html: $(sources) $(headerin) filter/* order.txt style.css Makefile
+build/doc.html: $(sources) $(headerin) filter/* headerbar.html order.txt style.css Makefile
 	mkdir -p ./build
 	cp ./style.css ./build/style.css
 	pandoc \
@@ -16,12 +16,13 @@ build/doc.html: $(sources) $(headerin) filter/* order.txt style.css Makefile
 		--from=$(informat) \
 		--to=html \
 		-V lang=en \
+		-B headerbar.html \
 		-B $(headerout) \
 		--mathjax=https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.1.2/es5/tex-chtml.min.js \
 		--standalone \
 		--lua-filter ./filter/diagram-generator.lua \
 		--toc \
-		--toc-depth=4 \
+		--toc-depth=3 \
 		--section-divs \
 		--number-sections \
 		--css=style.css \

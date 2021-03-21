@@ -31,7 +31,7 @@ TEST_CASE(PREFIX "Should parse everything without error")
 +slot("a-b'c d");
 
 +choice("w1", bounds(1, 9), optional);
-+choice("w2", min(1), max(178));
++choice("w2", min(1), max(178), optional_if(false));
 +choice("w3", bounds(12, 13), parts(3));
 
 +chooser("p1", [0, 1, 2]);

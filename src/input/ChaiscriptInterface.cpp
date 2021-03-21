@@ -137,14 +137,15 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::fun(&ChaiscriptInterface::cexp_superset), "supersetOf");
 
     c.add(cs::fun(&ChaiscriptInterface::read_file_string), "readFile");
-    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
-    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&, char)>(&ChaiscriptInterface::read_file_csv)), "readCsv");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&)>(&ChaiscriptInterface::read_file_csv)), "read_csv");
+    c.add(cs::fun(static_cast<shared_ptr<rapidcsv::Document> (*)(string const&, char)>(&ChaiscriptInterface::read_file_csv)), "read_csv");
 
-    c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::optional), "optional");
+    c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::optional_obj), "optional");
     c.add(cs::fun(&ChaiscriptInterface::min), "min");
     c.add(cs::fun(&ChaiscriptInterface::max), "max");
     c.add(cs::fun(&ChaiscriptInterface::parts), "parts");
     c.add(cs::fun(&ChaiscriptInterface::bounds), "bounds");
+    c.add(cs::fun(&ChaiscriptInterface::optional), "optional_if");
 }
 
 shared_ptr<InputSlotData> ChaiscriptInterface::slot(InputReader& reader, string const& name)
@@ -203,7 +204,7 @@ shared_ptr<InputChoiceData> ChaiscriptInterface::choice(InputReader& reader,
             case Ignore: break;
             case Min: newChoice->min = tagged.value(); break;
             case Max: newChoice->max = tagged.value(); break;
-            case Optional: newChoice->optional = true; break;
+            case Optional: newChoice->optional = tagged.value() == 1; break;
             case Parts: newChoice->parts = tagged.value(); break;
             case Bounds: newChoice->min = tagged.value(0); newChoice->max = tagged.value(1); break;
             default: unsupported_value(tagged);
@@ -369,6 +370,11 @@ Tagged ChaiscriptInterface::bounds(int min, int max)
 Tagged ChaiscriptInterface::parts(int parts)
 {
     return Tagged(Parts, parts);
+}
+
+Tagged ChaiscriptInterface::optional(bool value)
+{
+    return Tagged(Optional, value ? 1 : 0);
 }
 
 ConstraintExpressionAccessor ChaiscriptInterface::cexp_choices(shared_ptr<InputSlotData> const& set)

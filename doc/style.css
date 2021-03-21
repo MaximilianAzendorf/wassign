@@ -4,6 +4,28 @@
   float: right;
 }
 
+#headerbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: -1em;
+  padding: 5pt 5pt 5pt 15pt;
+}
+
+#headerbar a {
+  margin-right: 1em;
+}
+
+#headerbar a:not(:hover):not(:active) {
+  color: unset;
+}
+
+#headerbar a svg {
+  margin-right: 0.3em;
+}
+
 body {
   color: #444;
   font-family: Palatino, "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
@@ -18,6 +40,16 @@ body {
   -webkit-hyphens: auto;
     -moz-hyphens: auto;
   hyphens: auto;
+}
+
+td:first-child:not(:only-child) {
+  width: 1px;
+  white-space: nowrap;
+}
+
+td code {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 a {
@@ -206,6 +238,7 @@ table {
   border-right: 1px solid #ddd;
   border-spacing: 0;
   border-collapse: collapse;
+  min-width: 100%; 
 }
 
 table th {
@@ -246,6 +279,11 @@ table td {
       filter: none !important;
       -ms-filter: none !important;
   }
+
+  #headerbar {
+    display: none;
+  }
+
   body {
       font-size: 12pt;
       max-width: 100%;

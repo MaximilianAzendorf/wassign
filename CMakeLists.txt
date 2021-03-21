@@ -25,6 +25,7 @@ set(BUILD_DEPS ON)
 set(BUILD_EXAMPLES OFF)
 set(BUILD_SAMPLES OFF)
 set(USE_SCIP OFF)
+set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(deps/or-tools)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-sign-compare")
