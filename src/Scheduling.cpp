@@ -15,6 +15,7 @@
  */
 
 #include "Scheduling.h"
+#include "Scoring.h"
 
 #include <utility>
 #include <cassert>
@@ -49,7 +50,7 @@ bool Scheduling::is_feasible() const
         }
     }
 
-    return true;
+    return Scoring::satisfies_constraints_scheduling(*this);
 }
 
 int Scheduling::slot_of(int choice) const

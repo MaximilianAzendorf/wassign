@@ -20,9 +20,9 @@
 
 #include "Util.h"
 
-bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
+bool Scoring::satisfies_constraints_scheduling(Scheduling const& scheduling)
 {
-    for(Constraint constraint : solution.input_data().scheduling_constraints())
+    for(Constraint constraint : scheduling.input_data().scheduling_constraints())
     {
         int l = constraint.left();
         int r = constraint.right();
@@ -31,31 +31,31 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
         switch(constraint.type())
         {
             case ChoiceIsInSlot:
-                if(solution.scheduling()->slot_of(l) != r) return false;
+                if(scheduling.slot_of(l) != r) return false;
                 break;
 
             case ChoiceIsNotInSlot:
-                if(solution.scheduling()->slot_of(l) == r) return false;
+                if(scheduling.slot_of(l) == r) return false;
                 break;
 
             case ChoicesAreInSameSlot:
-                if(solution.scheduling()->slot_of(l) != solution.scheduling()->slot_of(r)) return false;
+                if(scheduling.slot_of(l) != scheduling.slot_of(r)) return false;
                 break;
 
             case ChoicesAreNotInSameSlot:
-                if(solution.scheduling()->slot_of(l) == solution.scheduling()->slot_of(r)) return false;
+                if(scheduling.slot_of(l) == scheduling.slot_of(r)) return false;
                 break;
 
             case ChoicesHaveOffset:
-                if(solution.scheduling()->slot_of(r) - solution.scheduling()->slot_of(l) != e) return false;
+                if(scheduling.slot_of(r) - scheduling.slot_of(l) != e) return false;
                 break;
 
             case SlotHasLimitedSize:
             {
                 int count = 0;
-                for(int w = 0; w < solution.input_data().choice_count(); w++)
+                for(int w = 0; w < scheduling.input_data().choice_count(); w++)
                 {
-                    if(solution.scheduling()->slot_of(w) == constraint.left())
+                    if(scheduling.slot_of(w) == constraint.left())
                     {
                         count++;
                     }
@@ -81,9 +81,9 @@ bool Scoring::satisfies_constraints_scheduling(Solution const& solution) const
     return true;
 }
 
-bool Scoring::satisfies_constraints_assignment(Solution const& solution) const
+bool Scoring::satisfies_constraints_assignment(Assignment const& assignment)
 {
-    for(Constraint const& constraint : solution.input_data().assignment_constraints())
+    for(Constraint const& constraint : assignment.input_data().assignment_constraints())
     {
         int l = constraint.left();
         int r = constraint.right();
@@ -92,19 +92,19 @@ bool Scoring::satisfies_constraints_assignment(Solution const& solution) const
         switch(constraint.type())
         {
             case ChoicesHaveSameChoosers:
-                if(solution.assignment()->choosers_ordered(l) != solution.assignment()->choosers_ordered(r)) return false;
+                if(assignment.choosers_ordered(l) != assignment.choosers_ordered(r)) return false;
                 break;
 
             case ChooserIsInChoice:
-                if(!solution.assignment()->is_in_choice(l, r)) return false;
+                if(!assignment.is_in_choice(l, r)) return false;
                 break;
 
             case ChooserIsNotInChoice:
-                if(solution.assignment()->is_in_choice(l, r)) return false;
+                if(assignment.is_in_choice(l, r)) return false;
                 break;
 
             case ChoosersHaveSameChoices:
-                if(solution.assignment()->choices_ordered(l) != solution.assignment()->choices_ordered(r)) return false;
+                if(assignment.choices_ordered(l) != assignment.choices_ordered(r)) return false;
                 break;
 
             default: throw std::logic_error("Unknown assignment constraint type " + str(constraint.type()) + ".");
@@ -116,7 +116,8 @@ bool Scoring::satisfies_constraints_assignment(Solution const& solution) const
 
 bool Scoring::satisfies_constraints(Solution const& solution) const
 {
-    return satisfies_constraints_scheduling(solution) && satisfies_constraints_assignment(solution);
+    return satisfies_constraints_scheduling(*solution.scheduling())
+        && satisfies_constraints_assignment(*solution.assignment());
 }
 
 int Scoring::evaluate_major(Solution const& solution) const

@@ -32,10 +32,6 @@ private:
     const_ptr<Options> _options;
     float _scaling;
 
-    [[nodiscard]] bool satisfies_constraints_scheduling(Solution const& solution) const;
-
-    [[nodiscard]] bool satisfies_constraints_assignment(Solution const& solution) const;
-
     [[nodiscard]] bool satisfies_constraints(Solution const& solution) const;
 
     [[nodiscard]] int evaluate_major(Solution const& solution) const;
@@ -54,6 +50,16 @@ public:
      * Calculates the score of the given solution.
      */
     [[nodiscard]] virtual Score evaluate(Solution const& solution) const;
+
+    /**
+     * Determines if the given scheduling satisfies all constraints.
+     */
+    [[nodiscard]] static bool satisfies_constraints_scheduling(Scheduling const& scheduling);
+
+    /**
+     * Determines if the given assignment satisfies all constraints.
+     */
+    [[nodiscard]] static bool satisfies_constraints_assignment(Assignment const& assignment);
 };
 
 
