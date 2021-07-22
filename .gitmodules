@@ -16,9 +16,6 @@
 [submodule "deps/rapidcsv"]
 	path = deps/rapidcsv
 	url = https://github.com/d99kris/rapidcsv.git
-[submodule "deps/--force"]
-	path = deps/--force
-	url = https://github.com/google/or-tools.git
 [submodule "deps/or-tools"]
 	path = deps/or-tools
 	url = https://github.com/google/or-tools.git
