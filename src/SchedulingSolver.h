@@ -72,7 +72,7 @@ private:
      * Calculates critical sets in the current partial solution that limit the next decision. Critical sets are sets
      * that need the next choice in order to still be able to fulfill the chooser count.
      */
-    vector<int> calculate_critical_sets(map<int, int> const& decisions, int availableMaxPush, int choice);
+    vector<int> calculate_critical_slots(map<int, int> const& decisions, int availableMaxPush, int choice);
 
     /**
      * Calculates the score used to decide the order in which sets are preferred when deciding a set for a choice

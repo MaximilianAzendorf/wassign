@@ -209,7 +209,7 @@ bool SchedulingSolver::has_impossibilities(map<int, int> const& decisions, int a
 }
 
 vector<int>
-SchedulingSolver::calculate_critical_sets(map<int, int> const& decisions, int availableMaxPush, int choice)
+SchedulingSolver::calculate_critical_slots(map<int, int> const& decisions, int availableMaxPush, int choice)
 {
     vector<int> criticalSets;
 
@@ -357,13 +357,13 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
                 // If the partial solution does not satisfy critical set constraints it is infeasible.
                 //
                 // This is the case when there aren't enough elements in a critical set to cover all sets. For
-                // example, for 4 Sets and the critical set {A, B, C, D, E}, a partial solution of the form
+                // example, for 4 Slots and the critical set {A, B, C, D, E}, a partial solution of the form
                 //
-                //      Set 1:    ... A, C ....
-                //      Set 2:    ... D .......
-                //      Set 3:    .............
-                //      Set 4:    .............
-                //  Not assigned: ... B, E ....
+                //      Slot 1:    .. A, C, E ..
+                //      Slot 2:    .. D ........
+                //      Slot 3:    .............
+                //      Slot 4:    .............
+                //  Not assigned:  .. B ........
                 //
                 // Would not be feasible, because the critical set can not be covered anymore (we would need at
                 // least 2 open choices in the critical set to cover Set 3 and 4).
@@ -374,13 +374,13 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
                 }
                 else
                 {
-                    vector<int> criticalSets = calculate_critical_sets(decisions, availableMaxPush, choice);
+                    vector<int> criticalSlots = calculate_critical_slots(decisions, availableMaxPush, choice);
 
-                    if(criticalSets.size() == 1)
+                    if(criticalSlots.size() == 1)
                     {
-                        backtracking.push(criticalSets);
+                        backtracking.push(criticalSlots);
                     }
-                    else if(criticalSets.size() > 1)
+                    else if(criticalSlots.size() > 1)
                     {
                         backtracking.push({});
                     }
