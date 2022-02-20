@@ -18,13 +18,11 @@
 
 #include "../src/input/InputReader.h"
 #include "../src/input/ConstraintBuilder.h"
-#include <boost/algorithm/string.hpp>
 #include <utility>
+#include <regex>
 #include "../src/OutputFormatter.h"
 #include "../src/Status.h"
 #include "../src/ShotgunSolverThreaded.h"
-
-using namespace boost::algorithm;
 
 const_ptr<InputData> parse_data(std::string const& input)
 {
@@ -33,14 +31,22 @@ const_ptr<InputData> parse_data(std::string const& input)
     return data;
 }
 
+std::string trim_copy(std::string const& str)
+{
+    std::string res = std::string(str);
+    res.erase(res.begin(), std::find_if(res.begin(), res.end(), [](char ch){ return !std::isspace(ch);}));
+    res.erase(std::find_if(res.rbegin(), res.rend(), [](char ch){ return !std::isspace(ch);}).base(), res.end());
+    return res;
+}
+
 std::string assignment_str(Solution const& solution)
 {
     std::string solutionStr = OutputFormatter::write_assignment_solution(solution);
-    solutionStr = replace_all_copy(solutionStr, " ", "");
-    solutionStr = replace_all_copy(solutionStr, "\"", "");
+    solutionStr = std::regex_replace(solutionStr, std::regex(" "), "");
+    solutionStr = std::regex_replace(solutionStr, std::regex("\""), "");
     solutionStr.erase(0, solutionStr.find('\n') + 1);
     solutionStr = trim_copy(solutionStr);
-    solutionStr = replace_all_copy(solutionStr, "\n", ";");
+    solutionStr = std::regex_replace(solutionStr, std::regex("\\n"), ";");
 
     return solutionStr;
 }
@@ -49,20 +55,20 @@ std::string assignment_str(Solution const& solution)
 std::string scheduling_str(Solution const& solution)
 {
     std::string solutionStr = OutputFormatter::write_scheduling_solution(solution);
-    solutionStr = replace_all_copy(solutionStr, " ", "");
-    solutionStr = replace_all_copy(solutionStr, "\"", "");
+    solutionStr = std::regex_replace(solutionStr, std::regex(" "), "");
+    solutionStr = std::regex_replace(solutionStr, std::regex("\""), "");
     solutionStr.erase(0, solutionStr.find('\n') + 1);
     solutionStr = trim_copy(solutionStr);
-    solutionStr = replace_all_copy(solutionStr, "\n", ";");
+    solutionStr = std::regex_replace(solutionStr, std::regex("\\n"), ";");
 
     return solutionStr;
 }
 
 std::string strip_whitespace(std::string text)
 {
-    text = replace_all_copy(text, " ", "");
-    text = replace_all_copy(text, "\t", "");
-    text = replace_all_copy(text, "\n", "");
+    text = std::regex_replace(text, std::regex(" "), "");
+    text = std::regex_replace(text, std::regex("\\t"), "");
+    text = std::regex_replace(text, std::regex("\\n"), "");
 
     return text;
 }

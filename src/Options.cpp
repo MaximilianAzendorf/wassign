@@ -72,16 +72,16 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
     if(helpOpt->is_set() && newOpt)
     {
         std::cout << header << std::endl << op << std::endl;
-        return EXIT;
+        return OPT_PARSE_EXIT;
     }
     else if(versionOpt->is_set() && newOpt)
     {
         std::cout << WASSIGN_VERSION << std::endl;
-        return EXIT;
+        return OPT_PARSE_EXIT;
     }
     else if(!op.non_option_args().empty() || !op.unknown_options().empty())
     {
-        return ERROR;
+        return OPT_PARSE_ERROR;
     }
     else
     {
@@ -111,7 +111,7 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
             std::cerr << header << std::endl;
         }
 
-        return OK;
+        return OPT_PARSE_OK;
     }
 }
 

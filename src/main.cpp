@@ -132,11 +132,11 @@ int main(int argc, char** argv)
 
         switch (optionsStatus)
         {
-            case OK:
+            case OPT_PARSE_OK:
                 break;
-            case EXIT:
+            case OPT_PARSE_EXIT:
                 return 0;
-            case ERROR:
+            case OPT_PARSE_ERROR:
             {
                 Status::error("Invalid arguments.");
                 return 1;

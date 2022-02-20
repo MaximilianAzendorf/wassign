@@ -22,9 +22,9 @@
 
 enum OptionsParseStatus
 {
-    OK,
-    EXIT,
-    ERROR
+    OPT_PARSE_OK,
+    OPT_PARSE_EXIT,
+    OPT_PARSE_ERROR
 };
 
 /**

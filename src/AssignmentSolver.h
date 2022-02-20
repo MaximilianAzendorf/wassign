@@ -85,7 +85,7 @@ public:
     /**
      * Returns the number of solved LP (or MIP) instances so far.
      */
-     [[nodiscard]] int lp_count() const;
+    [[nodiscard]] int lp_count() const;
 };
 
 

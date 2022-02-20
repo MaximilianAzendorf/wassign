@@ -524,6 +524,11 @@ shared_ptr<rapidcsv::Document> ChaiscriptInterface::read_file_csv(string const& 
 
 vector<string> ChaiscriptInterface::slice(vector<string> const& v, int from, int to)
 {
+    if(from < 0 || to < 0 || from >= v.size() || to >= v.size())
+    {
+        throw InputException("An array of length " + str(v.size()) + " can not be sliced between " + str(from) + " and " + str(to) + ".");
+    }
+
     vector<string> slice;
 
     if(to == end) to = v.size() - 1;
