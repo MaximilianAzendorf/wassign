@@ -78,6 +78,8 @@ shared_ptr<Scheduling const> HillClimbingSolver::random_swap_neighbor(shared_ptr
 
 vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_ptr<Scheduling const> const& scheduling)
 {
+    bool addSwapNeighbors = scheduling->input_data().choice_count() > 1 && scheduling->input_data().slot_count() > 1;
+
     vector<shared_ptr<Scheduling const>> result;
 
     vector<int> neighborKeys(max_neighbor_key());
@@ -102,14 +104,18 @@ vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_p
         if(!nextNeighbor->is_feasible()) continue;
 
         result.push_back(nextNeighbor);
-        auto swapNeighbor = random_swap_neighbor(scheduling);
-        if (swapNeighbor->is_feasible())
+
+        if (addSwapNeighbors)
         {
-            result.push_back(swapNeighbor);
+            auto swapNeighbor = random_swap_neighbor(scheduling);
+            if (swapNeighbor->is_feasible())
+            {
+                result.push_back(swapNeighbor);
+            }
         }
     }
 
-    if (result.size() < _options->max_neighbors())
+    if (addSwapNeighbors && result.size() < _options->max_neighbors())
     {
         // Fill up the neighbors with swap neighbors
         int amount = std::min(_options->max_neighbors() - (int)result.size(), max_neighbor_key());
