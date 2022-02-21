@@ -55,6 +55,7 @@ bool Scoring::satisfies_constraints_scheduling(Scheduling const& scheduling)
                 if(scheduling.slot_of(l) == Scheduling::NOT_SCHEDULED
                    || scheduling.slot_of(r) == Scheduling::NOT_SCHEDULED)
                 {
+                    if(scheduling.slot_of(l) != scheduling.slot_of(r)) return false;
                     break;
                 }
                 if(scheduling.slot_of(r) - scheduling.slot_of(l) != e) return false;
