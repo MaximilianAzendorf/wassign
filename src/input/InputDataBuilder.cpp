@@ -189,7 +189,8 @@ void InputDataBuilder::compile_choices(InputReader const& reader)
                 pw->name,
                 pw->min,
                 pw->max,
-                pw->parts > 1 ? std::make_optional(wsidx + 1) : std::nullopt));
+                pw->parts > 1 ? std::make_optional(wsidx + 1) : std::nullopt,
+                pw->optional));
 
         wsidx++;
         if(pw->parts > 1)
@@ -215,56 +216,10 @@ void InputDataBuilder::compile_choices(InputReader const& reader)
                         name,
                         pw->min,
                         pw->max,
-                        i == pw->parts - 1 ? std::nullopt : std::make_optional(wsidx + 1)));
+                        i == pw->parts - 1 ? std::nullopt : std::make_optional(wsidx + 1),
+                        pw->optional));
                 wsidx++;
             }
-        }
-    }
-}
-
-void InputDataBuilder::generate_extra_slots(InputReader const& reader)
-{
-    int optMin = 0;
-    bool hasOpt = false;
-    for(auto const& pw : reader._choices)
-    {
-        if(!pw->optional) continue;
-        hasOpt = true;
-        optMin += pw->min;
-    }
-
-    int numExtraSets = (int)std::ceil((double)optMin / (double)_inputData->_choosers.size());
-    numExtraSets = std::max(hasOpt ? 1 : 0, numExtraSets);
-
-    for(int i = 0; i < numExtraSets; i++)
-    {
-        string extraSet = InputData::NotScheduledSlotPrefix + str(i);
-        string extraChoice = InputData::HiddenChoicePrefix + "unassigned_" + str(i);
-
-        int s = _inputData->_slots.size();
-
-        _inputData->_slots.push_back(SlotData(extraSet));
-        _inputData->_choices.push_back(ChoiceData(extraChoice, 0, _inputData->_choosers.size() + 1));
-        _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsInSlot, _inputData->_choices.size() - 1, s));
-
-        for(int p = 0; p < _inputData->_choosers.size(); p++)
-        {
-            vector<int> newPref(_inputData->_choosers[p].preferences);
-            newPref.push_back(InputData::MinPrefPlaceholder);
-            _inputData->_choosers[p] = ChooserData(_inputData->_choosers[p].name, newPref);
-        }
-
-        for(auto const& pw : reader._choices)
-        {
-            if(pw->optional) continue;
-
-            int w = 0;
-            for(; w < _inputData->_choices.size(); w++)
-            {
-                if(_inputData->_choices[w].name == pw->name) break;
-            }
-
-            _inputData->_schedulingConstraints.push_back(Constraint(ChoiceIsNotInSlot, w, s));
         }
     }
 }
@@ -307,7 +262,8 @@ void InputDataBuilder::build_constraints(InputReader const& reader)
                 _inputData->_choices[i].name,
                 newLimits[i].first,
                 newLimits[i].second,
-                _inputData->_choices[i].continuation);
+                _inputData->_choices[i].continuation,
+                _inputData->_choices[i].isOptional);
     }
 
     for(int i = 0; i < _inputData->_choosers.size(); i++)
@@ -389,7 +345,6 @@ void InputDataBuilder::process_input_reader(InputReader const& reader)
     build_preference_levels(reader);
 
     compile_choices(reader);
-    generate_extra_slots(reader);
     build_constraints(reader);
     build_constraint_maps();
 }

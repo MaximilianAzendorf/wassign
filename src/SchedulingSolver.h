@@ -52,7 +52,7 @@ private:
     /**
      * Tests if the hypothetical decision of putting choice into set would violate any scheduling constraints.
      */
-    bool satisfies_scheduling_constraints(int choice, int set, map<int, int> const& decisions);
+    bool satisfies_scheduling_constraints(int choice, int slot, map<int, int> const& decisions);
 
     /**
      * Checks if the hypothetical decision of putting choice into set would violate any slot size constraints. This

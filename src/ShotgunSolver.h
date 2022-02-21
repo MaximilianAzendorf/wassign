@@ -56,6 +56,8 @@ private:
 
     ShotgunSolverProgress _progress;
 
+    int _schedulings = 0;
+
 public:
     ShotgunSolver(const_ptr<InputData> inputData,
                   const_ptr<CriticalSetAnalysis> const& csAnalysis,

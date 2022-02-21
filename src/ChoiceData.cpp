@@ -21,13 +21,13 @@ ChoiceData::ChoiceData(string name, int min, int max)
 {
 }
 
-ChoiceData::ChoiceData(string name, int min, int max, int continuation)
-        : name(std::move(name)), min(min), max(max), continuation(continuation)
+ChoiceData::ChoiceData(string name, int min, int max, int continuation, bool isOptional)
+        : name(std::move(name)), min(min), max(max), continuation(continuation), isOptional(isOptional)
 {
 }
 
-ChoiceData::ChoiceData(string name, int min, int max, optional<int> continuation)
-        : name(std::move(name)), min(min), max(max), continuation(continuation)
+ChoiceData::ChoiceData(string name, int min, int max, optional<int> continuation, bool isOptional)
+        : name(std::move(name)), min(min), max(max), continuation(continuation), isOptional(isOptional)
 {
 }
 

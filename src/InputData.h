@@ -51,8 +51,6 @@ private:
 
 public:
     inline static const string GeneratedPrefix = "~";
-    inline static const string NotScheduledSlotPrefix = GeneratedPrefix + "not_scheduled_";
-    inline static const string HiddenChoicePrefix = GeneratedPrefix + "hidden_";
     inline static const string GeneratedSlotName = "Generated Slot";
     inline static const int MinPrefPlaceholder = INT_MAX;
 

@@ -29,16 +29,7 @@ string OutputFormatter::write_scheduling_solution(Solution const& solution)
     {
         int s = solution.scheduling()->slot_of(w);
         string wName = solution.input_data().choice(w).name;
-        if(wName.rfind(InputData::HiddenChoicePrefix, 0) == 0)
-        {
-            continue;
-        }
-
-        string sName = solution.input_data().slot(s).name;
-        if(sName.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
-        {
-            sName = "not scheduled";
-        }
+        string sName = s == Scheduling::NOT_SCHEDULED ? "not scheduled" : solution.input_data().slot(s).name;
 
         if(wName.rfind(InputData::GeneratedPrefix, 0) == 0)
         {
@@ -60,11 +51,6 @@ string OutputFormatter::write_assignment_solution(Solution const& solution)
 
     for(int s = 0; s < solution.input_data().slot_count(); s++)
     {
-        if(solution.input_data().slot(s).name.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
-        {
-            continue;
-        }
-
         str << ", \"" << solution.input_data().slot(s).name << '"';
     }
 
@@ -81,11 +67,6 @@ vector<int> choices(solution.input_data().slot_count());
 
         for(int s = 0; s < solution.input_data().slot_count(); s++)
         {
-            if(solution.input_data().slot(s).name.rfind(InputData::NotScheduledSlotPrefix, 0) == 0)
-            {
-                continue;
-            }
-
             string wName = solution.input_data().choice(choices[s]).name;
             if(wName.rfind(InputData::GeneratedPrefix, 0) == 0)
             {

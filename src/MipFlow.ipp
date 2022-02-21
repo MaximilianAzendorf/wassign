@@ -149,7 +149,9 @@ bool MipFlow<NodeKey, EdgeKey>::solve(op::MPSolver& solver)
 
     minTerm->SetMinimization();
 
-    bool success = solver.Solve() == op::MPSolver::OPTIMAL;
+    //string exp; solver.ExportModelAsMpsFormat(false, false, &exp);
+    auto solverRes = solver.Solve();
+    bool success = solverRes == op::MPSolver::OPTIMAL;
 
     if(success)
     {

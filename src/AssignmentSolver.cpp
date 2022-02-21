@@ -36,6 +36,8 @@ set<pair<int, int>> AssignmentSolver::get_blocked_constraint_edges(shared_ptr<Sc
             case ChooserIsInChoice:
             {
                 int s = scheduling->slot_of(constraint.right());
+                if (s < 0) continue;
+
                 int from = _staticData->baseFlow.nodes().at(MipFlowStaticData::node_chooser(constraint.left(), s));
 
                 for(int w = 0; w < _inputData->choice_count(); w++)
@@ -109,6 +111,8 @@ void AssignmentSolver::create_edge_groups(const_ptr<Scheduling> const& schedulin
             for(int w : group)
             {
                 int s = scheduling->slot_of(w);
+                if (s < 0) continue;
+
                 int from = flow.nodes().at(MipFlowStaticData::node_chooser(p, s));
                 int to = flow.nodes().at(MipFlowStaticData::node_choice(w));
                 edgeGroup.push_back(MipFlowStaticData::edge_id(from, to));
@@ -135,6 +139,7 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
 
     for(int w = 0; w < _inputData->choice_count(); w++)
     {
+        if (scheduling->slot_of(w) == Scheduling::NOT_SCHEDULED) continue;
         flow.set_supply(flow.nodes().at(MipFlowStaticData::node_choice(w)), -_inputData->choice(w).min);
     }
 
@@ -222,6 +227,7 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
 
     // ... and solve this instance
     //
+    _lpCount++;
     if(!flow.solve(solver))
     {
         return nullptr;
@@ -247,7 +253,6 @@ const_ptr<Assignment> AssignmentSolver::solve_with_limit(const_ptr<Scheduling> c
         }
     }
 
-    _lpCount++;
     return std::make_shared<Assignment const>(_inputData, data);
 }
 

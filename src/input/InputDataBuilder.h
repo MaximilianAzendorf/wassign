@@ -47,12 +47,6 @@ private:
     void compile_choices(InputReader const& reader);
 
     /**
-     * Generates extra slots if there are optional choices present (which are internally handled with a virtual
-     * "not scheduled"-slot and extra virtual workhops to which to assign all choosers in this virtual slot).
-     */
-    void generate_extra_slots(InputReader const& reader);
-
-    /**
      * Converts the constraint expressions contained int he input reader to constraints.
      */
     vector<Constraint> parse_constraints(InputReader const& reader);

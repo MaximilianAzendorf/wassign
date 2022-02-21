@@ -43,11 +43,16 @@ public:
      */
     optional<int> continuation;
 
+    /**
+     * This is true if the choice is optional.
+     */
+    bool isOptional;
+
     ChoiceData(string name, int min, int max);
 
-    ChoiceData(string name, int min, int max, int continuation);
+    ChoiceData(string name, int min, int max, int continuation, bool isOptional);
 
-    ChoiceData(string name, int min, int max, optional<int> continuation);
+    ChoiceData(string name, int min, int max, optional<int> continuation, bool isOptional);
 
     [[nodiscard]] bool has_continuation() const;
 

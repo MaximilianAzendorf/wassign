@@ -30,6 +30,8 @@ private:
     vector<int> _data;
 
 public:
+    inline static const int NOT_SCHEDULED = -1;
+
     /**
      * Constructor.
      */

@@ -43,10 +43,20 @@ bool Scoring::satisfies_constraints_scheduling(Scheduling const& scheduling)
                 break;
 
             case ChoicesAreNotInSameSlot:
+                if(scheduling.slot_of(l) == Scheduling::NOT_SCHEDULED
+                    || scheduling.slot_of(r) == Scheduling::NOT_SCHEDULED)
+                {
+                    break;
+                }
                 if(scheduling.slot_of(l) == scheduling.slot_of(r)) return false;
                 break;
 
             case ChoicesHaveOffset:
+                if(scheduling.slot_of(l) == Scheduling::NOT_SCHEDULED
+                   || scheduling.slot_of(r) == Scheduling::NOT_SCHEDULED)
+                {
+                    break;
+                }
                 if(scheduling.slot_of(r) - scheduling.slot_of(l) != e) return false;
                 break;
 
@@ -196,6 +206,11 @@ bool Scoring::is_feasible(Solution const& solution) const
 
     for(int i = 0; i < _inputData->choice_count(); i++)
     {
+        if (solution.scheduling()->slot_of(i) == Scheduling::NOT_SCHEDULED)
+        {
+            continue;
+        }
+
         if(partCounts[i] < _inputData->choice(i).min || partCounts[i] > _inputData->choice(i).max)
         {
             return false;

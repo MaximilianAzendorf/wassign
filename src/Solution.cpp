@@ -27,7 +27,7 @@ Solution::Solution(const_ptr<Scheduling> scheduling, const_ptr<Assignment> assig
 {
     // HACK: This somehow breaks wasm builds; just ignore for now.
 #ifndef __EMSCRIPTEN__
-    assert(&_scheduling->input_data() == &_assignment->input_data());
+    assert(_scheduling == nullptr || _assignment == nullptr || &_scheduling->input_data() == &_assignment->input_data());
 #endif
 }
 

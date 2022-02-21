@@ -21,7 +21,7 @@
 
 int HillClimbingSolver::max_neighbor_key()
 {
-    return _inputData->choice_count() * (_inputData->slot_count() - 1);
+    return _inputData->choice_count() * (_inputData->slot_count());
 }
 
 shared_ptr<Assignment const> HillClimbingSolver::solve_assignment(const_ptr<Scheduling const> const& scheduling)
@@ -35,7 +35,7 @@ shared_ptr<Scheduling const> HillClimbingSolver::neighbor(shared_ptr<Scheduling 
 {
     vector<int> data(scheduling->raw_data());
 
-    int s = neighborKey / _inputData->choice_count();
+    int s = neighborKey / _inputData->choice_count() - 1;
     int w = neighborKey % _inputData->choice_count();
 
     if(s >= scheduling->slot_of(w))
@@ -104,6 +104,11 @@ int HillClimbingSolver::assignment_count() const
 Solution HillClimbingSolver::solve(const_ptr<Scheduling> const& scheduling)
 {
     Solution bestSolution(scheduling, solve_assignment(scheduling));
+    if(bestSolution.is_invalid())
+    {
+        return Solution::invalid();
+    }
+
     Score bestScore = _scoring->evaluate(bestSolution);
 
     if(!bestScore.is_finite())

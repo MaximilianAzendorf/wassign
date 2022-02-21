@@ -38,6 +38,12 @@ bool Scheduling::is_feasible() const
 
     for(int i = 0; i < _data.size(); i++)
     {
+        if (_data[i] == Scheduling::NOT_SCHEDULED)
+        {
+            if (!_inputData->choice(i).isOptional) return false;
+            continue;
+        }
+
         slotMin[_data[i]] += _inputData->choice(i).min;
         slotMax[_data[i]] += _inputData->choice(i).max;
     }
