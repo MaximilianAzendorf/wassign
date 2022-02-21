@@ -104,6 +104,7 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
         if(csTimeoutOpt->is_set()) set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
         if(noCsOpt->is_set()) set_no_critical_sets(true);
         if(threadsOpt->is_set()) set_thread_count(threadsOpt->value());
+        if(maxNeighborsOpt->is_set()) set_max_neighbors(maxNeighborsOpt->value());
         if(greedyOpt->is_set()) set_greedy(true);
 
         if(verbosity() > 0 && newOpt)

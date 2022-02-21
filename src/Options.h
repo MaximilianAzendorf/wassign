@@ -42,7 +42,7 @@ private:
     int _csTimeout = 3;
     bool _noCs = false;
     int _threadCount = (int)std::thread::hardware_concurrency();
-    int _maxNeighbors = 16;
+    int _maxNeighbors = 12;
     bool _greedy = false;
 
     OptionsParseStatus parse_base(int argc, char** argv, bool newOpt, string const& header);

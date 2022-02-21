@@ -44,8 +44,35 @@ shared_ptr<Scheduling const> HillClimbingSolver::neighbor(shared_ptr<Scheduling 
     }
 
     data[w] = s;
-    auto newScheduling = std::make_shared<Scheduling const>(_inputData, data);
 
+    auto newScheduling = std::make_shared<Scheduling const>(_inputData, data);
+    return newScheduling;
+}
+
+shared_ptr<Scheduling const> HillClimbingSolver::random_swap_neighbor(shared_ptr<Scheduling const> const& scheduling)
+{
+    vector<int> data(scheduling->raw_data());
+    vector<int> swapIdx;
+    swapIdx.push_back(Rng::next(0, (int)data.size()));
+
+    do
+    {
+        int nextIdx;
+        do
+        {
+            nextIdx = Rng::next(0, (int)data.size());
+        } while(std::find(swapIdx.begin(), swapIdx.end(), nextIdx) != swapIdx.end());
+        swapIdx.push_back(nextIdx);
+
+    } while(Rng::next(0, 3) == 0 && swapIdx.size() < data.size() / 2);
+
+    int carry = data[swapIdx[swapIdx.size() - 1]];
+    for(int idx : swapIdx)
+    {
+        std::swap(carry, data[idx]);
+    }
+
+    auto newScheduling = std::make_shared<Scheduling const>(_inputData, data);
     return newScheduling;
 }
 
@@ -63,6 +90,11 @@ vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_p
 
     for(int keyIdx = 0; keyIdx < neighborKeys.size(); keyIdx++)
     {
+        if(result.size() >= _options->max_neighbors())
+        {
+            break;
+        }
+
         if(keyIdx > _options->max_neighbors() * 32) break;
 
         int neighborKey = neighborKeys[keyIdx];
@@ -70,10 +102,24 @@ vector<shared_ptr<Scheduling const>> HillClimbingSolver::pick_neighbors(shared_p
         if(!nextNeighbor->is_feasible()) continue;
 
         result.push_back(nextNeighbor);
-
-        if(result.size() >= _options->max_neighbors())
+        auto swapNeighbor = random_swap_neighbor(scheduling);
+        if (swapNeighbor->is_feasible())
         {
-            break;
+            result.push_back(swapNeighbor);
+        }
+    }
+
+    if (result.size() < _options->max_neighbors())
+    {
+        // Fill up the neighbors with swap neighbors
+        int amount = std::min(_options->max_neighbors() - (int)result.size(), max_neighbor_key());
+        for(int i = 0; i < amount * 32 && result.size() < _options->max_neighbors(); i++)
+        {
+            auto swapNeighbor = random_swap_neighbor(scheduling);
+            if (swapNeighbor->is_feasible())
+            {
+                result.push_back(swapNeighbor);
+            }
         }
     }
 
