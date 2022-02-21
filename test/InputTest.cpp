@@ -52,8 +52,8 @@ chooser("q5").name = "p5";
 
     SECTION("Should have the correct number of slots, choices and choosers")
     {
-        REQUIRE(data->slot_count() == 4); // 3 real slots and 1 not-scheduled slot.
-        REQUIRE(data->choice_count() == 6); // 3 real choices + 2 extra parts of w2 + 1 unassigned slot
+        REQUIRE(data->slot_count() == 3);
+        REQUIRE(data->choice_count() == 5); // 3 real choices + 2 extra parts of w2
         REQUIRE(data->chooser_count() == 5);
     }
 
@@ -70,7 +70,7 @@ chooser("q5").name = "p5";
 
     SECTION("Should have the correct number of constraints")
     {
-        REQUIRE(data->scheduling_constraints().size() == 9);
+        REQUIRE(data->scheduling_constraints().size() == 6);
         REQUIRE(data->assignment_constraints().size() == 3);
     }
 }
@@ -103,23 +103,6 @@ TEST_CASE(PREFIX "Should create scheduling constraints for multi-part choices")
             REQUIRE(c.type() == ChoicesAreNotInSameSlot);
         }
     }
-}
-
-TEST_CASE(PREFIX "Should create scheduling constraints for non-optional choices")
-{
-    auto input = R"(
-+slot("s1");
-
-+choice("e", bounds(1, 100));
-+choice("f", bounds(1, 100), optional);
-
-+chooser("p", [1, 1]);
-)";
-
-    auto data = InputReader(Options::default_options()).read_input(input);
-
-    // One ChoiceIsNotInSlot for e and one ChoiceIsInSlot for the auto-generated unassigned-slot-filling-choice.
-    REQUIRE(data->scheduling_constraints().size() == 2);
 }
 
 TEST_CASE(PREFIX "Should auto-generate set if none is given")
@@ -217,7 +200,7 @@ TEST_CASE(PREFIX "Should parse choices")
     auto reader = InputReader(Options::default_options());
     auto data = reader.read_input(input);
 
-    REQUIRE(data->choice_count() > 4); // 3 normal, 1 extra part,  at least one unassigned
+    REQUIRE(data->choice_count() == 4); // 3 normal + 1 extra part
 
     REQUIRE(data->choice(0).name == "a");
     REQUIRE(data->choice(0).min == 1);
@@ -244,7 +227,6 @@ TEST_CASE(PREFIX "Should parse choices")
     REQUIRE(data->chooser(0).preferences[1] == 4);
     REQUIRE(data->chooser(0).preferences[2] == 0);
     REQUIRE(data->chooser(0).preferences[3] == 0);
-    REQUIRE(data->chooser(0).preferences[4] > 0);
 }
 
 TEST_CASE(PREFIX "Should parse choosers")

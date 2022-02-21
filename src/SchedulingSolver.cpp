@@ -187,7 +187,7 @@ bool SchedulingSolver::check_slot_size_constraints([[maybe_unused]] int choice, 
             {
                 if(choice == w) continue;
                 int wslot = decisions.at(w);
-                if (wslot > 0)
+                if (wslot != Scheduling::NOT_SCHEDULED)
                 {
                     slotSizes[wslot]++;
                 }
