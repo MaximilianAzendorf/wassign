@@ -59,7 +59,7 @@ public:
     /**
      * Determines if the given assignment satisfies all constraints.
      */
-    [[nodiscard]] static bool satisfies_constraints_assignment(Assignment const& assignment);
+    [[nodiscard]] static bool satisfies_constraints_assignment(Scheduling const& scheduling, Assignment const& assignment);
 };
 
 

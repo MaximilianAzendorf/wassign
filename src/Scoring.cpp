@@ -91,7 +91,7 @@ bool Scoring::satisfies_constraints_scheduling(Scheduling const& scheduling)
     return true;
 }
 
-bool Scoring::satisfies_constraints_assignment(Assignment const& assignment)
+bool Scoring::satisfies_constraints_assignment(Scheduling const& scheduling, Assignment const& assignment)
 {
     for(Constraint const& constraint : assignment.input_data().assignment_constraints())
     {
@@ -102,10 +102,12 @@ bool Scoring::satisfies_constraints_assignment(Assignment const& assignment)
         switch(constraint.type())
         {
             case ChoicesHaveSameChoosers:
+                if(scheduling.slot_of(r) == Scheduling::NOT_SCHEDULED || scheduling.slot_of(l) == Scheduling::NOT_SCHEDULED) continue;
                 if(assignment.choosers_ordered(l) != assignment.choosers_ordered(r)) return false;
                 break;
 
             case ChooserIsInChoice:
+                if(scheduling.slot_of(r) == Scheduling::NOT_SCHEDULED) continue;
                 if(!assignment.is_in_choice(l, r)) return false;
                 break;
 
@@ -127,7 +129,7 @@ bool Scoring::satisfies_constraints_assignment(Assignment const& assignment)
 bool Scoring::satisfies_constraints(Solution const& solution) const
 {
     return satisfies_constraints_scheduling(*solution.scheduling())
-        && satisfies_constraints_assignment(*solution.assignment());
+        && satisfies_constraints_assignment(*solution.scheduling(), *solution.assignment());
 }
 
 int Scoring::evaluate_major(Solution const& solution) const
