@@ -36,6 +36,7 @@ private:
 
     const_ptr<Options> _options;
     cancel_token _cancellation;
+    int _maxDepthReached;
 
     /**
      * The available max push is the sum of the maximum chooser counts of all choices that are not yet assigned
@@ -136,9 +137,17 @@ public:
     /**
      * Returns the last found solution.
      */
-    [[nodiscard]] const_ptr<Scheduling> scheduling()
+    [[nodiscard]] const_ptr<Scheduling> scheduling() const
     {
         return _currentSolution;
+    }
+
+    /**
+     * Returns the maximum depth this solver has reached.
+     */
+    [[nodiscard]] int max_depth_reached() const
+    {
+         return _maxDepthReached;
     }
 
     /**

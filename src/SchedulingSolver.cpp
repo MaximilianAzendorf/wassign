@@ -361,6 +361,7 @@ vector<vector<int>> SchedulingSolver::solve_scheduling(vector<CriticalSet> const
 
     for(int depth = 0; depth < choiceScramble.size();)
     {
+        _maxDepthReached = std::max(_maxDepthReached, depth);
         if(time_now() > timeLimit || is_set(_cancellation))
         {
             return {};

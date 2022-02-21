@@ -30,6 +30,7 @@
 
 struct ShotgunSolverProgress
 {
+    float schedDepth = 0;
     int iterations = 0;
     int assignments = 0;
     int lp = 0;

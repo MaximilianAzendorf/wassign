@@ -75,6 +75,7 @@ int ShotgunSolver::iterate(int numberOfIterations)
 
 ShotgunSolverProgress const& ShotgunSolver::progress()
 {
+    _progress.schedDepth = _schedulingSolver->max_depth_reached();
     _progress.assignments = _hillClimbingSolver->assignment_count();
     _progress.lp = _hillClimbingSolver->lp_count();
     return _progress;

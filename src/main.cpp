@@ -105,9 +105,13 @@ void track_progress(ShotgunSolverThreaded& solver)
         {
             auto progress = solver.progress();
             string scoreStr = progress.getBestScore().is_finite() ? "Best score: " + progress.getBestScore().to_str() : "No solution yet";
+            string itDepthString = progress.getLp() == 0
+                    ? "; Scheduling depth: " + str(progress.schedDepth, 1)
+                    : "; Progress I/A/L: " + str(progress.getIterations()) + "/" + str(progress.getAssignments()) + "/" + str(progress.getLp());
+
             Status::info("[Status] " + scoreStr
             + "; Time remaining: " + str(milliseconds(progress.getMillisecondsRemaining()))
-            + "; Iterations (A/L): " + str(progress.getIterations()) + " (" + str(progress.getAssignments()) + "/" + str(progress.getLp()) + ")");
+            + itDepthString);
             lastOutput = time_now();
         }
         std::this_thread::sleep_for(milliseconds(5));

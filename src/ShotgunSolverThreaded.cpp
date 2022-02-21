@@ -197,10 +197,13 @@ ShotgunSolverThreadedProgress ShotgunSolverThreaded::progress() const
             progress.best_solution = threadProgress.best_solution;
         }
 
+        progress.schedDepth += threadProgress.schedDepth;
         progress.iterations += threadProgress.iterations;
         progress.assignments += threadProgress.assignments;
         progress.lp += threadProgress.lp;
     }
+
+    progress.schedDepth /= (float)_threads.size();
 
     return progress;
 }
