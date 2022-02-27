@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     {
         Rng::seed(time_now().time_since_epoch().count());
 
-        const string header = "wassign [Version " WASSIGN_VERSION "]\n(c) 2021 Maximilian Azendorf\n";
+        const string header = "wassign [Version " WASSIGN_VERSION "]\n(c) 2022 Maximilian Azendorf\n";
         shared_ptr<Options> options = std::make_shared<Options>();
 
         auto optionsStatus = Options::parse(argc, argv, header, options);
