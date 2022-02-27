@@ -19,7 +19,6 @@
 #include "Types.h"
 #include "ShotgunSolver.h"
 
-// TODO: Switch to C++11 threads.
 #include <pthread.h>
 
 struct ShotgunSolverThreadedProgress : ShotgunSolverProgress
