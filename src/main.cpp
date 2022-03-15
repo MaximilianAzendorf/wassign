@@ -27,7 +27,7 @@
 
 #include <iostream>
 #include <fstream>
-#include <signal.h>
+#include <csignal>
 
 template<typename Stream>
 string readInputStringFromStream(Stream& stream)
@@ -86,7 +86,7 @@ void signal_handler(int signal)
 }
 
 struct sigaction old_action;
-void set_signal_handler(int signal, sighandler_t handler)
+void set_signal_handler(int signal, void (*handler)(int))
 {
     struct sigaction action;
     memset(&action, 0, sizeof(action));
