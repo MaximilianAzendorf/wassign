@@ -72,6 +72,14 @@ vector<vector<int>> InputDataBuilder::get_dependent_preferences(vector<Constrain
         }
     }
 
+    // Ignore the preferences of choosers that are fixed to a choice.
+    //
+    for(Constraint const& constraint : constraints)
+    {
+        if (constraint.type() != ChooserIsInChoice) continue;
+        pref[constraint.left()][constraint.right()] = 0;
+    }
+
     return pref;
 }
 

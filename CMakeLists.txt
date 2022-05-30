@@ -33,7 +33,7 @@ add_subdirectory(deps/or-tools)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-sign-compare")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 
 add_subdirectory(src)
 add_subdirectory(test)

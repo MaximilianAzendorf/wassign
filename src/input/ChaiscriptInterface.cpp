@@ -45,7 +45,9 @@ void ChaiscriptInterface::register_interface(InputReader& reader)
     c.add(cs::vector_conversion<vector<Tagged>>());
 
     c.add_global_const(chaiscript::const_var(&ChaiscriptInterface::end), "end");
-    c.add(cs::fun(&ChaiscriptInterface::slice), "slice");
+    c.add(cs::fun(&ChaiscriptInterface::slice<int>), "slice");
+    c.add(cs::fun(&ChaiscriptInterface::slice<string>), "slice");
+    c.add(cs::fun(&ChaiscriptInterface::slice<vector<string>>), "slice");
 
     c.add(cs::fun(&ChaiscriptInterface::set_arguments, readerRef), "set_arguments");
 
@@ -519,26 +521,8 @@ shared_ptr<rapidcsv::Document> ChaiscriptInterface::read_file_csv(string const& 
 
 shared_ptr<rapidcsv::Document> ChaiscriptInterface::read_file_csv(string const& filename, char separator)
 {
-    return std::make_shared<rapidcsv::Document>(filename, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(separator));
-}
-
-vector<string> ChaiscriptInterface::slice(vector<string> const& v, int from, int to)
-{
-    if(from < 0 || to < 0 || from >= v.size() || to >= v.size())
-    {
-        throw InputException("An array of length " + str(v.size()) + " can not be sliced between " + str(from) + " and " + str(to) + ".");
-    }
-
-    vector<string> slice;
-
-    if(to == end) to = v.size() - 1;
-
-    for(int i = from; i <= to; i++)
-    {
-        slice.push_back(v[i]);
-    }
-
-    return slice;
+    auto res = std::make_shared<rapidcsv::Document>(filename, rapidcsv::LabelParams(-1, -1), rapidcsv::SeparatorParams(separator));
+    return res;
 }
 
 void ChaiscriptInterface::set_arguments(InputReader& reader, vector<string> args)

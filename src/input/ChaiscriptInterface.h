@@ -107,7 +107,9 @@ public:
     static vector<vector<string>> get_csv_rows(rapidcsv::Document const& doc);
 
     static inline const int end = INT_MAX;
-    static vector<string> slice(vector<string> const& v, int from, int to);
+
+    template<typename T>
+    static vector<T> slice(vector<T> const& v, int from, int to);
 
     static void set_arguments(InputReader& reader, vector<string> args);
 

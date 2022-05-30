@@ -28,7 +28,15 @@ InputReader::InputReader(shared_ptr<Options> options)
 
 const_ptr<InputData> InputReader::read_input(string const& input)
 {
-    _chai.eval(input);
+    try
+    {
+        _chai.eval(input);
+    }
+    catch(cs::exception::eval_error const& exception)
+    {
+        throw InputException(exception.reason
+        + " (at " + str(exception.start_position.line) + ":" + str(exception.start_position.column) + ")");
+    }
 
     for(auto const& obj : _inputObjects)
     {
