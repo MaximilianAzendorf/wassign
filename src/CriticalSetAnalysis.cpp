@@ -21,7 +21,7 @@
 #include "Util.h"
 #include "Status.h"
 
-void CriticalSetAnalysis::analyze()
+void CriticalSetAnalysis::analyze(bool simplify)
 {
     auto nextOutput = time_now() + ProgressInterval;
 
@@ -85,52 +85,51 @@ void CriticalSetAnalysis::analyze()
         }
     }
 
+    if (!simplify) return;
+
     list<CriticalSet*> setList;
     for(CriticalSet& set : _sets)
     {
         setList.push_back(&set);
     }
 
-    bool changed = true;
-    while(changed)
+    // TODO: This can probably also be done in parallel.
+    for(CriticalSet* setPtr : setList)
     {
-        changed = false;
         if(time_now() > nextOutput)
         {
             Status::info("Simplifying... (" + str(setList.size()) + " sets remaining)");
             nextOutput = time_now() + ProgressInterval;
         }
 
-        for(auto setPtrIt = setList.begin(); setPtrIt != setList.end(); setPtrIt++)
+        for(auto otherSetPtrIt = setList.begin(); otherSetPtrIt != setList.end();)
         {
-            CriticalSet* setPtr = *setPtrIt;
-            bool canBeRemoved = false;
-
-            for(CriticalSet* otherSetPtr : setList)
+            CriticalSet* otherSetPtr = *otherSetPtrIt;
+            if(setPtr != otherSetPtr && otherSetPtr->is_covered_by(*setPtr))
             {
-                if(setPtr != otherSetPtr && setPtr->is_covered_by(*otherSetPtr))
-                {
-                    canBeRemoved = true;
-                    break;
-                }
+                otherSetPtrIt = setList.erase(otherSetPtrIt);
             }
-
-            if(canBeRemoved)
+            else
             {
-                changed = true;
-                setList.erase(setPtrIt);
-                break;
+                otherSetPtrIt++;
             }
         }
     }
+
+    vector<CriticalSet> newSets;
+    for(CriticalSet* setPtr : setList)
+    {
+        newSets.push_back(*setPtr);
+    }
+    _sets = newSets;
 }
 
-CriticalSetAnalysis::CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze)
+CriticalSetAnalysis::CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze, bool simplify)
         : _inputData(std::move(inputData))
 {
     if(analyze)
     {
-        this->analyze();
+        this->analyze(simplify);
 
         preferenceBound = _inputData->max_preference();
         for(int prefLevel : _inputData->preference_levels())

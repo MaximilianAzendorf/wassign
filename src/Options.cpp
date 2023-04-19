@@ -63,6 +63,7 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
     auto timeoutOpt = op.add<Value<string>>("t", "timeout", "Sets the optimization timeout.");
     auto csTimeoutOpt = op.add<Value<string>>("", "cs-timeout", "Sets the timeout for attempting to satisfy critical sets of a certain preference level.");
     auto noCsOpt = op.add<Switch>("", "no-cs", "Do not perform critical set analysis");
+    auto noCsSimpOpt = op.add<Switch>("", "no-cs-simp", "Do not perform critical set simplification (only relevant if critical set analysis is enabled)");
     auto threadsOpt = op.add<Value<int>>("j", "threads", "Number of threads to use for computation.");
     auto maxNeighborsOpt = op.add<Value<int>>("n", "max-neighbors", "Maximum number of neighbor schedulings that will be explored per hill climbing iteration.");
     auto greedyOpt = op.add<Switch>("g", "greedy", "Do not use the worst-preference scoring as primary score and just use sum-based scoring instead.");
@@ -103,6 +104,7 @@ OptionsParseStatus Options::parse_base(int argc, char **argv, bool newOpt, strin
         if(timeoutOpt->is_set()) set_timeout_seconds(parse_time(timeoutOpt->value()));
         if(csTimeoutOpt->is_set()) set_critical_set_timeout_seconds(parse_time(csTimeoutOpt->value()));
         if(noCsOpt->is_set()) set_no_critical_sets(true);
+        if(noCsSimpOpt->is_set()) set_no_critical_set_simplification(true);
         if(threadsOpt->is_set()) set_thread_count(threadsOpt->value());
         if(maxNeighborsOpt->is_set()) set_max_neighbors(maxNeighborsOpt->value());
         if(greedyOpt->is_set()) set_greedy(true);
@@ -166,6 +168,11 @@ bool Options::no_critical_sets() const
     return _noCs;
 }
 
+bool Options::no_critical_set_simplification() const
+{
+    return _noCsSimp;
+}
+
 double Options::preference_exponent() const
 {
     return _prefExp;
@@ -204,6 +211,11 @@ void Options::set_input_files(vector<string> inputFiles)
 void Options::set_no_critical_sets(bool noCriticalSets)
 {
     _noCs = noCriticalSets;
+}
+
+void Options::set_no_critical_set_simplification(bool noCriticalSetSimplification)
+{
+    _noCsSimp = noCriticalSetSimplification;
 }
 
 void Options::set_output_file(string outputFile)

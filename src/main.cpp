@@ -25,7 +25,6 @@
 #include "input/ConstraintBuilder.h"
 #include "ShotgunSolverThreaded.h"
 
-#include <iostream>
 #include <fstream>
 #include <csignal>
 
@@ -167,8 +166,12 @@ int main(int argc, char** argv)
         auto scoring = std::make_shared<Scoring>(inputData, options);
 
         bool doCsAnalysis = !options->no_critical_sets() && !options->greedy() && inputData->slot_count() > 1;
-        Status::info(doCsAnalysis ? "Performing critical set analysis." : "Skipping critical set analysis.");
-        auto csAnalysis = std::make_shared<CriticalSetAnalysis>(inputData, doCsAnalysis);
+        bool doCsSimplification = doCsAnalysis && !options->no_critical_set_simplification();
+        Status::info(doCsAnalysis
+        ? "Performing critical set analysis "
+            + string(doCsSimplification ? "with simplification." : "without simplification.")
+        : "Skipping critical set analysis.");
+        auto csAnalysis = std::make_shared<CriticalSetAnalysis>(inputData, doCsAnalysis, doCsSimplification);
 
         if(doCsAnalysis)
         {

@@ -41,6 +41,7 @@ private:
     int _timeout = 60;
     int _csTimeout = 3;
     bool _noCs = false;
+    bool _noCsSimp = false;
     int _threadCount = (int)std::thread::hardware_concurrency();
     int _maxNeighbors = 12;
     bool _greedy = false;
@@ -78,6 +79,8 @@ public:
 
     [[nodiscard]] bool no_critical_sets() const;
 
+    [[nodiscard]] bool no_critical_set_simplification() const;
+
     [[nodiscard]] double preference_exponent() const;
 
     [[nodiscard]] bool any() const;
@@ -99,6 +102,8 @@ public:
     void set_critical_set_timeout_seconds( int csTimeoutSeconds);
 
     void set_no_critical_sets(bool noCriticalSets);
+
+    void set_no_critical_set_simplification(bool noCriticalSetSimplification);
 
     void set_preference_exponent(double prefExponent);
 

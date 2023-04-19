@@ -34,7 +34,7 @@ private:
     /**
      * Performs the analysis.
      */
-    void analyze();
+    void analyze(bool simplify);
 
 public:
     /**
@@ -52,7 +52,7 @@ public:
      * @param inputData The input data to analyze.
      * @param analyze If this is set to false, no analysis will be performed and this instance will only hold dummy data.
      */
-    explicit CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze = true);
+    explicit CriticalSetAnalysis(const_ptr<InputData> inputData, bool analyze = true, bool simplify = true);
 
     /**
      * Returns all critical sets relevant for the given preference bound.
