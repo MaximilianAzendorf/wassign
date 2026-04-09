@@ -168,4 +168,4 @@ If you want to get an exhaustive overview over all features of wassign, you shou
 
  - *optional choices*: Choices marked with optional can be omitted completely if this allows wassign to create a better solution. Example: `+choice("XYZ", optional)`.
  - *multi-part choices*: Choices can have multiple parts (so they get scheduled into multiple consecutive slots at the same time). Example: `+choice("XYZ", parts(3))`.
- - advanced input files: The input files actually are scripts written in [chaiscript](http://chaiscript.com/), so you can go wild with typical programming constructs (conditionals, loops etc.) to build advanced logic into a single input file.
+ - advanced input files: The input files actually are scripts written in Rhai, so you can go wild with typical programming constructs (conditionals, loops etc.) to build advanced logic into a single input file.

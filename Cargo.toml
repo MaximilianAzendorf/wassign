@@ -1,0 +1,41 @@
+[package]
+name = "wassign"
+version = "2.1.0"
+edition = "2024"
+authors = ["Maximilian Azendorf <wassign@azendorf.com>"]
+
+[dependencies]
+clap = { version = "4.5.38", features = ["derive", "cargo"] }
+console = "0.15.10"
+csv = "1.3.1"
+env_logger = "0.11.8"
+good_lp = { version = "1.14.0", default-features = false, features = ["microlp"] }
+indicatif = "0.17.11"
+itertools = "0.14.0"
+log = "0.4.27"
+rand = "0.9.1"
+rhai = { version = "1.19.0", features = ["sync"] }
+thiserror = "2.0.12"
+
+[dev-dependencies]
+approx = "0.5.1"
+
+[lints.rust]
+unused = { level = "warn", priority = -1 }
+unsafe_code = "forbid"
+missing_docs = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "warn", priority = -1 }
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+manual_let_else = "warn"
+needless_pass_by_ref_mut = "warn"
+unwrap_used = "deny"
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+missing_safety_doc = "warn"

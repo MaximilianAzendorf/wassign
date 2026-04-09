@@ -4,7 +4,7 @@ The following section contains the complete documentation of all wassign feature
 
 ## Input syntax
 
-Input files are [chaiscript scripts](http://chaiscript.com/), so all typical programming constructs like variables (`var x = ...`), loops (`for(...)`), conditionals (`if(...)`) and others are available to construct the input. In addition, the following API is used to interact with wassign.
+Input files are [Rhai scripts](https://rhai.rs/), so all typical programming constructs like variables (`let x = ...`), loops (`for(...)`), conditionals (`if(...)`) and others are available to construct the input. In addition, the following API is used to interact with wassign.
 
 ### Adding slots, choices choosers and constraints
 
@@ -37,6 +37,8 @@ Input files are [chaiscript scripts](http://chaiscript.com/), so all typical pro
 +===+
 | Adds the given argument `arg` (a newly created slot, choice, chooser or constraint) to the input. |
 +---+ 
+
+The preference list may also contain numeric strings, which are parsed as integers. This is useful when the preferences come from CSV data.
 
 ### Choice arguments
 
@@ -127,6 +129,18 @@ Constraints are relations between two *constaint objects*. All slots, choices an
 +---+ 
 
 +---+
+| `readFile(filename)` |
++===+
+| Reads the given file and returns its full contents as a string. |
++---+
+
++---+
+| `set_arguments(args)` |
++===+
+| Parses CLI-style arguments for the current input reader. |
++---+
+
++---+
 | `CSVFILE.row(n)`<br>`CSVFILE[n]` |
 +===+
 | Returns the row with number `n` (numbering starting at 0) of the `CSVFILE` (returned by `read_csv`). Rows are just plain lists of the row values, so individual values of a row can be accessed with the `[]` operator.|
@@ -152,10 +166,9 @@ Given is the following CSV file called `workshops.csv`:
 We can then use this file to generate choices for our input as follows:
 
 ```
-var file = read_csv("workshops.csv");
+let file = read_csv("workshops.csv");
 
-for(row : file.rows.slice(1, end))
-{
+for row in file.rows.slice(1, end) {
     +choice(row[0], bounds(row[1], row[2]), optional_if(row[3] == "yes"));
     // or add(choice(...))
 }
@@ -163,12 +176,20 @@ for(row : file.rows.slice(1, end))
 
 Note that we have to skip the first row (with `.slice(1, end)`) because it contains the column headers.
 
+Because `read_csv` keeps cell values as strings, helper functions such as `min`, `max`, `bounds` and `parts` accept numeric strings directly.
+
 ### Utility functions
 
 +---+
 | `LIST.slice(x, y)` |
 +===+
 | Returns a list that only contains the element of the list `LIST` with indices between `x` (inclusive) and `y` (inclusive). Note that index numbering starts at 0. You can give `end` as the value for `y` as a replacement for `LIST.length - 1`. |
++---+
+
++---+
+| `end` |
++===+
+| Sentinel value used with `slice` to indicate the last element. |
 +---+
 
 +---+
@@ -184,7 +205,6 @@ Note that we have to skip the first row (with `.slice(1, end)`) because it conta
 `--version`                         Show the current version of wassign.
 `-i [file]`, `--input [file]`       Read the input from the specified file(s). If this option is present more than once, all files will be read in the order they were given.
 `-o [prefix]`, `--output [prefix]`  Write the output to files starting with the given prefix. The files generated will be named `[prefix].assignment.csv` and `[prefix].scheduling.csv`.
-`-v [n]`, `--verbosity [n]`         A number `n` between 0 and 3 indicating how much status information should be output.
 `-a`, `--any`                       If this option is given, wassign will not optimize any solution and will just return the first solution it finds.
 `-p [exp]`, `--pref-exp [exp]`      Sets the preference exponent to the given value. See the [respective section](#preference-exponent) for more information.
 `-t [time]`, `--timeout [time]`     Sets the optimization timeout. The syntax for this argument is described under the [respective section](#time-format).
