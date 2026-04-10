@@ -30,7 +30,7 @@ jobs:
           enablement: true
 
       - name: Build documentation image
-        run: cd doc && make docker-image
+        run: docker build -f doc/Dockerfile -t wassign-docs doc
 
       - name: Render documentation
         run: |
