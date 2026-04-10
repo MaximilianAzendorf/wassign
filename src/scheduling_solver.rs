@@ -506,7 +506,7 @@ impl<'a> SchedulingSolver<'a> {
                 continue;
             }
 
-            let next_slot = backtracking[depth].pop().expect("backtracking slot must exist");
+            let next_slot = backtracking[depth].remove(0);
             decisions.insert(choice, next_slot);
             depth += 1;
             self.current_depth = depth;
