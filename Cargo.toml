@@ -1,8 +1,8 @@
 [package]
 name = "wassign"
-version = "2.1.0"
+version = "3.0.0"
 edition = "2024"
-authors = ["Maximilian Azendorf <wassign@azendorf.com>"]
+authors = ["Maximilian Azendorf <wassign@azendorf.dev>"]
 
 [dependencies]
 clap = { version = "4.5.38", features = ["derive", "cargo"] }
@@ -11,14 +11,10 @@ csv = "1.3.1"
 env_logger = "0.11.8"
 good_lp = { version = "1.14.0", default-features = false, features = ["microlp"] }
 indicatif = "0.17.11"
-itertools = "0.14.0"
 log = "0.4.27"
 rand = "0.9.1"
 rhai = { version = "1.19.0", features = ["sync"] }
 thiserror = "2.0.12"
-
-[dev-dependencies]
-approx = "0.5.1"
 
 [lints.rust]
 unused = { level = "warn", priority = -1 }
