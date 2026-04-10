@@ -12,7 +12,11 @@ impl Scoring {
     /// Creates a new scorer for the given input and options.
     #[must_use]
     pub fn new(input_data: &InputData, options: &Options) -> Self {
-        let scaling = (input_data.max_preference as f32).powf(options.preference_exponent as f32);
+        let scaling = if input_data.max_preference == 0 {
+            1.0
+        } else {
+            (input_data.max_preference as f32).powf(options.preference_exponent as f32)
+        };
         Self {
             greedy: options.greedy,
             preference_exponent: options.preference_exponent,
@@ -20,7 +24,7 @@ impl Scoring {
         }
     }
 
-    pub(crate) fn is_feasible(&self, input_data: &InputData, solution: &Solution) -> bool {
+    pub(crate) fn is_feasible(input_data: &InputData, solution: &Solution) -> bool {
         let scheduling = solution
             .scheduling()
             .expect("feasibility requires a scheduling");
@@ -82,7 +86,7 @@ impl Scoring {
         let major = if self.greedy {
             f32::NAN
         } else {
-            self.evaluate_major(input_data, solution) as f32
+            Self::evaluate_major(input_data, solution) as f32
         };
         let minor = self.evaluate_minor(input_data, solution);
 
@@ -130,17 +134,17 @@ impl Scoring {
                 crate::ConstraintType::ChoicesHaveOffset => {
                     let left_slot = scheduling.slot_of(left);
                     let right_slot = scheduling.slot_of(constraint.other_choice());
-                    if left_slot.is_none() || right_slot.is_none() {
-                        if left_slot != right_slot {
-                            return false;
+                    match (left_slot, right_slot) {
+                        (Some(left_slot), Some(right_slot)) => {
+                            if i32::try_from(right_slot).expect("slot fits in i32")
+                                - i32::try_from(left_slot).expect("slot fits in i32")
+                                != constraint.offset()
+                            {
+                                return false;
+                            }
                         }
-                    } else if i32::try_from(right_slot.expect("checked above"))
-                        .expect("slot fits in i32")
-                        - i32::try_from(left_slot.expect("checked above"))
-                            .expect("slot fits in i32")
-                        != constraint.offset()
-                    {
-                        return false;
+                        (None, None) => {}
+                        _ => return false,
                     }
                 }
                 crate::ConstraintType::SlotHasLimitedSize => {
@@ -215,7 +219,7 @@ impl Scoring {
 }
 
 impl Scoring {
-    fn evaluate_major(&self, input_data: &InputData, solution: &Solution) -> u32 {
+    fn evaluate_major(input_data: &InputData, solution: &Solution) -> u32 {
         let assignment = solution.assignment().expect("solution requires assignment");
         let mut max_pref = 0_u32;
         for chooser in 0..input_data.choosers.len() {
@@ -228,7 +232,7 @@ impl Scoring {
     }
 
     fn evaluate_minor(&self, input_data: &InputData, solution: &Solution) -> f32 {
-        if !self.is_feasible(input_data, solution) {
+        if !Self::is_feasible(input_data, solution) {
             return f32::INFINITY;
         }
 

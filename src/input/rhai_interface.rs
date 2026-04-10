@@ -130,13 +130,28 @@ impl RhaiInterface {
         engine.register_fn("+", |slot_ref: SlotRef| {
             script_result(register_slot(slot_ref))
         });
+        engine.register_fn("add", |slot_ref: SlotRef| {
+            script_result(register_slot(slot_ref))
+        });
         engine.register_fn("+", |choice_ref: ChoiceRef| {
+            script_result(register_choice(choice_ref))
+        });
+        engine.register_fn("add", |choice_ref: ChoiceRef| {
             script_result(register_choice(choice_ref))
         });
         engine.register_fn("+", |chooser_ref: ChooserRef| {
             script_result(register_chooser(chooser_ref))
         });
+        engine.register_fn("add", |chooser_ref: ChooserRef| {
+            script_result(register_chooser(chooser_ref))
+        });
         engine.register_fn("+", {
+            let state = state.clone();
+            move |expression: ConstraintExpression| {
+                script_result(register_constraint(&state, expression))
+            }
+        });
+        engine.register_fn("add", {
             let state = state.clone();
             move |expression: ConstraintExpression| {
                 script_result(register_constraint(&state, expression))
@@ -399,11 +414,11 @@ fn choice(
         match tag.tag {
             Tag::Min => {
                 proto.min = u32::try_from(tag.value(0))
-                    .map_err(|err| InputError::Message(err.to_string()))?
+                    .map_err(|err| InputError::Message(err.to_string()))?;
             }
             Tag::Max => {
                 proto.max = u32::try_from(tag.value(0))
-                    .map_err(|err| InputError::Message(err.to_string()))?
+                    .map_err(|err| InputError::Message(err.to_string()))?;
             }
             Tag::Bounds => {
                 proto.min = u32::try_from(tag.value(0))
@@ -413,7 +428,7 @@ fn choice(
             }
             Tag::Parts => {
                 proto.parts = u32::try_from(tag.value(0))
-                    .map_err(|err| InputError::Message(err.to_string()))?
+                    .map_err(|err| InputError::Message(err.to_string()))?;
             }
             Tag::Optional => proto.optional = tag.value(0) == 1,
         }

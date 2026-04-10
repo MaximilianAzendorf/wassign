@@ -5,7 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use wassign::{
-    InputReader, Options, OutputFormatter, PreparedProblem, Rng, Solution, ThreadedSolver, status,
+    InputReader, Options, OutputFormatter, PreparedProblem, Rng, ThreadedSolver, status,
 };
 
 fn main() {
@@ -13,12 +13,17 @@ fn main() {
 }
 
 fn run() -> i32 {
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos()
-        .try_into()
-        .unwrap_or_default();
+    let seed = std::env::var("WASSIGN_SEED")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or_else(|| {
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+                .try_into()
+                .unwrap_or_default()
+        });
     Rng::seed(seed);
 
     let options = Options::parse();
@@ -102,7 +107,7 @@ fn try_run(input_string: &str, options: &Options) -> wassign::Result<()> {
     let input_data = &result.input_data;
     let solution = &result.solution;
 
-    if *solution == Solution::Invalid {
+    if solution.is_invalid() {
         status::info_important("No solution found.");
         return Ok(());
     }

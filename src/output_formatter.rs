@@ -42,6 +42,10 @@ impl OutputFormatter {
     ///
     /// Returns an error if the solution does not contain a scheduling or if it
     /// references an invalid slot index.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the scheduling references a slot index outside `input.slots`.
     pub fn write_scheduling_solution(
         input: &InputData,
         solution: &Solution,
@@ -56,10 +60,10 @@ impl OutputFormatter {
         for (choice_index, choice) in input.choices.iter().enumerate() {
             let slot = scheduling.slot_of(choice_index);
             let mut choice_name = choice.name.clone();
-            let slot_name = if slot.is_none() {
-                "not scheduled".to_owned()
+            let slot_name = if let Some(slot_index) = slot {
+                input.slots[slot_index].name.clone()
             } else {
-                input.slots[slot.expect("checked above")].name.clone()
+                "not scheduled".to_owned()
             };
             if let Some(stripped) = choice_name.strip_prefix(crate::InputData::GENERATED_PREFIX) {
                 choice_name = stripped.to_owned();

@@ -62,6 +62,10 @@ impl<'a> SchedulingSolver<'a> {
     }
 
     /// Advances the search to the next feasible scheduling.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `critical_set_timeout_seconds` cannot be converted to `u64`.
     pub fn next_scheduling(&mut self, deadline: Option<SystemTime>) -> bool {
         let input_data = &self.problem.input_data;
         self.current_depth = 0;

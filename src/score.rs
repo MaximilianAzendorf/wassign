@@ -32,16 +32,55 @@ impl PartialOrd for Score {
 
 impl Ord for Score {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        if other.major.is_infinite() && other.minor.is_infinite() {
-            return std::cmp::Ordering::Less;
+        match (self.is_finite(), other.is_finite()) {
+            (false, false) => std::cmp::Ordering::Equal,
+            (false, true) => std::cmp::Ordering::Greater,
+            (true, false) => std::cmp::Ordering::Less,
+            (true, true) => {
+                let major_cmp = self.major.total_cmp(&other.major);
+                if self.major.is_nan()
+                    || other.major.is_nan()
+                    || major_cmp == std::cmp::Ordering::Equal
+                {
+                    self.minor.total_cmp(&other.minor)
+                } else {
+                    major_cmp
+                }
+            }
         }
+    }
+}
 
-        if self.major.partial_cmp(&other.major) == Some(std::cmp::Ordering::Equal)
-            || (self.major.is_nan() && other.major.is_nan())
-        {
-            self.minor.total_cmp(&other.minor)
-        } else {
-            self.major.total_cmp(&other.major)
-        }
+#[cfg(test)]
+mod tests {
+    use super::Score;
+
+    #[test]
+    fn invalid_scores_are_worse_than_greedy_scores() {
+        let invalid = Score {
+            major: f32::INFINITY,
+            minor: f32::INFINITY,
+        };
+        let greedy = Score {
+            major: f32::NAN,
+            minor: 2.0,
+        };
+
+        assert!(greedy < invalid);
+        assert!(invalid > greedy);
+    }
+
+    #[test]
+    fn greedy_scores_compare_by_minor_value() {
+        let better = Score {
+            major: f32::NAN,
+            minor: 2.0,
+        };
+        let worse = Score {
+            major: f32::NAN,
+            minor: 3.0,
+        };
+
+        assert!(better < worse);
     }
 }

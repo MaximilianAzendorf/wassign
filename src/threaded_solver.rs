@@ -74,6 +74,15 @@ impl ThreadedSolver {
     }
 
     /// Starts the background solve session and returns the running solver state.
+    ///
+    /// # Errors
+    ///
+    /// This function currently does not return an error during startup, but it
+    /// uses `Result` to align with the rest of the solver API.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `thread_count` cannot be converted to `usize`.
     pub fn start(self) -> Result<ThreadedSolverRunning> {
         let ThreadedSolver { problem, options } = self;
         let num_threads = if problem.input_data.slots.len() == 1 {
@@ -113,6 +122,10 @@ impl ThreadedSolver {
 
                         while !cancellation.is_cancelled() && time_now() <= deadline {
                             let iterations_done = solver.iterate(1, Some(deadline));
+                            if options.any && solver.progress().best_score.is_finite() {
+                                cancellation.cancel();
+                                break;
+                            }
                             if problem.input_data.slots.len() == 1 || iterations_done < 1 {
                                 break;
                             }
@@ -203,10 +216,11 @@ impl ThreadedSolverRunning {
                 if let Some(lp) = event.lp {
                     worker_progress.lp = lp;
                 }
-                if let Some(best_score) = event.best_score {
+                if let (Some(best_score), Some(best_solution)) =
+                    (event.best_score, event.best_solution)
+                    && best_score < worker_progress.best_score
+                {
                     worker_progress.best_score = best_score;
-                }
-                if let Some(best_solution) = event.best_solution {
                     worker_progress.best_solution = best_solution;
                 }
             }
@@ -245,6 +259,11 @@ impl ThreadedSolverRunning {
     }
 
     /// Waits for the current solve session to finish and returns the final result.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`InputError::WorkerPanic`] if the background solver thread
+    /// terminated with a panic.
     pub fn wait(self) -> Result<ThreadedSolverResult> {
         match self.handle.join() {
             Ok(result) => Ok(result),
@@ -277,4 +296,90 @@ fn panic_message(payload: &Box<dyn Any + Send + 'static>) -> String {
     }
 
     "unknown panic payload".to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::sync::mpsc;
+    use std::thread;
+
+    use super::*;
+
+    fn empty_input_data() -> InputData {
+        InputData {
+            choices: Vec::new(),
+            choosers: Vec::new(),
+            slots: Vec::new(),
+            scheduling_constraints: Vec::new(),
+            assignment_constraints: Vec::new(),
+            dependent_choice_groups: Vec::new(),
+            preference_levels: Vec::new(),
+            max_preference: 0,
+            choice_constraint_map: BTreeMap::new(),
+            chooser_constraint_map: BTreeMap::new(),
+        }
+    }
+
+    fn dummy_running_solver(progress_rx: Receiver<WorkerProgressEvent>) -> ThreadedSolverRunning {
+        let options = Options::default();
+        ThreadedSolverRunning {
+            options: options.clone(),
+            max_sched_depth: 1.0,
+            thread_progress: vec![empty_progress()],
+            thread_start_times: vec![time_now()],
+            handle: thread::spawn(|| ThreadedSolverResult {
+                input_data: empty_input_data(),
+                scoring: Scoring::new(&empty_input_data(), &Options::default()),
+                solution: Solution::Invalid,
+            }),
+            progress_rx,
+            cancellation: CancellationToken::new(),
+        }
+    }
+
+    #[test]
+    fn progress_keeps_worker_best_score_monotonic() {
+        let (tx, rx) = mpsc::channel();
+        let mut solver = dummy_running_solver(rx);
+        let improved_solution = Solution::Invalid;
+
+        tx.send(WorkerProgressEvent {
+            worker_index: 0,
+            sched_depth: None,
+            iterations: None,
+            assignments: None,
+            lp: None,
+            best_solution: Some(improved_solution.clone()),
+            best_score: Some(Score {
+                major: 45.0,
+                minor: 1.5,
+            }),
+        })
+        .expect("event should send");
+        tx.send(WorkerProgressEvent {
+            worker_index: 0,
+            sched_depth: None,
+            iterations: None,
+            assignments: None,
+            lp: None,
+            best_solution: Some(Solution::Invalid),
+            best_score: Some(Score {
+                major: 45.0,
+                minor: 1.8,
+            }),
+        })
+        .expect("event should send");
+
+        let progress = solver.progress();
+
+        assert_eq!(
+            progress.best_score,
+            Score {
+                major: 45.0,
+                minor: 1.5
+            }
+        );
+        assert_eq!(progress.best_solution, improved_solution);
+    }
 }

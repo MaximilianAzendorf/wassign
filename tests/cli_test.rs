@@ -2,40 +2,16 @@
 
 mod common;
 
-use std::io::Write;
-use std::process::{Command, Output, Stdio};
-
-use common::{temp_file_path, write_temp_file};
+use common::{run_cli, temp_file_path, write_temp_file};
 
 const WASSIGN_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-fn run_cli(args: &[&str], stdin: Option<&str>) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_wassign"));
-    command
-        .args(args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    if stdin.is_some() {
-        command.stdin(Stdio::piped());
-    }
-    let mut child = command.spawn().expect("cli should spawn");
-    if let Some(stdin) = stdin {
-        child
-            .stdin
-            .as_mut()
-            .expect("stdin should be piped")
-            .write_all(stdin.as_bytes())
-            .expect("stdin should be writable");
-    }
-    child.wait_with_output().expect("cli should finish")
-}
 
 #[test]
 fn help_lists_supported_flags_without_verbosity() {
     let output = run_cli(&["--help"], None);
 
-    assert!(output.status.success());
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    output.assert_success();
+    let stdout = &output.stdout;
     assert!(stdout.contains("Usage: wassign"));
     assert!(stdout.contains("--max-neighbors"));
     assert!(stdout.contains("--no-cs-simp"));
@@ -47,19 +23,16 @@ fn help_lists_supported_flags_without_verbosity() {
 fn version_reports_the_binary_version() {
     let output = run_cli(&["--version"], None);
 
-    assert!(output.status.success());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout).trim(),
-        format!("wassign {WASSIGN_VERSION}")
-    );
+    output.assert_success();
+    assert_eq!(output.stdout.trim(), format!("wassign {WASSIGN_VERSION}"));
 }
 
 #[test]
 fn legacy_verbosity_flag_is_rejected() {
     let output = run_cli(&["-v"], None);
 
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    output.assert_failure();
+    let stderr = &output.stderr;
     assert!(stderr.contains("-v"));
     assert!(stderr.contains("unexpected argument"));
 }
@@ -95,11 +68,7 @@ let c2 = +choice("c2", bounds(2, 2));
         None,
     );
 
-    assert!(
-        output.status.success(),
-        "stderr: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    output.assert_success();
 
     let scheduling_path = format!("{output_prefix}.scheduling.csv");
     let assignment_path = format!("{output_prefix}.assignment.csv");
@@ -140,13 +109,9 @@ let c2 = +choice("c2", bounds(2, 2));
         ),
     );
 
-    assert!(
-        output.status.success(),
-        "stderr: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    output.assert_success();
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        output.stdout,
         "\"Choice\", \"Slot\"\n\"c1\", \"s1\"\n\"c2\", \"s2\"\n\n\"Chooser\", \"s1\", \"s2\"\n\"p1\", \"c1\", \"c2\"\n\"p2\", \"c1\", \"c2\"\n\n"
     );
 }
@@ -167,6 +132,6 @@ fn infeasible_input_reports_no_solution_without_writing_csv() {
         ),
     );
 
-    assert!(output.status.success());
-    assert!(String::from_utf8_lossy(&output.stdout).is_empty());
+    output.assert_success();
+    output.assert_no_stdout();
 }
