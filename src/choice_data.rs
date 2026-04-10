@@ -2,8 +2,8 @@
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ChoiceData {
     pub(crate) name: String,
-    pub(crate) min: i32,
-    pub(crate) max: i32,
+    pub(crate) min: u32,
+    pub(crate) max: u32,
     pub(crate) continuation: Option<usize>,
     pub(crate) is_optional: bool,
 }
@@ -17,13 +17,13 @@ impl ChoiceData {
 
     /// Returns the minimum number of choosers that must be assigned to this choice.
     #[must_use]
-    pub fn min(&self) -> i32 {
+    pub fn min(&self) -> u32 {
         self.min
     }
 
     /// Returns the maximum number of choosers that may be assigned to this choice.
     #[must_use]
-    pub fn max(&self) -> i32 {
+    pub fn max(&self) -> u32 {
         self.max
     }
 

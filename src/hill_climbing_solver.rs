@@ -1,47 +1,35 @@
-use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use crate::shotgun_solver::ShotgunSolverProgress;
 use crate::status;
 use crate::{
-    AssignmentSolver, CriticalSetAnalysis, InputData, MipFlowStaticData, Options, Rng, Scheduling,
-    Scoring, Solution,
+    AssignmentSolver, Options, PreparedProblem, Rng, Scheduling, Solution,
 };
+use crate::shotgun_solver::ProgressReporter;
 
 #[derive(Debug)]
-pub(crate) struct HillClimbingSolver {
-    input_data: Arc<InputData>,
-    scoring: Arc<Scoring>,
-    options: Arc<Options>,
+pub(crate) struct HillClimbingSolver<'a> {
+    problem: &'a PreparedProblem,
+    options: &'a Options,
+    progress_reporter: ProgressReporter,
     rng: Rng,
-    progress_sink: Option<Arc<Mutex<ShotgunSolverProgress>>>,
     pub(crate) assignment_count: usize,
-    pub(crate) assignment_solver: AssignmentSolver,
+    pub(crate) assignment_solver: AssignmentSolver<'a>,
 }
 
-impl HillClimbingSolver {
+impl<'a> HillClimbingSolver<'a> {
     pub(crate) fn new_with_rng(
-        input_data: Arc<InputData>,
-        cs_analysis: &Arc<CriticalSetAnalysis>,
-        static_data: &Arc<MipFlowStaticData>,
-        scoring: Arc<Scoring>,
-        options: Arc<Options>,
-        progress_sink: Option<Arc<Mutex<ShotgunSolverProgress>>>,
+        problem: &'a PreparedProblem,
+        options: &'a Options,
+        progress_reporter: ProgressReporter,
         rng: Rng,
     ) -> Self {
-        let assignment_solver = AssignmentSolver::new_with_progress(
-            input_data.clone(),
-            cs_analysis.clone(),
-            static_data.clone(),
-            options.clone(),
-            progress_sink.clone(),
-        );
+        let assignment_solver =
+            AssignmentSolver::new_with_progress(problem, options, progress_reporter.clone());
         Self {
-            input_data,
-            scoring,
+            problem,
             options,
+            progress_reporter,
             rng,
-            progress_sink,
             assignment_count: 0,
             assignment_solver,
         }
@@ -49,7 +37,7 @@ impl HillClimbingSolver {
 
     pub(crate) fn solve(
         &mut self,
-        scheduling: &Arc<Scheduling>,
+        scheduling: &Scheduling,
         deadline: Option<SystemTime>,
     ) -> Solution {
         let mut best_solution = Solution::new(
@@ -60,11 +48,12 @@ impl HillClimbingSolver {
             return Solution::Invalid;
         }
 
-        let mut best_score = self.scoring.evaluate(&best_solution);
+        let mut best_score = self.problem.scoring.evaluate(&self.problem.input_data, &best_solution);
         if !best_score.is_finite() {
             return Solution::Invalid;
         }
-        self.publish_best_solution(&best_solution, best_score);
+        self.progress_reporter
+            .publish_best_solution(best_solution.clone(), best_score);
 
         loop {
             if deadline.is_some_and(|deadline| SystemTime::now() >= deadline) {
@@ -85,16 +74,16 @@ impl HillClimbingSolver {
                     return best_solution;
                 }
 
-                let neighbor_solution = Solution::new(
-                    Some(neighbor.clone()),
-                    self.solve_assignment(&neighbor, deadline),
-                );
-                let neighbor_score = self.scoring.evaluate(&neighbor_solution);
+                let neighbor_solution =
+                    Solution::new(Some(neighbor.clone()), self.solve_assignment(&neighbor, deadline));
+                let neighbor_score =
+                    self.problem.scoring.evaluate(&self.problem.input_data, &neighbor_solution);
                 if neighbor_score < best_score {
                     found_better_neighbor = true;
                     best_score = neighbor_score;
-                    best_solution = neighbor_solution;
-                    self.publish_best_solution(&best_solution, best_score);
+                    best_solution = neighbor_solution.clone();
+                    self.progress_reporter
+                        .publish_best_solution(neighbor_solution, best_score);
                 }
             }
 
@@ -107,38 +96,36 @@ impl HillClimbingSolver {
     }
 
     fn max_neighbor_key(&self) -> usize {
-        self.input_data.choices.len() * self.input_data.slots.len()
+        self.problem.input_data.choices.len() * self.problem.input_data.slots.len()
     }
 
     fn solve_assignment(
         &mut self,
-        scheduling: &Arc<Scheduling>,
+        scheduling: &Scheduling,
         deadline: Option<SystemTime>,
-    ) -> Option<Arc<crate::Assignment>> {
-        let assignment = self
-            .assignment_solver
-            .solve_until(scheduling, deadline);
+    ) -> Option<crate::Assignment> {
+        let assignment = self.assignment_solver.solve_until(scheduling, deadline);
         self.assignment_count += 1;
-        self.publish_assignment_progress();
+        self.progress_reporter
+            .publish_assignments(self.assignment_count);
         assignment
     }
 
-    fn neighbor(&self, scheduling: &Scheduling, neighbor_key: usize) -> Arc<Scheduling> {
-        let mut data = scheduling.data.clone();
-        let choice_count = self.input_data.choices.len();
-        let mut slot =
-            i32::try_from(neighbor_key / choice_count).expect("neighbor key must fit in i32") - 1;
+    fn neighbor(&self, scheduling: &Scheduling, neighbor_key: usize) -> Scheduling {
+        let mut data = scheduling.to_data();
+        let choice_count = self.problem.input_data.choices.len();
+        let mut slot = (neighbor_key / choice_count).checked_sub(1);
         let choice = neighbor_key % choice_count;
 
         if slot >= scheduling.slot_of(choice) {
-            slot += 1;
+            slot = slot.map(|slot| slot + 1).or(Some(0));
         }
         data[choice] = slot;
-        Arc::new(Scheduling::with_data(self.input_data.clone(), data))
+        Scheduling::with_data(&self.problem.input_data, data)
     }
 
-    fn random_swap_neighbor(&mut self, scheduling: &Scheduling) -> Arc<Scheduling> {
-        let mut data = scheduling.data.clone();
+    fn random_swap_neighbor(&mut self, scheduling: &Scheduling) -> Scheduling {
+        let mut data = scheduling.to_data();
         let mut swap_idx = vec![
             usize::try_from(self.rng.next_in_range(
                 0,
@@ -166,23 +153,23 @@ impl HillClimbingSolver {
             std::mem::swap(&mut carry, &mut data[idx]);
         }
 
-        Arc::new(Scheduling::with_data(self.input_data.clone(), data))
+        Scheduling::with_data(&self.problem.input_data, data)
     }
 
-    fn pick_neighbors(&mut self, scheduling: &Scheduling) -> Vec<Arc<Scheduling>> {
+    fn pick_neighbors(&mut self, scheduling: &Scheduling) -> Vec<Scheduling> {
         let add_swap_neighbors =
-            scheduling.input_data.choices.len() > 1 && scheduling.input_data.slots.len() > 1;
+            self.problem.input_data.choices.len() > 1 && self.problem.input_data.slots.len() > 1;
         let mut result = Vec::new();
         let mut neighbor_keys = (0..self.max_neighbor_key()).collect::<Vec<_>>();
 
         if self.max_neighbor_key()
-            > usize::try_from(self.options.max_neighbors).expect("max_neighbors must be positive")
+            > usize::try_from(self.options.max_neighbors).expect("max_neighbors must fit in usize")
         {
             self.rng.shuffle(&mut neighbor_keys);
         }
 
         let max_neighbors =
-            usize::try_from(self.options.max_neighbors).expect("max_neighbors must be positive");
+            usize::try_from(self.options.max_neighbors).expect("max_neighbors must fit in usize");
         for (key_index, &neighbor_key) in neighbor_keys.iter().enumerate() {
             if result.len() >= max_neighbors {
                 break;
@@ -192,14 +179,14 @@ impl HillClimbingSolver {
             }
 
             let next_neighbor = self.neighbor(scheduling, neighbor_key);
-            if !next_neighbor.is_feasible() {
+            if !next_neighbor.is_feasible(&self.problem.input_data) {
                 continue;
             }
             result.push(next_neighbor);
 
             if add_swap_neighbors {
                 let swap_neighbor = self.random_swap_neighbor(scheduling);
-                if swap_neighbor.is_feasible() {
+                if swap_neighbor.is_feasible(&self.problem.input_data) {
                     result.push(swap_neighbor);
                 }
             }
@@ -212,35 +199,12 @@ impl HillClimbingSolver {
                     break;
                 }
                 let swap_neighbor = self.random_swap_neighbor(scheduling);
-                if swap_neighbor.is_feasible() {
+                if swap_neighbor.is_feasible(&self.problem.input_data) {
                     result.push(swap_neighbor);
                 }
             }
         }
 
         result
-    }
-
-    fn publish_assignment_progress(&self) {
-        let Some(progress_sink) = &self.progress_sink else {
-            return;
-        };
-
-        progress_sink
-            .lock()
-            .expect("progress mutex poisoned")
-            .assignments = self.assignment_count;
-    }
-
-    fn publish_best_solution(&self, solution: &Solution, score: crate::Score) {
-        let Some(progress_sink) = &self.progress_sink else {
-            return;
-        };
-
-        let mut progress = progress_sink.lock().expect("progress mutex poisoned");
-        if score < progress.best_score {
-            progress.best_score = score;
-            progress.best_solution = solution.clone();
-        }
     }
 }

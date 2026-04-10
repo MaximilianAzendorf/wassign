@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{Assignment, Scheduling};
 
 /// Combined scheduling and assignment result.
@@ -8,13 +6,13 @@ pub enum Solution {
     /// No usable scheduling or assignment is available.
     Invalid,
     /// A feasible scheduling exists, but no assignment has been found for it.
-    Scheduling(Arc<Scheduling>),
+    Scheduling(Scheduling),
     /// Both scheduling and assignment are available.
     Complete {
         /// The scheduling stage result.
-        scheduling: Arc<Scheduling>,
+        scheduling: Scheduling,
         /// The assignment stage result for the scheduling.
-        assignment: Arc<Assignment>,
+        assignment: Assignment,
     },
 }
 
@@ -25,7 +23,7 @@ impl Solution {
     ///
     /// Panics if an assignment is provided without a scheduling.
     #[must_use]
-    pub fn new(scheduling: Option<Arc<Scheduling>>, assignment: Option<Arc<Assignment>>) -> Self {
+    pub fn new(scheduling: Option<Scheduling>, assignment: Option<Assignment>) -> Self {
         match (scheduling, assignment) {
             (Some(scheduling), Some(assignment)) => Self::Complete {
                 scheduling,
@@ -46,7 +44,7 @@ impl Solution {
     }
 
     #[must_use]
-    pub(crate) fn scheduling(&self) -> Option<&Arc<Scheduling>> {
+    pub(crate) fn scheduling(&self) -> Option<&Scheduling> {
         match self {
             Self::Invalid => None,
             Self::Scheduling(scheduling) | Self::Complete { scheduling, .. } => Some(scheduling),
@@ -54,7 +52,7 @@ impl Solution {
     }
 
     #[must_use]
-    pub(crate) fn assignment(&self) -> Option<&Arc<Assignment>> {
+    pub(crate) fn assignment(&self) -> Option<&Assignment> {
         match self {
             Self::Complete { assignment, .. } => Some(assignment),
             Self::Invalid | Self::Scheduling(_) => None,

@@ -8,14 +8,14 @@ use env_logger::{Env, WriteStyle};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use log::{Level, LevelFilter};
 
-use crate::{Options, ShotgunSolverThreaded, Solution};
+use crate::{Options, Solution, ThreadedSolverResult, ThreadedSolverRunning};
 
 /// Global status output helper used by the CLI.
 ///
 /// # Panics
 ///
 /// Panics if the global status mutex is poisoned.
-pub fn enable_output(_options: &Arc<Options>) {
+pub fn enable_output(_options: &Options) {
     initialize_logger();
 
     let multi_progress = Arc::new(MultiProgress::with_draw_target(
@@ -62,7 +62,7 @@ pub fn error(text: &str) {
 /// # Errors
 ///
 /// Returns an error if joining the worker threads fails or a worker panics.
-pub fn track_solver(solver: &mut ShotgunSolverThreaded) -> crate::Result<Solution> {
+pub fn track_solver(mut solver: ThreadedSolverRunning) -> crate::Result<ThreadedSolverResult> {
     let timeout_ms = u64::try_from(solver.timeout_seconds().max(0)).unwrap_or(0) * 1_000;
     let solving = solver_progress_bar(timeout_ms.max(1));
     solving.set_message(format_solver_message(&solver.progress()));
@@ -76,18 +76,18 @@ pub fn track_solver(solver: &mut ShotgunSolverThreaded) -> crate::Result<Solutio
         sleep(Duration::from_millis(100));
     }
 
-    let solution = match solver.wait_for_result() {
-        Ok(solution) => solution,
+    let final_progress = solver.progress();
+    let result = match solver.wait() {
+        Ok(result) => result,
         Err(err) => {
             solving.finish_and_clear();
             return Err(err);
         }
     };
-    let final_progress = solver.progress();
     let remaining_ms = u64::try_from(final_progress.milliseconds_remaining.max(0)).unwrap_or(0);
     let elapsed_ms = timeout_ms.saturating_sub(remaining_ms);
     solving.set_position(elapsed_ms.min(timeout_ms.max(1)));
-    let summary = if solution == Solution::Invalid {
+    let summary = if result.solution == Solution::Invalid {
         "No solution found.".to_owned()
     } else {
         format!("Solved {}", format_solver_summary(&final_progress))
@@ -95,7 +95,7 @@ pub fn track_solver(solver: &mut ShotgunSolverThreaded) -> crate::Result<Solutio
     solving.finish_and_clear();
     info_important(&summary);
 
-    Ok(solution)
+    Ok(result)
 }
 
 #[derive(Default)]
@@ -234,7 +234,7 @@ fn emit(level: Level, text: &str) {
 }
 
 fn format_solver_message(
-    progress: &crate::shotgun_solver_threaded::ShotgunSolverThreadedProgress,
+    progress: &crate::threaded_solver::ThreadedSolverProgress,
 ) -> String {
     let counters = style(format!(
         "{}/{}/{}",
@@ -260,7 +260,7 @@ fn format_solver_message(
 }
 
 fn format_solver_summary(
-    progress: &crate::shotgun_solver_threaded::ShotgunSolverThreadedProgress,
+    progress: &crate::threaded_solver::ThreadedSolverProgress,
 ) -> String {
     if progress.best_score.is_finite() {
         format!(

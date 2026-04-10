@@ -34,10 +34,10 @@ pub struct Options {
         long = "threads",
         default_value_t = default_thread_count()
     )]
-    pub thread_count: i32,
+    pub thread_count: u32,
     /// Maximum number of hill-climbing neighbors to inspect per step.
     #[arg(short = 'n', long = "max-neighbors", default_value_t = 12)]
-    pub max_neighbors: i32,
+    pub max_neighbors: u32,
     /// Enables greedy assignment solving.
     #[arg(short = 'g', long = "greedy")]
     pub greedy: bool,
@@ -100,7 +100,7 @@ impl Options {
     }
 }
 
-fn default_thread_count() -> i32 {
+fn default_thread_count() -> u32 {
     std::thread::available_parallelism()
-        .map_or(1_i32, |value| i32::try_from(value.get()).unwrap_or(1))
+        .map_or(1_u32, |value| u32::try_from(value.get()).unwrap_or(1))
 }

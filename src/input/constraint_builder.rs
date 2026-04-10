@@ -1,4 +1,4 @@
-use crate::{Constraint, InputData};
+use crate::{Constraint, ConstraintExtra, ConstraintTarget, InputData};
 use crate::{ConstraintType, InputError, SlotSizeLimitOp};
 
 use super::constraint_expression::{
@@ -36,7 +36,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoiceIsInSlot,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -51,7 +51,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoiceIsNotInSlot,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -66,7 +66,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoicesAreInSameSlot,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -81,7 +81,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoicesAreNotInSameSlot,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -96,7 +96,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::SlotContainsChoice,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -111,7 +111,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::SlotNotContainsChoice,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -126,7 +126,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::SlotsHaveSameChoices,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -141,7 +141,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoicesHaveSameChoosers,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -156,7 +156,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChooserIsInChoice,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -171,7 +171,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChooserIsNotInChoice,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -186,7 +186,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoosersHaveSameChoices,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -201,7 +201,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoiceContainsChooser,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -216,7 +216,7 @@ impl ConstraintBuilder {
                         &expression,
                         &mut result,
                         ConstraintType::ChoiceNotContainsChooser,
-                        0,
+                        ConstraintExtra::None,
                     )?;
                 }
                 (
@@ -235,15 +235,15 @@ impl ConstraintBuilder {
                     &expression,
                     &mut result,
                     ConstraintType::SlotHasLimitedSize,
-                    match expression.relation.kind {
-                        RelationType::Eq => SlotSizeLimitOp::Eq as i32,
-                        RelationType::Neq => SlotSizeLimitOp::Neq as i32,
-                        RelationType::Gt => SlotSizeLimitOp::Gt as i32,
-                        RelationType::Lt => SlotSizeLimitOp::Lt as i32,
-                        RelationType::Geq => SlotSizeLimitOp::Geq as i32,
-                        RelationType::Leq => SlotSizeLimitOp::Leq as i32,
+                    ConstraintExtra::SlotSizeLimitOp(match expression.relation.kind {
+                        RelationType::Eq => SlotSizeLimitOp::Eq,
+                        RelationType::Neq => SlotSizeLimitOp::Neq,
+                        RelationType::Gt => SlotSizeLimitOp::Gt,
+                        RelationType::Lt => SlotSizeLimitOp::Lt,
+                        RelationType::Geq => SlotSizeLimitOp::Geq,
+                        RelationType::Leq => SlotSizeLimitOp::Leq,
                         _ => unreachable!(),
-                    },
+                    }),
                 )?,
                 _ => {
                     if pass == 0 {
@@ -268,13 +268,26 @@ impl ConstraintBuilder {
         expression: &ConstraintExpression,
         result: &mut Vec<Constraint>,
         kind: ConstraintType,
-        extra: i32,
+        extra: ConstraintExtra,
     ) -> crate::Result<()> {
+        let right = match expression.right.kind {
+            AccessorType::Slot => ConstraintTarget::Slot(Self::resolve_accessor(data, &expression.right)?),
+            AccessorType::Choice => {
+                ConstraintTarget::Choice(Self::resolve_accessor(data, &expression.right)?)
+            }
+            AccessorType::Chooser => {
+                ConstraintTarget::Chooser(Self::resolve_accessor(data, &expression.right)?)
+            }
+            AccessorType::Integer => ConstraintTarget::Limit(
+                u32::try_from(Self::resolve_accessor(data, &expression.right)?)
+                    .expect("constraint integer must fit in u32"),
+            ),
+            _ => ConstraintTarget::None,
+        };
         result.push(Constraint::new(
             kind,
             Self::resolve_accessor(data, &expression.left)?,
-            i32::try_from(Self::resolve_accessor(data, &expression.right)?)
-                .expect("constraint accessor must fit in i32"),
+            right,
             extra,
         ));
         Ok(())

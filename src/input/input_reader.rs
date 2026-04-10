@@ -18,12 +18,12 @@ use super::{
 pub struct InputReader {
     engine: Engine,
     options: Arc<Mutex<Options>>,
-    pub(crate) set_map: std::collections::BTreeMap<String, Arc<InputSlotData>>,
-    pub(crate) choice_map: std::collections::BTreeMap<String, Arc<InputChoiceData>>,
-    pub(crate) chooser_map: std::collections::BTreeMap<String, Arc<InputChooserData>>,
-    pub(crate) sets: Vec<Arc<InputSlotData>>,
-    pub(crate) choices: Vec<Arc<InputChoiceData>>,
-    pub(crate) choosers: Vec<Arc<InputChooserData>>,
+    pub(crate) set_map: std::collections::BTreeMap<String, InputSlotData>,
+    pub(crate) choice_map: std::collections::BTreeMap<String, InputChoiceData>,
+    pub(crate) chooser_map: std::collections::BTreeMap<String, InputChooserData>,
+    pub(crate) sets: Vec<InputSlotData>,
+    pub(crate) choices: Vec<InputChoiceData>,
+    pub(crate) choosers: Vec<InputChooserData>,
     pub(crate) input_objects: Vec<super::input_object::InputObject>,
     pub(crate) constraint_expressions: Vec<ConstraintExpression>,
     state: Arc<Mutex<ReaderState>>,
@@ -32,9 +32,9 @@ pub struct InputReader {
 impl InputReader {
     /// Creates a new input reader configured with the given options.
     #[must_use]
-    pub fn new(options: &Arc<Options>) -> Self {
+    pub fn new(options: &Options) -> Self {
         let state = Arc::new(Mutex::new(ReaderState::default()));
-        let options = Arc::new(Mutex::new(options.as_ref().clone()));
+        let options = Arc::new(Mutex::new(options.clone()));
         let mut engine = Engine::new();
         RhaiInterface::register_interface(&mut engine, &state, &options);
         status::trace("Initialized Rhai input engine.");
@@ -63,7 +63,7 @@ impl InputReader {
     /// # Panics
     ///
     /// Panics if the internal reader state mutex is poisoned.
-    pub fn read_input(&mut self, input: &str) -> crate::Result<Arc<InputData>> {
+    pub fn read_input(&mut self, input: &str) -> crate::Result<InputData> {
         status::debug("Resetting input reader state.");
         *self
             .state
@@ -127,7 +127,7 @@ impl InputReader {
             .map(|&id| {
                 (
                     state.slots[id].slot.name.clone(),
-                    Arc::new(state.slots[id].clone()),
+                    state.slots[id].clone(),
                 )
             })
             .collect();
@@ -137,7 +137,7 @@ impl InputReader {
             .map(|&id| {
                 (
                     state.choices[id].choice.name.clone(),
-                    Arc::new(state.choices[id].clone()),
+                    state.choices[id].clone(),
                 )
             })
             .collect();
@@ -147,24 +147,24 @@ impl InputReader {
             .map(|&id| {
                 (
                     state.choosers[id].chooser.name.clone(),
-                    Arc::new(state.choosers[id].clone()),
+                    state.choosers[id].clone(),
                 )
             })
             .collect();
         self.sets = state
             .registered_set_ids
             .iter()
-            .map(|&id| Arc::new(state.slots[id].clone()))
+            .map(|&id| state.slots[id].clone())
             .collect();
         self.choices = state
             .registered_choice_ids
             .iter()
-            .map(|&id| Arc::new(state.choices[id].clone()))
+            .map(|&id| state.choices[id].clone())
             .collect();
         self.choosers = state
             .registered_chooser_ids
             .iter()
-            .map(|&id| Arc::new(state.choosers[id].clone()))
+            .map(|&id| state.choosers[id].clone())
             .collect();
         self.input_objects = state
             .slots
@@ -182,13 +182,11 @@ impl InputReader {
     ///
     /// Panics if the internal options mutex is poisoned.
     #[must_use]
-    pub fn effective_options(&self) -> Arc<Options> {
-        Arc::new(
-            self.options
-                .lock()
-                .expect("reader options mutex poisoned")
-                .clone(),
-        )
+    pub fn effective_options(&self) -> Options {
+        self.options
+            .lock()
+            .expect("reader options mutex poisoned")
+            .clone()
     }
 }
 

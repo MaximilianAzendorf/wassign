@@ -1,4 +1,4 @@
-use crate::Solution;
+use crate::{InputData, Solution};
 
 /// Formats solutions as CSV output.
 pub struct OutputFormatter;
@@ -42,27 +42,24 @@ impl OutputFormatter {
     ///
     /// Returns an error if the solution does not contain a scheduling or if it
     /// references an invalid slot index.
-    pub fn write_scheduling_solution(solution: &Solution) -> crate::Result<FormattedOutput> {
+    pub fn write_scheduling_solution(
+        input: &InputData,
+        solution: &Solution,
+    ) -> crate::Result<FormattedOutput> {
         let scheduling = solution
             .scheduling()
             .ok_or(crate::InputError::IncompleteSolution(
                 "scheduling output requires a scheduling",
             ))?;
-        let input = &scheduling.input_data;
-
         let mut lines = Vec::new();
         lines.push("\"Choice\", \"Slot\"".to_owned());
         for (choice_index, choice) in input.choices.iter().enumerate() {
             let slot = scheduling.slot_of(choice_index);
             let mut choice_name = choice.name.clone();
-            let slot_name = if slot == crate::Scheduling::NOT_SCHEDULED {
+            let slot_name = if slot.is_none() {
                 "not scheduled".to_owned()
             } else {
-                input.slots[usize::try_from(slot).map_err(|_| {
-                    crate::InputError::IncompleteSolution(
-                        "scheduled choice referenced an invalid slot index",
-                    )
-                })?]
+                input.slots[slot.expect("checked above")]
                 .name
                 .clone()
             };
@@ -81,7 +78,10 @@ impl OutputFormatter {
     ///
     /// Returns an error if the solution does not contain both a scheduling and
     /// an assignment or if it references an invalid slot index.
-    pub fn write_assignment_solution(solution: &Solution) -> crate::Result<FormattedOutput> {
+    pub fn write_assignment_solution(
+        input: &InputData,
+        solution: &Solution,
+    ) -> crate::Result<FormattedOutput> {
         let scheduling = solution
             .scheduling()
             .ok_or(crate::InputError::IncompleteSolution(
@@ -92,8 +92,6 @@ impl OutputFormatter {
             .ok_or(crate::InputError::IncompleteSolution(
                 "assignment output requires an assignment",
             ))?;
-        let input = &assignment.input_data;
-
         let mut lines = Vec::new();
         let mut header = vec!["\"Chooser\"".to_owned()];
         header.extend(input.slots.iter().map(|slot| format!("\"{}\"", slot.name)));
@@ -102,11 +100,11 @@ impl OutputFormatter {
             let mut choices = vec![0_usize; input.slots.len()];
             for slot in 0..input.slots.len() {
                 let choice = assignment.choice_of(chooser, slot);
-                let scheduled_slot = usize::try_from(scheduling.slot_of(choice)).map_err(|_| {
+                let scheduled_slot = scheduling.slot_of(choice).ok_or(
                     crate::InputError::IncompleteSolution(
                         "assignment output referenced an unscheduled choice",
-                    )
-                })?;
+                    ),
+                )?;
                 choices[scheduled_slot] = choice;
             }
 

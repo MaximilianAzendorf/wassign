@@ -1,10 +1,9 @@
-use std::sync::{Arc, Mutex};
+use std::sync::mpsc::Sender;
 use std::time::SystemTime;
 
 use crate::status;
 use crate::{
-    CriticalSetAnalysis, HillClimbingSolver, InputData, MipFlowStaticData, Options, Rng,
-    SchedulingSolver, Score, Scoring, Solution,
+    HillClimbingSolver, Options, PreparedProblem, Rng, SchedulingSolver, Score, Solution,
 };
 
 #[derive(Debug, Clone)]
@@ -17,52 +16,133 @@ pub(crate) struct ShotgunSolverProgress {
     pub(crate) best_score: Score,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct WorkerProgressEvent {
+    pub(crate) worker_index: usize,
+    pub(crate) sched_depth: Option<f32>,
+    pub(crate) iterations: Option<usize>,
+    pub(crate) assignments: Option<usize>,
+    pub(crate) lp: Option<usize>,
+    pub(crate) best_solution: Option<Solution>,
+    pub(crate) best_score: Option<Score>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ProgressReporter {
+    tx: Sender<WorkerProgressEvent>,
+    worker_index: usize,
+}
+
+impl ProgressReporter {
+    pub(crate) fn new(tx: Sender<WorkerProgressEvent>, worker_index: usize) -> Self {
+        Self { tx, worker_index }
+    }
+
+    pub(crate) fn dummy() -> Self {
+        let (tx, _rx) = std::sync::mpsc::channel();
+        Self::new(tx, 0)
+    }
+
+    pub(crate) fn publish_depth(&self, sched_depth: f32) {
+        self.publish(WorkerProgressEvent {
+            worker_index: self.worker_index,
+            sched_depth: Some(sched_depth),
+            iterations: None,
+            assignments: None,
+            lp: None,
+            best_solution: None,
+            best_score: None,
+        });
+    }
+
+    pub(crate) fn publish_iterations(&self, iterations: usize) {
+        self.publish(WorkerProgressEvent {
+            worker_index: self.worker_index,
+            sched_depth: None,
+            iterations: Some(iterations),
+            assignments: None,
+            lp: None,
+            best_solution: None,
+            best_score: None,
+        });
+    }
+
+    pub(crate) fn publish_assignments(&self, assignments: usize) {
+        self.publish(WorkerProgressEvent {
+            worker_index: self.worker_index,
+            sched_depth: None,
+            iterations: None,
+            assignments: Some(assignments),
+            lp: None,
+            best_solution: None,
+            best_score: None,
+        });
+    }
+
+    pub(crate) fn publish_lp(&self, lp: usize) {
+        self.publish(WorkerProgressEvent {
+            worker_index: self.worker_index,
+            sched_depth: None,
+            iterations: None,
+            assignments: None,
+            lp: Some(lp),
+            best_solution: None,
+            best_score: None,
+        });
+    }
+
+    pub(crate) fn publish_best_solution(&self, best_solution: Solution, best_score: Score) {
+        self.publish(WorkerProgressEvent {
+            worker_index: self.worker_index,
+            sched_depth: None,
+            iterations: None,
+            assignments: None,
+            lp: None,
+            best_solution: Some(best_solution),
+            best_score: Some(best_score),
+        });
+    }
+
+    fn publish(&self, event: WorkerProgressEvent) {
+        let _ = self.tx.send(event);
+    }
+}
+
 #[derive(Debug)]
-pub(crate) struct ShotgunSolver {
-    scoring: Arc<Scoring>,
-    progress_sink: Option<Arc<Mutex<ShotgunSolverProgress>>>,
-    pub(crate) hill_climbing_solver: HillClimbingSolver,
-    pub(crate) scheduling_solver: SchedulingSolver,
+pub(crate) struct ShotgunSolver<'a> {
+    problem: &'a PreparedProblem,
+    progress_reporter: ProgressReporter,
+    pub(crate) hill_climbing_solver: HillClimbingSolver<'a>,
+    pub(crate) scheduling_solver: SchedulingSolver<'a>,
     pub(crate) progress: ShotgunSolverProgress,
 }
 
-impl ShotgunSolver {
+impl<'a> ShotgunSolver<'a> {
     pub(crate) fn new_with_seed(
-        input_data: Arc<InputData>,
-        cs_analysis: &Arc<CriticalSetAnalysis>,
-        static_data: &Arc<MipFlowStaticData>,
-        scoring: Arc<Scoring>,
-        options: Arc<Options>,
-        progress_sink: Option<Arc<Mutex<ShotgunSolverProgress>>>,
+        problem: &'a PreparedProblem,
+        options: &'a Options,
+        progress_tx: Sender<WorkerProgressEvent>,
+        worker_index: usize,
         seed: u64,
     ) -> Self {
-        let scoring_for_children = scoring.clone();
-        let progress_sink_for_children = progress_sink.clone();
+        let progress_reporter = ProgressReporter::new(progress_tx, worker_index);
         let scheduling_rng = Rng::from_seed(seed);
         let hill_rng = Rng::from_seed(seed.wrapping_add(1));
-        let mut scheduling_solver = SchedulingSolver::new_with_rng(
-            input_data.clone(),
-            cs_analysis.clone(),
-            options.clone(),
-            scheduling_rng,
-        );
-        if let Some(progress_sink) = &progress_sink_for_children {
-            scheduling_solver.set_progress_sink(progress_sink.clone());
-        }
-
         Self {
-            scoring,
-            progress_sink,
-            hill_climbing_solver: HillClimbingSolver::new_with_rng(
-                input_data,
-                cs_analysis,
-                static_data,
-                scoring_for_children,
+            problem,
+            scheduling_solver: SchedulingSolver::new_with_rng(
+                problem,
                 options,
-                progress_sink_for_children,
+                progress_reporter.clone(),
+                scheduling_rng,
+            ),
+            hill_climbing_solver: HillClimbingSolver::new_with_rng(
+                problem,
+                options,
+                progress_reporter.clone(),
                 hill_rng,
             ),
-            scheduling_solver,
+            progress_reporter,
             progress: ShotgunSolverProgress {
                 sched_depth: 0.0,
                 iterations: 0,
@@ -82,7 +162,6 @@ impl ShotgunSolver {
             .map_or(f32::INFINITY, f32::from);
         self.progress.assignments = self.hill_climbing_solver.assignment_count;
         self.progress.lp = self.hill_climbing_solver.assignment_solver.lp_count;
-        self.publish_progress_snapshot();
         &self.progress
     }
 
@@ -109,39 +188,24 @@ impl ShotgunSolver {
                 .scheduling()
                 .expect("next_scheduling must populate the current scheduling");
             let solution = self.hill_climbing_solver.solve(&scheduling, deadline);
-            let score = self.scoring.evaluate(&solution);
+            let score = self.problem.scoring.evaluate(&self.problem.input_data, &solution);
             if score < self.progress.best_score {
                 status::debug(&format!(
                     "Found improved solution with score {}.",
                     score.to_str()
                 ));
-                self.progress.best_solution = solution;
+                self.progress.best_solution = solution.clone();
                 self.progress.best_score = score;
-                self.publish_progress_snapshot();
+                self.progress_reporter
+                    .publish_best_solution(solution, score);
             }
 
             self.progress.iterations += 1;
-            self.publish_progress_snapshot();
+            self.progress_reporter
+                .publish_iterations(self.progress.iterations);
             iteration += 1;
         }
 
         iteration
-    }
-
-    fn publish_progress_snapshot(&self) {
-        let Some(progress_sink) = &self.progress_sink else {
-            return;
-        };
-
-        let mut progress = progress_sink.lock().expect("progress mutex poisoned");
-        progress.sched_depth =
-            u16::try_from(self.scheduling_solver.current_depth).map_or(f32::INFINITY, f32::from);
-        progress.iterations = self.progress.iterations;
-        progress.assignments = self.hill_climbing_solver.assignment_count;
-        progress.lp = self.hill_climbing_solver.assignment_solver.lp_count;
-        if self.progress.best_score < progress.best_score {
-            progress.best_score = self.progress.best_score;
-            progress.best_solution = self.progress.best_solution.clone();
-        }
     }
 }

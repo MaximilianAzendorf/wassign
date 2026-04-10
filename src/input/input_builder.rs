@@ -1,7 +1,6 @@
-use std::sync::Arc;
-
 use crate::{
-    ChoiceData, ChooserData, Constraint, ConstraintType, InputData, InputError, SlotData,
+    ChoiceData, ChooserData, Constraint, ConstraintExtra, ConstraintTarget, ConstraintType,
+    InputData, InputError, SlotData,
     UnionFind, constraints,
 };
 
@@ -9,7 +8,7 @@ use super::input_reader::InputReader;
 
 #[derive(Debug, Default)]
 pub struct InputDataBuilder {
-    input_data: Option<Arc<InputData>>,
+    input_data: Option<InputData>,
 }
 
 impl InputDataBuilder {
@@ -22,7 +21,7 @@ impl InputDataBuilder {
             assignment_constraints: Vec::new(),
             dependent_choice_groups: Vec::new(),
             preference_levels: Vec::new(),
-            max_preference: -1,
+            max_preference: 0,
             choice_constraint_map: std::collections::BTreeMap::new(),
             chooser_constraint_map: std::collections::BTreeMap::new(),
         };
@@ -50,11 +49,11 @@ impl InputDataBuilder {
         Self::build_constraints(reader, &mut input_data)?;
         Self::build_constraint_maps(&mut input_data);
 
-        self.input_data = Some(Arc::new(input_data));
+        self.input_data = Some(input_data);
         Ok(())
     }
 
-    pub fn get_input_data(&self) -> Arc<InputData> {
+    pub fn get_input_data(&self) -> InputData {
         self.input_data
             .as_ref()
             .expect("input data builder was not initialized")
@@ -62,7 +61,7 @@ impl InputDataBuilder {
     }
 
     fn build_preferences(reader: &InputReader, input_data: &mut InputData) -> crate::Result<()> {
-        input_data.max_preference = i32::MIN;
+        input_data.max_preference = 0;
         for chooser in &reader.choosers {
             if chooser.chooser.preferences.len() != reader.choices.len() {
                 return Err(InputError::Message(format!(
@@ -114,7 +113,7 @@ impl InputDataBuilder {
                     let mut new_prefs = Vec::new();
                     for (index, &pref) in chooser.preferences.clone().iter().enumerate() {
                         let repeat = if index == next_index - 1 {
-                            usize::try_from(proto.parts).expect("parts must be non-negative")
+                            usize::try_from(proto.parts).expect("parts must fit in usize")
                         } else {
                             1
                         };
@@ -209,14 +208,14 @@ impl InputDataBuilder {
                     constraints.push(Constraint::new(
                         ConstraintType::ChoicesHaveSameChoosers,
                         left,
-                        i32::try_from(right).expect("choice index must fit in i32"),
-                        0,
+                        ConstraintTarget::Choice(right),
+                        ConstraintExtra::None,
                     ));
                     constraints.push(Constraint::new(
                         ConstraintType::ChoicesHaveOffset,
                         left,
-                        i32::try_from(right).expect("choice index must fit in i32"),
-                        i32::try_from(j - i).expect("offset must fit in i32"),
+                        ConstraintTarget::Choice(right),
+                        ConstraintExtra::Offset(i32::try_from(j - i).expect("offset must fit in i32")),
                     ));
                 }
             }
@@ -226,18 +225,15 @@ impl InputDataBuilder {
     fn get_dependent_choice_limits(
         input_data: &InputData,
         constraints: &[Constraint],
-    ) -> Vec<(i32, i32)> {
+    ) -> Vec<(u32, u32)> {
         let mut groups = UnionFind::<usize>::new(input_data.choices.len());
         for constraint in constraints {
             if constraint.kind == ConstraintType::ChoicesHaveSameChoosers {
-                groups.join(
-                    constraint.left,
-                    usize::try_from(constraint.right).expect("choice index must be non-negative"),
-                );
+                groups.join(constraint.left, constraint.other_choice());
             }
         }
 
-        let mut limits = vec![(0_i32, i32::MAX); input_data.choices.len()];
+        let mut limits = vec![(0_u32, u32::MAX); input_data.choices.len()];
         for choice in 0..input_data.choices.len() {
             let group = groups.find(choice);
             limits[group] = (
@@ -254,7 +250,7 @@ impl InputDataBuilder {
     fn get_dependent_preferences(
         input_data: &InputData,
         constraints: &[Constraint],
-    ) -> Vec<Vec<i32>> {
+    ) -> Vec<Vec<u32>> {
         let dep_groups = constraints::get_dependent_choices(constraints, input_data.choices.len());
         let mut prefs = input_data
             .choosers
@@ -268,7 +264,7 @@ impl InputDataBuilder {
                     .iter()
                     .map(|&choice| prefs_row[choice])
                     .min()
-                    .unwrap_or(i32::MAX);
+                    .unwrap_or(u32::MAX);
                 for &choice in group {
                     prefs_row[choice] = min_pref;
                 }
@@ -277,8 +273,7 @@ impl InputDataBuilder {
 
         for constraint in constraints {
             if constraint.kind == ConstraintType::ChooserIsInChoice {
-                prefs[constraint.left][usize::try_from(constraint.right)
-                    .expect("choice index must be non-negative")] = 0;
+                prefs[constraint.left][constraint.other_choice()] = 0;
             }
         }
 
@@ -317,8 +312,7 @@ impl InputDataBuilder {
                     input_data
                         .choice_constraint_map
                         .get_mut(
-                            &usize::try_from(constraint.right)
-                                .expect("choice index must be non-negative"),
+                            &constraint.other_choice(),
                         )
                         .expect("choice map entry must exist")
                         .push(constraint);
@@ -338,10 +332,7 @@ impl InputDataBuilder {
                         .push(constraint);
                     input_data
                         .chooser_constraint_map
-                        .get_mut(
-                            &usize::try_from(constraint.right)
-                                .expect("chooser index must be non-negative"),
-                        )
+                        .get_mut(&constraint.other_chooser())
                         .expect("chooser map entry must exist")
                         .push(constraint);
                 }

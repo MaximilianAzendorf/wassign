@@ -6,6 +6,7 @@
 
 mod assignment;
 mod assignment_solver;
+mod cancellation;
 mod choice_data;
 mod chooser_data;
 mod constraint;
@@ -20,13 +21,14 @@ mod mip_flow;
 mod mip_flow_static_data;
 mod options;
 mod output_formatter;
+mod prepared_problem;
 mod rng;
 mod scheduling;
 mod scheduling_solver;
 mod score;
 mod scoring;
 mod shotgun_solver;
-mod shotgun_solver_threaded;
+mod threaded_solver;
 mod slot_data;
 mod solution;
 /// Terminal status output helpers for logging and progress bars.
@@ -45,18 +47,20 @@ pub use input_data::InputData;
 pub use mip_flow_static_data::MipFlowStaticData;
 pub use options::Options;
 pub use output_formatter::OutputFormatter;
+pub use prepared_problem::PreparedProblem;
 pub use rng::Rng;
 pub use scheduling::Scheduling;
 pub use scheduling_solver::SchedulingSolver;
 pub use scoring::Scoring;
-pub use shotgun_solver_threaded::ShotgunSolverThreaded;
+pub use threaded_solver::{ThreadedSolver, ThreadedSolverResult, ThreadedSolverRunning};
 pub use slot_data::SlotData;
 pub use solution::Solution;
 
-pub(crate) use constraint::{Constraint, ConstraintType, SlotSizeLimitOp};
+pub(crate) use constraint::{
+    Constraint, ConstraintExtra, ConstraintTarget, ConstraintType, SlotSizeLimitOp,
+};
 pub(crate) use critical_set::CriticalSet;
 pub(crate) use hill_climbing_solver::HillClimbingSolver;
 pub(crate) use mip_flow::MipFlow;
 pub(crate) use score::Score;
-pub(crate) use shotgun_solver::ShotgunSolver;
 pub(crate) use union_find::UnionFind;

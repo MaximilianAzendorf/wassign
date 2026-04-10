@@ -276,22 +276,22 @@ let p2 = +chooser("d", [0, 0]);
         .map(|constraint| format!("{constraint:?}"))
         .collect::<BTreeSet<_>>();
     let required = BTreeSet::from([
-        "Constraint { kind: ChoiceIsInSlot, left: 0, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoiceIsInSlot, left: 1, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoiceIsNotInSlot, left: 1, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoiceIsNotInSlot, left: 1, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoicesAreInSameSlot, left: 1, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoicesAreNotInSameSlot, left: 0, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: SlotHasLimitedSize, left: 1, right: 1, extra: 1 }".to_owned(),
-        "Constraint { kind: SlotHasLimitedSize, left: 1, right: 3, extra: -2 }".to_owned(),
-        "Constraint { kind: ChoicesHaveSameChoosers, left: 1, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsInChoice, left: 0, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsInChoice, left: 0, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsInChoice, left: 1, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsInChoice, left: 1, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsNotInChoice, left: 1, right: 0, extra: 0 }".to_owned(),
-        "Constraint { kind: ChooserIsNotInChoice, left: 1, right: 1, extra: 0 }".to_owned(),
-        "Constraint { kind: ChoosersHaveSameChoices, left: 1, right: 0, extra: 0 }".to_owned(),
+        "Constraint { kind: ChoiceIsInSlot, left: 0, right: Slot(1), extra: None }".to_owned(),
+        "Constraint { kind: ChoiceIsInSlot, left: 1, right: Slot(1), extra: None }".to_owned(),
+        "Constraint { kind: ChoiceIsNotInSlot, left: 1, right: Slot(0), extra: None }".to_owned(),
+        "Constraint { kind: ChoiceIsNotInSlot, left: 1, right: Slot(1), extra: None }".to_owned(),
+        "Constraint { kind: ChoicesAreInSameSlot, left: 1, right: Choice(0), extra: None }".to_owned(),
+        "Constraint { kind: ChoicesAreNotInSameSlot, left: 0, right: Choice(1), extra: None }".to_owned(),
+        "Constraint { kind: SlotHasLimitedSize, left: 1, right: Limit(1), extra: SlotSizeLimitOp(Eq) }".to_owned(),
+        "Constraint { kind: SlotHasLimitedSize, left: 1, right: Limit(3), extra: SlotSizeLimitOp(Leq) }".to_owned(),
+        "Constraint { kind: ChoicesHaveSameChoosers, left: 1, right: Choice(0), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsInChoice, left: 0, right: Choice(0), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsInChoice, left: 0, right: Choice(1), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsInChoice, left: 1, right: Choice(0), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsInChoice, left: 1, right: Choice(1), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsNotInChoice, left: 1, right: Choice(0), extra: None }".to_owned(),
+        "Constraint { kind: ChooserIsNotInChoice, left: 1, right: Choice(1), extra: None }".to_owned(),
+        "Constraint { kind: ChoosersHaveSameChoices, left: 1, right: Chooser(0), extra: None }".to_owned(),
     ]);
     assert_eq!(constraints, required);
 }

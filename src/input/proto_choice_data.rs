@@ -1,8 +1,8 @@
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ProtoChoiceData {
     pub name: String,
-    pub min: i32,
-    pub max: i32,
-    pub parts: i32,
+    pub min: u32,
+    pub max: u32,
+    pub parts: u32,
     pub optional: bool,
 }

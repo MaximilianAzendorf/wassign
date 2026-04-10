@@ -1,6 +1,4 @@
-use crate::Constraint;
-use crate::ConstraintType;
-use crate::UnionFind;
+use crate::{Constraint, ConstraintExtra, ConstraintTarget, ConstraintType, UnionFind};
 
 pub(crate) fn get_dependent_choices(
     constraints: &[Constraint],
@@ -9,10 +7,7 @@ pub(crate) fn get_dependent_choices(
     let mut groups = UnionFind::<usize>::new(choice_count);
     for constraint in constraints {
         if constraint.kind == ConstraintType::ChoicesHaveSameChoosers {
-            groups.join(
-                constraint.left,
-                usize::try_from(constraint.right).expect("choice index must be non-negative"),
-            );
+            groups.join(constraint.left, constraint.other_choice());
         }
     }
     groups.groups()
@@ -39,9 +34,7 @@ pub(crate) fn reduce_and_optimize(
             }
             ConstraintType::SlotsHaveSameChoices => {
                 add = false;
-                if i32::try_from(constraint.left).expect("constraint index must fit in i32")
-                    != constraint.right
-                {
+                if constraint.left != constraint.slot() {
                     is_infeasible = true;
                 }
             }
@@ -54,13 +47,26 @@ pub(crate) fn reduce_and_optimize(
             reduced.push(Constraint::new(
                 new_kind,
                 if switch_sides {
-                    usize::try_from(constraint.right)
-                        .expect("constraint index must be non-negative")
+                    match constraint.right {
+                        ConstraintTarget::Slot(slot)
+                        | ConstraintTarget::Choice(slot)
+                        | ConstraintTarget::Chooser(slot) => slot,
+                        _ => panic!("unsupported switched constraint target"),
+                    }
                 } else {
                     constraint.left
                 },
                 if switch_sides {
-                    i32::try_from(constraint.left).expect("constraint index must fit in i32")
+                    match constraint.kind {
+                        ConstraintType::SlotContainsChoice | ConstraintType::SlotNotContainsChoice => {
+                            ConstraintTarget::Slot(constraint.left)
+                        }
+                        ConstraintType::ChoiceContainsChooser
+                        | ConstraintType::ChoiceNotContainsChooser => {
+                            ConstraintTarget::Choice(constraint.left)
+                        }
+                        _ => panic!("unsupported switched constraint kind"),
+                    }
                 } else {
                     constraint.right
                 },
@@ -91,8 +97,8 @@ fn expand_dependent_constraints(
                     result.push(Constraint::new(
                         ConstraintType::ChoicesAreNotInSameSlot,
                         group[i],
-                        i32::try_from(group[j]).expect("choice index must fit in i32"),
-                        0,
+                        ConstraintTarget::Choice(group[j]),
+                        ConstraintExtra::None,
                     ));
                 }
             }
@@ -109,9 +115,7 @@ fn expand_dependent_constraints(
 
         let mut group = Vec::new();
         for dep_group in &dependent_choices {
-            if dep_group.contains(
-                &usize::try_from(constraint.right).expect("choice index must be non-negative"),
-            ) {
+            if dep_group.contains(&constraint.other_choice()) {
                 group.clone_from(dep_group);
                 break;
             }
@@ -122,14 +126,14 @@ fn expand_dependent_constraints(
         }
 
         for choice in group {
-            if i32::try_from(choice).expect("choice index must fit in i32") == constraint.right {
+            if choice == constraint.other_choice() {
                 continue;
             }
             result.push(Constraint::new(
                 constraint.kind,
                 constraint.left,
-                i32::try_from(choice).expect("choice index must fit in i32"),
-                0,
+                ConstraintTarget::Choice(choice),
+                ConstraintExtra::None,
             ));
         }
     }
@@ -151,9 +155,10 @@ fn get_mandatory_critical_sets(constraints: &[Constraint]) -> Vec<Vec<usize>> {
     let mut groups = std::collections::BTreeMap::<usize, Vec<usize>>::new();
     for constraint in constraints {
         if constraint.kind == ConstraintType::ChooserIsInChoice {
-            groups.entry(constraint.left).or_default().push(
-                usize::try_from(constraint.right).expect("choice index must be non-negative"),
-            );
+            groups
+                .entry(constraint.left)
+                .or_default()
+                .push(constraint.other_choice());
         }
     }
     groups.into_values().collect()

@@ -3,10 +3,9 @@
 mod common;
 
 use std::path::PathBuf;
-use std::sync::Arc;
 
-use common::{csa, default_options, parse_data_result, scoring, sd};
-use wassign::ShotgunSolverThreaded;
+use common::{default_options, parse_data_result, prepared_problem};
+use wassign::ThreadedSolver;
 
 fn root_fixture(name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -17,20 +16,14 @@ fn root_fixture(name: &str) -> PathBuf {
 fn smoke_solve_fixture(name: &str) {
     let input = std::fs::read_to_string(root_fixture(name)).expect("fixture should be readable");
     let data = parse_data_result(&input).expect("fixture should parse");
-    let mut options = Arc::unwrap_or_clone(default_options());
+    let mut options = default_options();
     options.timeout_seconds = 1;
-    let options = Arc::new(options);
 
-    let mut solver = ShotgunSolverThreaded::new(
-        data.clone(),
-        csa(data.clone(), true),
-        sd(&data),
-        scoring(data, options.clone()),
-        options,
-    );
-    solver.start().expect("smoke solver should start");
+    let solver = ThreadedSolver::new(prepared_problem(data, &options), options);
     let _ = solver
-        .wait_for_result()
+        .start()
+        .expect("smoke solver should start")
+        .wait()
         .expect("smoke solver should finish");
 }
 

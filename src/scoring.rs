@@ -1,28 +1,26 @@
-use std::sync::Arc;
-
 use crate::{Assignment, InputData, Options, Scheduling, Score, Solution};
 
 /// Evaluates complete solutions according to feasibility and preference quality.
 #[derive(Debug, Clone)]
 pub struct Scoring {
-    input_data: Arc<InputData>,
-    options: Arc<Options>,
+    greedy: bool,
+    preference_exponent: f64,
     scaling: f32,
 }
 
 impl Scoring {
     /// Creates a new scorer for the given input and options.
     #[must_use]
-    pub fn new(input_data: Arc<InputData>, options: Arc<Options>) -> Self {
+    pub fn new(input_data: &InputData, options: &Options) -> Self {
         let scaling = (input_data.max_preference as f32).powf(options.preference_exponent as f32);
         Self {
-            input_data,
-            options,
+            greedy: options.greedy,
+            preference_exponent: options.preference_exponent,
             scaling,
         }
     }
 
-    pub(crate) fn is_feasible(&self, solution: &Solution) -> bool {
+    pub(crate) fn is_feasible(&self, input_data: &InputData, solution: &Solution) -> bool {
         let scheduling = solution
             .scheduling()
             .expect("feasibility requires a scheduling");
@@ -30,15 +28,15 @@ impl Scoring {
             .assignment()
             .expect("feasibility requires an assignment");
 
-        let mut part_counts = vec![0_i32; self.input_data.choices.len()];
+        let mut part_counts = vec![0_u32; input_data.choices.len()];
         let mut is_in_slot =
-            vec![vec![false; self.input_data.slots.len()]; self.input_data.choosers.len()];
-        let slots = (0..self.input_data.choices.len())
+            vec![vec![false; input_data.slots.len()]; input_data.choosers.len()];
+        let slots = (0..input_data.choices.len())
             .map(|choice| scheduling.slot_of(choice))
             .collect::<Vec<_>>();
 
-        if !Self::satisfies_constraints_scheduling(scheduling)
-            || !Self::satisfies_constraints_assignment(scheduling, assignment)
+        if !Self::satisfies_constraints_scheduling(input_data, scheduling)
+            || !Self::satisfies_constraints_assignment(input_data, scheduling, assignment)
         {
             return false;
         }
@@ -46,12 +44,11 @@ impl Scoring {
         for (chooser, slots_in) in is_in_slot
             .iter_mut()
             .enumerate()
-            .take(self.input_data.choosers.len())
+            .take(input_data.choosers.len())
         {
-            for slot in 0..self.input_data.slots.len() {
+            for slot in 0..input_data.slots.len() {
                 let choice = assignment.choice_of(chooser, slot);
-                let scheduled_slot =
-                    usize::try_from(slots[choice]).expect("choice must be scheduled");
+                let scheduled_slot = slots[choice].expect("choice must be scheduled");
                 if slots_in[scheduled_slot] {
                     return false;
                 }
@@ -61,10 +58,10 @@ impl Scoring {
         }
 
         for (choice_index, &count) in part_counts.iter().enumerate() {
-            if scheduling.slot_of(choice_index) == Scheduling::NOT_SCHEDULED {
+            if scheduling.slot_of(choice_index).is_none() {
                 continue;
             }
-            let choice = &self.input_data.choices[choice_index];
+            let choice = &input_data.choices[choice_index];
             if count < choice.min || count > choice.max {
                 return false;
             }
@@ -75,7 +72,7 @@ impl Scoring {
 
     /// Evaluates a solution and returns its score.
     #[must_use]
-    pub fn evaluate(&self, solution: &Solution) -> Score {
+    pub fn evaluate(&self, input_data: &InputData, solution: &Solution) -> Score {
         if solution.is_invalid() {
             return Score {
                 major: f32::INFINITY,
@@ -83,12 +80,12 @@ impl Scoring {
             };
         }
 
-        let major = if self.options.greedy {
+        let major = if self.greedy {
             f32::NAN
         } else {
-            self.evaluate_major(solution) as f32
+            self.evaluate_major(input_data, solution) as f32
         };
-        let minor = self.evaluate_minor(solution);
+        let minor = self.evaluate_minor(input_data, solution);
 
         if (major.is_finite() || major.is_nan()) && minor.is_finite() {
             Score { major, minor }
@@ -100,65 +97,65 @@ impl Scoring {
         }
     }
 
-    pub(crate) fn satisfies_constraints_scheduling(scheduling: &Scheduling) -> bool {
-        for constraint in &scheduling.input_data.scheduling_constraints {
+    pub(crate) fn satisfies_constraints_scheduling(
+        input_data: &InputData,
+        scheduling: &Scheduling,
+    ) -> bool {
+        for constraint in &input_data.scheduling_constraints {
             let left = constraint.left;
-            let right = usize::try_from(constraint.right).unwrap_or(usize::MAX);
-            let extra = constraint.extra;
 
             match constraint.kind {
                 crate::ConstraintType::ChoiceIsInSlot => {
-                    if scheduling.slot_of(left) != constraint.right {
+                    if scheduling.slot_of(left) != Some(constraint.slot()) {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChoiceIsNotInSlot => {
-                    if scheduling.slot_of(left) == constraint.right {
+                    if scheduling.slot_of(left) == Some(constraint.slot()) {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChoicesAreInSameSlot => {
-                    if scheduling.slot_of(left) != scheduling.slot_of(right) {
+                    if scheduling.slot_of(left) != scheduling.slot_of(constraint.other_choice()) {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChoicesAreNotInSameSlot => {
-                    if scheduling.slot_of(left) != Scheduling::NOT_SCHEDULED
-                        && scheduling.slot_of(right) != Scheduling::NOT_SCHEDULED
-                        && scheduling.slot_of(left) == scheduling.slot_of(right)
+                    if scheduling.slot_of(left).is_some()
+                        && scheduling.slot_of(constraint.other_choice()).is_some()
+                        && scheduling.slot_of(left) == scheduling.slot_of(constraint.other_choice())
                     {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChoicesHaveOffset => {
                     let left_slot = scheduling.slot_of(left);
-                    let right_slot = scheduling.slot_of(right);
-                    if left_slot == Scheduling::NOT_SCHEDULED
-                        || right_slot == Scheduling::NOT_SCHEDULED
-                    {
+                    let right_slot = scheduling.slot_of(constraint.other_choice());
+                    if left_slot.is_none() || right_slot.is_none() {
                         if left_slot != right_slot {
                             return false;
                         }
-                    } else if right_slot - left_slot != extra {
+                    } else if i32::try_from(right_slot.expect("checked above")).expect("slot fits in i32")
+                        - i32::try_from(left_slot.expect("checked above")).expect("slot fits in i32")
+                        != constraint.offset()
+                    {
                         return false;
                     }
                 }
                 crate::ConstraintType::SlotHasLimitedSize => {
-                    let slot = i32::try_from(constraint.left).unwrap_or(i32::MAX);
-                    let count = i32::try_from(
-                        (0..scheduling.input_data.choices.len())
-                            .filter(|&choice| scheduling.slot_of(choice) == slot)
+                    let count = u32::try_from(
+                        (0..input_data.choices.len())
+                            .filter(|&choice| scheduling.slot_of(choice) == Some(constraint.left))
                             .count(),
                     )
-                    .unwrap_or(i32::MAX);
-                    let valid = match extra {
-                        1 => count == constraint.right,
-                        -1 => count != constraint.right,
-                        2 => count > constraint.right,
-                        -3 => count < constraint.right,
-                        3 => count >= constraint.right,
-                        -2 => count <= constraint.right,
-                        _ => panic!("Unknown slot size limit operator {extra}."),
+                    .unwrap_or(u32::MAX);
+                    let valid = match constraint.slot_size_limit_op() {
+                        crate::SlotSizeLimitOp::Eq => count == constraint.limit(),
+                        crate::SlotSizeLimitOp::Neq => count != constraint.limit(),
+                        crate::SlotSizeLimitOp::Gt => count > constraint.limit(),
+                        crate::SlotSizeLimitOp::Lt => count < constraint.limit(),
+                        crate::SlotSizeLimitOp::Geq => count >= constraint.limit(),
+                        crate::SlotSizeLimitOp::Leq => count <= constraint.limit(),
                     };
                     if !valid {
                         return false;
@@ -172,36 +169,39 @@ impl Scoring {
     }
 
     pub(crate) fn satisfies_constraints_assignment(
+        input_data: &InputData,
         scheduling: &Scheduling,
         assignment: &Assignment,
     ) -> bool {
-        for constraint in &assignment.input_data.assignment_constraints {
+        for constraint in &input_data.assignment_constraints {
             let left = constraint.left;
-            let right = usize::try_from(constraint.right).unwrap_or(usize::MAX);
 
             match constraint.kind {
                 crate::ConstraintType::ChoicesHaveSameChoosers => {
-                    if scheduling.slot_of(right) != Scheduling::NOT_SCHEDULED
-                        && scheduling.slot_of(left) != Scheduling::NOT_SCHEDULED
-                        && assignment.choosers_ordered(left) != assignment.choosers_ordered(right)
+                    if scheduling.slot_of(constraint.other_choice()).is_some()
+                        && scheduling.slot_of(left).is_some()
+                        && assignment.choosers_ordered(input_data, left)
+                            != assignment.choosers_ordered(input_data, constraint.other_choice())
                     {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChooserIsInChoice => {
-                    if scheduling.slot_of(right) != Scheduling::NOT_SCHEDULED
-                        && !assignment.is_in_choice(left, right)
+                    if scheduling.slot_of(constraint.other_choice()).is_some()
+                        && !assignment.is_in_choice(input_data, left, constraint.other_choice())
                     {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChooserIsNotInChoice => {
-                    if assignment.is_in_choice(left, right) {
+                    if assignment.is_in_choice(input_data, left, constraint.other_choice()) {
                         return false;
                     }
                 }
                 crate::ConstraintType::ChoosersHaveSameChoices => {
-                    if assignment.choices_ordered(left) != assignment.choices_ordered(right) {
+                    if assignment.choices_ordered(input_data, left)
+                        != assignment.choices_ordered(input_data, constraint.other_chooser())
+                    {
                         return false;
                     }
                 }
@@ -214,39 +214,39 @@ impl Scoring {
 }
 
 impl Scoring {
-    fn evaluate_major(&self, solution: &Solution) -> i32 {
+    fn evaluate_major(&self, input_data: &InputData, solution: &Solution) -> u32 {
         let assignment = solution.assignment().expect("solution requires assignment");
-        let mut max_pref = 0_i32;
-        for chooser in 0..self.input_data.choosers.len() {
-            for slot in 0..self.input_data.slots.len() {
+        let mut max_pref = 0_u32;
+        for chooser in 0..input_data.choosers.len() {
+            for slot in 0..input_data.slots.len() {
                 let choice = assignment.choice_of(chooser, slot);
-                max_pref = max_pref.max(self.input_data.choosers[chooser].preferences[choice]);
+                max_pref = max_pref.max(input_data.choosers[chooser].preferences[choice]);
             }
         }
         max_pref
     }
 
-    fn evaluate_minor(&self, solution: &Solution) -> f32 {
-        if !self.is_feasible(solution) {
+    fn evaluate_minor(&self, input_data: &InputData, solution: &Solution) -> f32 {
+        if !self.is_feasible(input_data, solution) {
             return f32::INFINITY;
         }
 
         let assignment = solution.assignment().expect("solution requires assignment");
         let mut pref_count =
-            vec![0_i32; usize::try_from(self.input_data.max_preference + 1).expect("non-negative")];
+            vec![0_u32; usize::try_from(input_data.max_preference + 1).expect("preference range must fit in usize")];
 
-        for chooser in 0..self.input_data.choosers.len() {
-            for slot in 0..self.input_data.slots.len() {
+        for chooser in 0..input_data.choosers.len() {
+            for slot in 0..input_data.slots.len() {
                 let choice = assignment.choice_of(chooser, slot);
-                let pref = usize::try_from(self.input_data.choosers[chooser].preferences[choice])
-                    .expect("preference must be non-negative");
+                let pref = usize::try_from(input_data.choosers[chooser].preferences[choice])
+                    .expect("preference must fit in usize");
                 pref_count[pref] += 1;
             }
         }
 
         let mut sum = 0.0_f32;
         for (pref, &count) in pref_count.iter().enumerate() {
-            sum += (count as f32) * (pref as f32).powf(self.options.preference_exponent as f32)
+            sum += (count as f32) * (pref as f32).powf(self.preference_exponent as f32)
                 / self.scaling;
         }
         sum

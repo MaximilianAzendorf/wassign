@@ -2,8 +2,6 @@
 
 mod common;
 
-use std::sync::Arc;
-
 use common::*;
 use wassign::{Assignment, Rng, SchedulingSolver};
 
@@ -54,7 +52,7 @@ fn common_check(scheduling: &wassign::Scheduling) {
     let mut s1 = 0;
     let mut s2 = 0;
     for w in 0..4 {
-        if scheduling.slot_of(w) == 0 {
+        if scheduling.slot_of(w) == Some(0) {
             s1 += 1;
         } else {
             s2 += 1;
@@ -70,14 +68,15 @@ fn minimal() {
     Rng::seed(12);
 
     let data = parse_data(INPUT_MINIMAL);
-    let mut solver =
-        SchedulingSolver::new(data.clone(), csa(data.clone(), false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
 
     assert!(solver.next_scheduling(None));
     let scheduling = solver.scheduling().expect("expected scheduling");
-    let assignment = Arc::new(Assignment::new(data, vec![vec![0]]));
+    let assignment = Assignment::new(&data, vec![vec![0]]);
 
-    expect_scheduling(&sol(scheduling, assignment), "e,s");
+    expect_scheduling(&data, &sol(scheduling, assignment), "e,s");
 }
 
 #[test]
@@ -85,7 +84,9 @@ fn works_without_constraints() {
     Rng::seed(12);
     let data = parse_data(&four_choice_input(""));
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     assert!(solver.next_scheduling(None));
     common_check(&solver.scheduling().expect("expected scheduling"));
 }
@@ -97,11 +98,13 @@ fn choice_is_in_slot_constraint_works() {
         r#"+constraint(choice("c1").slot == slot("s1"));"#,
     ));
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         let scheduling = solver.scheduling().expect("expected scheduling");
-        assert_eq!(scheduling.slot_of(0), 0);
+        assert_eq!(scheduling.slot_of(0), Some(0));
         common_check(&scheduling);
     }
 }
@@ -113,11 +116,13 @@ fn choice_is_not_in_slot_constraint_works() {
         r#"+constraint(choice("c1").slot != slot("s1"));"#,
     ));
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         let scheduling = solver.scheduling().expect("expected scheduling");
-        assert_ne!(scheduling.slot_of(0), 0);
+        assert_ne!(scheduling.slot_of(0), Some(0));
         common_check(&scheduling);
     }
 }
@@ -129,7 +134,9 @@ fn choices_are_in_same_slot_constraint_works() {
         r#"+constraint(choice("c1").slot == choice("c3").slot);"#,
     ));
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         let scheduling = solver.scheduling().expect("expected scheduling");
@@ -145,7 +152,9 @@ fn choices_are_not_in_same_slot_constraint_works() {
         r#"+constraint(choice("c1").slot != choice("c3").slot);"#,
     ));
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         let scheduling = solver.scheduling().expect("expected scheduling");
@@ -173,20 +182,22 @@ let p = [1, 1, 1];
 "#,
     );
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         let scheduling = solver.scheduling().expect("expected scheduling");
-        assert_eq!(scheduling.slot_of(2), 0);
-        assert_eq!(scheduling.slot_of(3), 1);
+        assert_eq!(scheduling.slot_of(2), Some(0));
+        assert_eq!(scheduling.slot_of(3), Some(1));
         common_check(&scheduling);
     }
 }
 
-fn count_slot_zero(scheduling: &wassign::Scheduling, choice_count: usize) -> i32 {
+fn count_slot_zero(scheduling: &wassign::Scheduling, choice_count: usize) -> usize {
     let mut slot_zero = 0;
     for choice in 0..choice_count {
-        if scheduling.slot_of(choice) == 0 {
+        if scheduling.slot_of(choice) == Some(0) {
             slot_zero += 1;
         }
     }
@@ -199,7 +210,9 @@ fn slot_has_limited_size_eq_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size == 2);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert_eq!(
@@ -218,7 +231,9 @@ fn slot_has_limited_size_neq_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size != 2);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert_ne!(
@@ -237,7 +252,9 @@ fn slot_has_limited_size_lt_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size < 3);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert!(
@@ -255,7 +272,9 @@ fn slot_has_limited_size_leq_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size <= 2);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert!(
@@ -273,7 +292,9 @@ fn slot_has_limited_size_gt_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size > 2);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert!(
@@ -291,7 +312,9 @@ fn slot_has_limited_size_geq_constraint_works() {
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size >= 3);"#));
     let choice_count = data.choices.len();
 
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
+    let options = default_options();
+    let problem = prepared_problem(data.clone(), &options);
+    let mut solver = SchedulingSolver::new(&problem, &options);
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
         assert!(

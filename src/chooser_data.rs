@@ -2,7 +2,7 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChooserData {
     pub(crate) name: String,
-    pub(crate) preferences: Vec<i32>,
+    pub(crate) preferences: Vec<u32>,
 }
 
 impl ChooserData {
@@ -14,7 +14,7 @@ impl ChooserData {
 
     /// Returns the chooser preferences after normalization.
     #[must_use]
-    pub fn preferences(&self) -> &[i32] {
+    pub fn preferences(&self) -> &[u32] {
         &self.preferences
     }
 }

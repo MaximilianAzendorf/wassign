@@ -18,9 +18,9 @@ pub struct InputData {
     /// Groups of choices that must be treated together for dependency handling.
     pub dependent_choice_groups: Vec<Vec<usize>>,
     /// Sorted distinct preference values that occur in the normalized input.
-    pub preference_levels: Vec<i32>,
+    pub preference_levels: Vec<u32>,
     /// Maximum normalized preference value present in the input.
-    pub max_preference: i32,
+    pub max_preference: u32,
     /// Lookup table from choice index to relevant scheduling constraints.
     pub choice_constraint_map: BTreeMap<usize, Vec<Constraint>>,
     /// Lookup table from chooser index to relevant assignment constraints.
@@ -31,12 +31,12 @@ impl InputData {
     pub(crate) const GENERATED_PREFIX: &str = "~";
     pub(crate) const GENERATED_SLOT_NAME: &str = "Generated Slot";
 
-    pub(crate) fn preference_after(&self, preference: i32) -> i32 {
+    pub(crate) fn preference_after(&self, preference: u32) -> u32 {
         self.preference_levels
             .iter()
             .copied()
             .find(|&level| level > preference)
-            .unwrap_or(i32::MAX)
+            .unwrap_or(u32::MAX)
     }
 
     pub(crate) fn scheduling_constraints_for(&self, choice: usize) -> &[Constraint] {

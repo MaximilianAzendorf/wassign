@@ -2,23 +2,12 @@ use crate::InputData;
 
 /// A scheduling that maps each choice to a slot.
 ///
-/// `data[choice]` stores the slot index as an `i32` because the constraint
-/// layer already models slot references with signed integers and `-1` is used
-/// as the sentinel for "not scheduled".
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Scheduling {
-    pub(crate) input_data: std::sync::Arc<InputData>,
-    pub(crate) data: Vec<i32>,
-}
+pub struct Scheduling(Vec<Option<usize>>);
 
 impl Scheduling {
-    pub(crate) const NOT_SCHEDULED: i32 = -1;
-
-    pub(crate) fn new(input_data: std::sync::Arc<InputData>) -> Self {
-        Self {
-            input_data,
-            data: Vec::new(),
-        }
+    pub(crate) fn new() -> Self {
+        Self(Vec::new())
     }
 
     /// Creates a scheduling from explicit slot assignments.
@@ -27,44 +16,47 @@ impl Scheduling {
     ///
     /// Panics if `data.len()` does not match the number of choices in `input_data`.
     #[must_use]
-    pub fn with_data(input_data: std::sync::Arc<InputData>, data: Vec<i32>) -> Self {
+    pub fn with_data(input_data: &InputData, data: Vec<Option<usize>>) -> Self {
         assert_eq!(data.len(), input_data.choices.len());
-        Self { input_data, data }
+        Self(data)
     }
 
-    pub(crate) fn is_feasible(&self) -> bool {
-        let mut slot_min = vec![0_i32; self.input_data.slots.len()];
-        let mut slot_max = vec![0_i32; self.input_data.slots.len()];
-        let chooser_count = i32::try_from(self.input_data.choosers.len()).unwrap_or(i32::MAX);
+    pub(crate) fn is_feasible(&self, input_data: &InputData) -> bool {
+        let mut slot_min = vec![0_u32; input_data.slots.len()];
+        let mut slot_max = vec![0_u32; input_data.slots.len()];
+        let chooser_count = u32::try_from(input_data.choosers.len()).unwrap_or(u32::MAX);
 
-        for (choice_index, &slot) in self.data.iter().enumerate() {
-            if slot == Self::NOT_SCHEDULED {
-                if !self.input_data.choices[choice_index].is_optional {
+        for (choice_index, slot) in self.0.iter().copied().enumerate() {
+            let Some(slot) = slot else {
+                if !input_data.choices[choice_index].is_optional {
                     return false;
                 }
                 continue;
-            }
+            };
 
-            let choice = &self.input_data.choices[choice_index];
-            let slot = usize::try_from(slot).expect("slot id must be non-negative");
+            let choice = &input_data.choices[choice_index];
             slot_min[slot] += choice.min;
             slot_max[slot] += choice.max;
         }
 
-        for slot in 0..self.input_data.slots.len() {
+        for slot in 0..input_data.slots.len() {
             if slot_min[slot] > chooser_count || slot_max[slot] < chooser_count {
                 return false;
             }
         }
 
-        crate::Scoring::satisfies_constraints_scheduling(self)
+        crate::Scoring::satisfies_constraints_scheduling(input_data, self)
     }
 
     /// Returns the slot assigned to the given choice.
     ///
-    /// Returns `-1` when the choice is not scheduled.
+    /// Returns `None` when the choice is not scheduled.
     #[must_use]
-    pub fn slot_of(&self, choice: usize) -> i32 {
-        self.data[choice]
+    pub fn slot_of(&self, choice: usize) -> Option<usize> {
+        self.0[choice]
+    }
+
+    pub(crate) fn to_data(&self) -> Vec<Option<usize>> {
+        self.0.clone()
     }
 }

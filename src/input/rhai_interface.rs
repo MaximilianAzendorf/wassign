@@ -106,7 +106,7 @@ impl RhaiInterface {
             let state = state.clone();
             move |name: &str, prefs: Array| {
                 script_result(
-                    array_to_i32(&prefs).and_then(|prefs| chooser(state.clone(), name, prefs)),
+                    array_to_u32(&prefs).and_then(|prefs| chooser(state.clone(), name, prefs)),
                 )
             }
         });
@@ -183,28 +183,48 @@ impl RhaiInterface {
             Tagged::new(Tag::Min, vec![value as i32])
         });
         engine.register_fn("min", |value: String| {
-            script_result(parse_string_int(&value).map(|value| Tagged::new(Tag::Min, vec![value])))
+            script_result(parse_string_uint(&value).and_then(|value| {
+                i32::try_from(value)
+                    .map(|value| Tagged::new(Tag::Min, vec![value]))
+                    .map_err(|err| InputError::Message(err.to_string()))
+            }))
         });
         engine.register_fn("max", |value: i64| {
             Tagged::new(Tag::Max, vec![value as i32])
         });
         engine.register_fn("max", |value: String| {
-            script_result(parse_string_int(&value).map(|value| Tagged::new(Tag::Max, vec![value])))
+            script_result(parse_string_uint(&value).and_then(|value| {
+                i32::try_from(value)
+                    .map(|value| Tagged::new(Tag::Max, vec![value]))
+                    .map_err(|err| InputError::Message(err.to_string()))
+            }))
         });
         engine.register_fn("parts", |value: i64| {
             Tagged::new(Tag::Parts, vec![value as i32])
         });
         engine.register_fn("parts", |value: String| {
             script_result(
-                parse_string_int(&value).map(|value| Tagged::new(Tag::Parts, vec![value])),
+                parse_string_uint(&value).and_then(|value| {
+                    i32::try_from(value)
+                        .map(|value| Tagged::new(Tag::Parts, vec![value]))
+                        .map_err(|err| InputError::Message(err.to_string()))
+                }),
             )
         });
         engine.register_fn("bounds", |min: i64, max: i64| {
             Tagged::new(Tag::Bounds, vec![min as i32, max as i32])
         });
         engine.register_fn("bounds", |min: String, max: String| {
-            script_result(parse_string_int(&min).and_then(|min| {
-                parse_string_int(&max).map(|max| Tagged::new(Tag::Bounds, vec![min, max]))
+            script_result(parse_string_uint(&min).and_then(|min| {
+                parse_string_uint(&max).and_then(|max| {
+                    Ok(Tagged::new(
+                        Tag::Bounds,
+                        vec![
+                            i32::try_from(min).map_err(|err| InputError::Message(err.to_string()))?,
+                            i32::try_from(max).map_err(|err| InputError::Message(err.to_string()))?,
+                        ],
+                    ))
+                })
             }))
         });
         engine.register_fn("optional_if", |value: bool| {
@@ -377,13 +397,18 @@ fn choice(
     };
     for tag in tags {
         match tag.tag {
-            Tag::Min => proto.min = tag.value(0),
-            Tag::Max => proto.max = tag.value(0),
+            Tag::Min => proto.min = u32::try_from(tag.value(0))
+                .map_err(|err| InputError::Message(err.to_string()))?,
+            Tag::Max => proto.max = u32::try_from(tag.value(0))
+                .map_err(|err| InputError::Message(err.to_string()))?,
             Tag::Bounds => {
-                proto.min = tag.value(0);
-                proto.max = tag.value(1);
+                proto.min = u32::try_from(tag.value(0))
+                    .map_err(|err| InputError::Message(err.to_string()))?;
+                proto.max = u32::try_from(tag.value(1))
+                    .map_err(|err| InputError::Message(err.to_string()))?;
             }
-            Tag::Parts => proto.parts = tag.value(0),
+            Tag::Parts => proto.parts = u32::try_from(tag.value(0))
+                .map_err(|err| InputError::Message(err.to_string()))?,
             Tag::Optional => proto.optional = tag.value(0) == 1,
         }
     }
@@ -401,7 +426,7 @@ fn choice(
 fn chooser(
     state: Arc<Mutex<ReaderState>>,
     name: &str,
-    preferences: Vec<i32>,
+    preferences: Vec<u32>,
 ) -> crate::Result<ChooserRef> {
     if let Some(id) = find_registered_chooser(&state, name)? {
         return Ok(ChooserRef { state, id });
@@ -477,7 +502,7 @@ fn set_arguments(options: &Arc<Mutex<Options>>, args: Array) -> crate::Result<()
                     InputError::Message("Missing value for --threads.".to_owned())
                 })?;
                 next.thread_count = value
-                    .parse::<i32>()
+                    .parse::<u32>()
                     .map_err(|err| InputError::Message(err.to_string()))?;
             }
             "-n" | "--max-neighbors" => {
@@ -485,7 +510,7 @@ fn set_arguments(options: &Arc<Mutex<Options>>, args: Array) -> crate::Result<()
                     InputError::Message("Missing value for --max-neighbors.".to_owned())
                 })?;
                 next.max_neighbors = value
-                    .parse::<i32>()
+                    .parse::<u32>()
                     .map_err(|err| InputError::Message(err.to_string()))?;
             }
             "-g" | "--greedy" => next.greedy = true,
@@ -625,16 +650,16 @@ fn find_registered_name(
     Ok(matches.first().map(|&index| values[index].0))
 }
 
-fn array_to_i32(array: &Array) -> crate::Result<Vec<i32>> {
+fn array_to_u32(array: &Array) -> crate::Result<Vec<u32>> {
     array
         .iter()
         .map(|value| {
             if let Some(number) = value.clone().try_cast::<i64>() {
-                i32::try_from(number).map_err(|err| InputError::Message(err.to_string()))
+                u32::try_from(number).map_err(|err| InputError::Message(err.to_string()))
             } else if let Some(number) = value.clone().try_cast::<i32>() {
-                Ok(number)
+                u32::try_from(number).map_err(|err| InputError::Message(err.to_string()))
             } else if let Some(text) = value.clone().try_cast::<String>() {
-                parse_string_int(&text)
+                parse_string_uint(&text)
             } else {
                 Err(InputError::Message(
                     "Unsupported chooser preference value.".to_owned(),
@@ -644,11 +669,11 @@ fn array_to_i32(array: &Array) -> crate::Result<Vec<i32>> {
         .collect()
 }
 
-fn parse_string_int(value: &str) -> crate::Result<i32> {
+fn parse_string_uint(value: &str) -> crate::Result<u32> {
     let number = value
         .parse::<i64>()
         .map_err(|err| InputError::Message(err.to_string()))?;
-    i32::try_from(number).map_err(|err| InputError::Message(err.to_string()))
+    u32::try_from(number).map_err(|err| InputError::Message(err.to_string()))
 }
 
 fn read_file_string(filename: &str) -> crate::Result<String> {

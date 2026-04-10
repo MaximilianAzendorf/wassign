@@ -32,16 +32,51 @@ pub enum SlotSizeLimitOp {
     Lt = -3,
 }
 
+impl SlotSizeLimitOp {
+    #[must_use]
+    pub fn negation(self) -> Self {
+        match self {
+            Self::Eq => Self::Neq,
+            Self::Neq => Self::Eq,
+            Self::Gt => Self::Leq,
+            Self::Geq => Self::Lt,
+            Self::Leq => Self::Gt,
+            Self::Lt => Self::Geq,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ConstraintTarget {
+    None,
+    Slot(usize),
+    Choice(usize),
+    Chooser(usize),
+    Limit(u32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum ConstraintExtra {
+    None,
+    Offset(i32),
+    SlotSizeLimitOp(SlotSizeLimitOp),
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Constraint {
     pub kind: ConstraintType,
     pub left: usize,
-    pub right: i32,
-    pub extra: i32,
+    pub right: ConstraintTarget,
+    pub extra: ConstraintExtra,
 }
 
 impl Constraint {
-    pub fn new(kind: ConstraintType, left: usize, right: i32, extra: i32) -> Self {
+    pub fn new(
+        kind: ConstraintType,
+        left: usize,
+        right: ConstraintTarget,
+        extra: ConstraintExtra,
+    ) -> Self {
         Self {
             kind,
             left,
@@ -61,7 +96,9 @@ impl Constraint {
             ConstraintType::ChoicesAreNotInSameSlot => {
                 neg.kind = ConstraintType::ChoicesAreInSameSlot;
             }
-            ConstraintType::SlotHasLimitedSize => neg.extra = -neg.extra,
+            ConstraintType::SlotHasLimitedSize => {
+                neg.extra = ConstraintExtra::SlotSizeLimitOp(self.slot_size_limit_op().negation());
+            }
             ConstraintType::SlotContainsChoice => neg.kind = ConstraintType::SlotNotContainsChoice,
             ConstraintType::SlotNotContainsChoice => neg.kind = ConstraintType::SlotContainsChoice,
             ConstraintType::ChooserIsInChoice => neg.kind = ConstraintType::ChooserIsNotInChoice,
@@ -93,5 +130,53 @@ impl Constraint {
     pub fn is_assignment_constraint(self) -> bool {
         (self.kind as i32) >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
             && self.kind != ConstraintType::Invalid
+    }
+
+    #[must_use]
+    pub fn slot(self) -> usize {
+        match self.right {
+            ConstraintTarget::Slot(slot) => slot,
+            _ => panic!("constraint does not carry a slot target"),
+        }
+    }
+
+    #[must_use]
+    pub fn other_choice(self) -> usize {
+        match self.right {
+            ConstraintTarget::Choice(choice) => choice,
+            _ => panic!("constraint does not carry a choice target"),
+        }
+    }
+
+    #[must_use]
+    pub fn other_chooser(self) -> usize {
+        match self.right {
+            ConstraintTarget::Chooser(chooser) => chooser,
+            _ => panic!("constraint does not carry a chooser target"),
+        }
+    }
+
+    #[must_use]
+    pub fn limit(self) -> u32 {
+        match self.right {
+            ConstraintTarget::Limit(limit) => limit,
+            _ => panic!("constraint does not carry a limit target"),
+        }
+    }
+
+    #[must_use]
+    pub fn offset(self) -> i32 {
+        match self.extra {
+            ConstraintExtra::Offset(offset) => offset,
+            _ => panic!("constraint does not carry an offset"),
+        }
+    }
+
+    #[must_use]
+    pub fn slot_size_limit_op(self) -> SlotSizeLimitOp {
+        match self.extra {
+            ConstraintExtra::SlotSizeLimitOp(op) => op,
+            _ => panic!("constraint does not carry a slot size limit operator"),
+        }
     }
 }

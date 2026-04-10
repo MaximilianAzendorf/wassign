@@ -1,13 +1,11 @@
 //! Command-line entry point for `wassign`.
 
 use std::io::Read;
-use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use wassign::{
-    CriticalSetAnalysis, InputReader, MipFlowStaticData, Options, OutputFormatter, Rng, Scoring,
-    ShotgunSolverThreaded, Solution, status,
+    InputReader, Options, OutputFormatter, PreparedProblem, Rng, Solution, ThreadedSolver, status,
 };
 
 fn main() {
@@ -23,7 +21,7 @@ fn run() -> i32 {
         .unwrap_or_default();
     Rng::seed(seed);
 
-    let options = Arc::new(Options::parse());
+    let options = Options::parse();
     status::enable_output(&options);
     status::debug(&format!("Parsed options: {options:?}"));
 
@@ -45,7 +43,7 @@ fn run() -> i32 {
     }
 }
 
-fn try_run(input_string: &str, options: &Arc<Options>) -> wassign::Result<()> {
+fn try_run(input_string: &str, options: &Options) -> wassign::Result<()> {
     status::info("Processing input.");
     status::debug(&format!("Input size: {} byte(s).", input_string.len()));
     let mut reader = InputReader::new(options);
@@ -74,7 +72,6 @@ fn try_run(input_string: &str, options: &Arc<Options>) -> wassign::Result<()> {
         );
     }
 
-    let scoring = Arc::new(Scoring::new(input_data.clone(), options.clone()));
     let do_cs_analysis = !options.no_critical_sets && !options.greedy && input_data.slots.len() > 1;
     let do_cs_simplification = do_cs_analysis && !options.no_critical_set_simplification;
     status::debug(&format!(
@@ -90,32 +87,22 @@ fn try_run(input_string: &str, options: &Arc<Options>) -> wassign::Result<()> {
         "Skipping critical set analysis."
     });
 
-    let cs_analysis = Arc::new(CriticalSetAnalysis::new(
-        input_data.clone(),
-        do_cs_analysis,
-        do_cs_simplification,
-    ));
+    let problem = PreparedProblem::new(input_data, &options);
     if do_cs_analysis {
         status::info(&format!(
             "Critical set analysis gives a preference bound of {}.",
-            cs_analysis.preference_bound()
+            problem.critical_set_analysis.preference_bound()
         ));
     }
 
     status::info("Generating static data and starting solver.");
-    let static_data = Arc::new(MipFlowStaticData::new(input_data.as_ref()));
-    status::debug("Static flow data generated.");
-    let mut solver = ShotgunSolverThreaded::new(
-        input_data.clone(),
-        cs_analysis,
-        static_data,
-        scoring.clone(),
-        options.clone(),
-    );
-    solver.start()?;
-    let solution = status::track_solver(&mut solver)?;
+    let solver = ThreadedSolver::new(problem, options.clone());
+    let running = solver.start()?;
+    let result = status::track_solver(running)?;
+    let input_data = &result.input_data;
+    let solution = &result.solution;
 
-    if solution == Solution::Invalid {
+    if *solution == Solution::Invalid {
         status::info_important("No solution found.");
         return Ok(());
     }
@@ -123,14 +110,14 @@ fn try_run(input_string: &str, options: &Arc<Options>) -> wassign::Result<()> {
     status::info_important("Solution found.");
     status::info(&format!(
         "Solution score: {}",
-        scoring.evaluate(&solution).to_str()
+        result.scoring.evaluate(input_data, solution).to_str()
     ));
 
     if input_data.slots.len() > 1 {
-        let scheduling = OutputFormatter::write_scheduling_solution(&solution)?;
+        let scheduling = OutputFormatter::write_scheduling_solution(input_data, solution)?;
         output_string(scheduling.as_str(), ".scheduling.csv", &options)?;
     }
-    let assignment = OutputFormatter::write_assignment_solution(&solution)?;
+    let assignment = OutputFormatter::write_assignment_solution(input_data, solution)?;
     output_string(assignment.as_str(), ".assignment.csv", &options)?;
 
     Ok(())
