@@ -1,4 +1,4 @@
-//! Smoke tests for the large example inputs at the repository root.
+//! Smoke tests for the large example inputs in `tests/inputs`.
 
 mod common;
 
@@ -9,7 +9,7 @@ use common::{csa, default_options, parse_data_result, scoring, sd};
 use wassign::ShotgunSolverThreaded;
 
 fn root_fixture(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/inputs").join(name)
 }
 
 fn smoke_solve_fixture(name: &str) {
