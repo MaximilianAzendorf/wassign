@@ -51,16 +51,17 @@ impl CriticalSetAnalysis {
     }
 
     pub(crate) fn for_preference(&self, preference: u32) -> &[CriticalSet] {
-        self.cached_sets
-            .get(&preference)
-            .map_or(&[], Box::as_ref)
+        self.cached_sets.get(&preference).map_or(&[], Box::as_ref)
     }
 
     fn build_cache(&mut self, input_data: &InputData) {
         self.cached_sets.clear();
         let mut by_preference = BTreeMap::<u32, Vec<CriticalSet>>::new();
         for set in &self.sets {
-            by_preference.entry(set.preference).or_default().push(set.clone());
+            by_preference
+                .entry(set.preference)
+                .or_default()
+                .push(set.clone());
         }
 
         let mut minimal_sets = Vec::<CriticalSet>::new();

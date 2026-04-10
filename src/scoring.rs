@@ -29,8 +29,7 @@ impl Scoring {
             .expect("feasibility requires an assignment");
 
         let mut part_counts = vec![0_u32; input_data.choices.len()];
-        let mut is_in_slot =
-            vec![vec![false; input_data.slots.len()]; input_data.choosers.len()];
+        let mut is_in_slot = vec![vec![false; input_data.slots.len()]; input_data.choosers.len()];
         let slots = (0..input_data.choices.len())
             .map(|choice| scheduling.slot_of(choice))
             .collect::<Vec<_>>();
@@ -135,8 +134,10 @@ impl Scoring {
                         if left_slot != right_slot {
                             return false;
                         }
-                    } else if i32::try_from(right_slot.expect("checked above")).expect("slot fits in i32")
-                        - i32::try_from(left_slot.expect("checked above")).expect("slot fits in i32")
+                    } else if i32::try_from(right_slot.expect("checked above"))
+                        .expect("slot fits in i32")
+                        - i32::try_from(left_slot.expect("checked above"))
+                            .expect("slot fits in i32")
                         != constraint.offset()
                     {
                         return false;
@@ -232,8 +233,11 @@ impl Scoring {
         }
 
         let assignment = solution.assignment().expect("solution requires assignment");
-        let mut pref_count =
-            vec![0_u32; usize::try_from(input_data.max_preference + 1).expect("preference range must fit in usize")];
+        let mut pref_count = vec![
+            0_u32;
+            usize::try_from(input_data.max_preference + 1)
+                .expect("preference range must fit in usize")
+        ];
 
         for chooser in 0..input_data.choosers.len() {
             for slot in 0..input_data.slots.len() {
@@ -246,8 +250,8 @@ impl Scoring {
 
         let mut sum = 0.0_f32;
         for (pref, &count) in pref_count.iter().enumerate() {
-            sum += (count as f32) * (pref as f32).powf(self.preference_exponent as f32)
-                / self.scaling;
+            sum +=
+                (count as f32) * (pref as f32).powf(self.preference_exponent as f32) / self.scaling;
         }
         sum
     }

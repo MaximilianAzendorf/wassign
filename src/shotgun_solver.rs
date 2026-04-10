@@ -2,9 +2,7 @@ use std::sync::mpsc::Sender;
 use std::time::SystemTime;
 
 use crate::status;
-use crate::{
-    HillClimbingSolver, Options, PreparedProblem, Rng, SchedulingSolver, Score, Solution,
-};
+use crate::{HillClimbingSolver, Options, PreparedProblem, Rng, SchedulingSolver, Score, Solution};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ShotgunSolverProgress {
@@ -188,7 +186,10 @@ impl<'a> ShotgunSolver<'a> {
                 .scheduling()
                 .expect("next_scheduling must populate the current scheduling");
             let solution = self.hill_climbing_solver.solve(&scheduling, deadline);
-            let score = self.problem.scoring.evaluate(&self.problem.input_data, &solution);
+            let score = self
+                .problem
+                .scoring
+                .evaluate(&self.problem.input_data, &solution);
             if score < self.progress.best_score {
                 status::debug(&format!(
                     "Found improved solution with score {}.",

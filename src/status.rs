@@ -233,9 +233,7 @@ fn emit(level: Level, text: &str) {
     }
 }
 
-fn format_solver_message(
-    progress: &crate::threaded_solver::ThreadedSolverProgress,
-) -> String {
+fn format_solver_message(progress: &crate::threaded_solver::ThreadedSolverProgress) -> String {
     let counters = style(format!(
         "{}/{}/{}",
         progress.iterations, progress.assignments, progress.lp
@@ -259,9 +257,7 @@ fn format_solver_message(
     }
 }
 
-fn format_solver_summary(
-    progress: &crate::threaded_solver::ThreadedSolverProgress,
-) -> String {
+fn format_solver_summary(progress: &crate::threaded_solver::ThreadedSolverProgress) -> String {
     if progress.best_score.is_finite() {
         format!(
             "{}; i/a/l {}/{}/{}; depth {:.1}/{:.1}",

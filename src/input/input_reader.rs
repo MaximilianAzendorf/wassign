@@ -124,12 +124,7 @@ impl InputReader {
         self.set_map = state
             .registered_set_ids
             .iter()
-            .map(|&id| {
-                (
-                    state.slots[id].slot.name.clone(),
-                    state.slots[id].clone(),
-                )
-            })
+            .map(|&id| (state.slots[id].slot.name.clone(), state.slots[id].clone()))
             .collect();
         self.choice_map = state
             .registered_choice_ids

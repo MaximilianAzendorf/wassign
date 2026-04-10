@@ -1,10 +1,8 @@
 use std::time::SystemTime;
 
-use crate::status;
-use crate::{
-    AssignmentSolver, Options, PreparedProblem, Rng, Scheduling, Solution,
-};
 use crate::shotgun_solver::ProgressReporter;
+use crate::status;
+use crate::{AssignmentSolver, Options, PreparedProblem, Rng, Scheduling, Solution};
 
 #[derive(Debug)]
 pub(crate) struct HillClimbingSolver<'a> {
@@ -48,7 +46,10 @@ impl<'a> HillClimbingSolver<'a> {
             return Solution::Invalid;
         }
 
-        let mut best_score = self.problem.scoring.evaluate(&self.problem.input_data, &best_solution);
+        let mut best_score = self
+            .problem
+            .scoring
+            .evaluate(&self.problem.input_data, &best_solution);
         if !best_score.is_finite() {
             return Solution::Invalid;
         }
@@ -74,10 +75,14 @@ impl<'a> HillClimbingSolver<'a> {
                     return best_solution;
                 }
 
-                let neighbor_solution =
-                    Solution::new(Some(neighbor.clone()), self.solve_assignment(&neighbor, deadline));
-                let neighbor_score =
-                    self.problem.scoring.evaluate(&self.problem.input_data, &neighbor_solution);
+                let neighbor_solution = Solution::new(
+                    Some(neighbor.clone()),
+                    self.solve_assignment(&neighbor, deadline),
+                );
+                let neighbor_score = self
+                    .problem
+                    .scoring
+                    .evaluate(&self.problem.input_data, &neighbor_solution);
                 if neighbor_score < best_score {
                     found_better_neighbor = true;
                     best_score = neighbor_score;

@@ -59,9 +59,7 @@ impl OutputFormatter {
             let slot_name = if slot.is_none() {
                 "not scheduled".to_owned()
             } else {
-                input.slots[slot.expect("checked above")]
-                .name
-                .clone()
+                input.slots[slot.expect("checked above")].name.clone()
             };
             if let Some(stripped) = choice_name.strip_prefix(crate::InputData::GENERATED_PREFIX) {
                 choice_name = stripped.to_owned();
@@ -100,11 +98,12 @@ impl OutputFormatter {
             let mut choices = vec![0_usize; input.slots.len()];
             for slot in 0..input.slots.len() {
                 let choice = assignment.choice_of(chooser, slot);
-                let scheduled_slot = scheduling.slot_of(choice).ok_or(
-                    crate::InputError::IncompleteSolution(
-                        "assignment output referenced an unscheduled choice",
-                    ),
-                )?;
+                let scheduled_slot =
+                    scheduling
+                        .slot_of(choice)
+                        .ok_or(crate::InputError::IncompleteSolution(
+                            "assignment output referenced an unscheduled choice",
+                        ))?;
                 choices[scheduled_slot] = choice;
             }
 

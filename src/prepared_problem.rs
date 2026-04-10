@@ -17,7 +17,8 @@ impl PreparedProblem {
     /// Builds immutable derived solver state for a parsed input and options.
     #[must_use]
     pub fn new(input_data: InputData, options: &Options) -> Self {
-        let do_cs_analysis = !options.no_critical_sets && !options.greedy && input_data.slots.len() > 1;
+        let do_cs_analysis =
+            !options.no_critical_sets && !options.greedy && input_data.slots.len() > 1;
         let do_cs_simplification = do_cs_analysis && !options.no_critical_set_simplification;
         let critical_set_analysis =
             CriticalSetAnalysis::new(&input_data, do_cs_analysis, do_cs_simplification);

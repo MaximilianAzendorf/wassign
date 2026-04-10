@@ -5,8 +5,10 @@ use std::time::{Duration, SystemTime};
 
 use crate::cancellation::CancellationToken;
 use crate::shotgun_solver::{ShotgunSolver, ShotgunSolverProgress, WorkerProgressEvent};
-use crate::util::{time_now, time_never};
-use crate::{InputData, InputError, Options, PreparedProblem, Result, Rng, Score, Scoring, Solution};
+use crate::util::{time_never, time_now};
+use crate::{
+    InputData, InputError, Options, PreparedProblem, Result, Rng, Score, Scoring, Solution,
+};
 
 #[derive(Debug, Clone)]
 pub struct ThreadedSolverProgress {
@@ -84,7 +86,9 @@ impl ThreadedSolver {
             u16::try_from(problem.input_data.choices.len()).map_or(f32::INFINITY, f32::from);
         let thread_progress = vec![empty_progress(); num_threads];
         let thread_start_times = vec![time_now(); num_threads];
-        let thread_seeds = (0..num_threads).map(|tid| Rng::derived_seed(tid as u64)).collect::<Vec<_>>();
+        let thread_seeds = (0..num_threads)
+            .map(|tid| Rng::derived_seed(tid as u64))
+            .collect::<Vec<_>>();
         let cancellation = CancellationToken::new();
         let cancellation_for_workers = cancellation.clone();
         let (progress_tx, progress_rx) = mpsc::channel();
@@ -102,8 +106,9 @@ impl ThreadedSolver {
                         let mut solver =
                             ShotgunSolver::new_with_seed(problem, options, progress_tx, tid, seed);
                         let start_time = time_now();
-                        let timeout =
-                            Duration::from_secs(u64::try_from(options.timeout_seconds).unwrap_or_default());
+                        let timeout = Duration::from_secs(
+                            u64::try_from(options.timeout_seconds).unwrap_or_default(),
+                        );
                         let deadline = start_time + timeout;
 
                         while !cancellation.is_cancelled() && time_now() <= deadline {
@@ -217,8 +222,9 @@ impl ThreadedSolverRunning {
                         .unwrap_or_else(time_never),
                 )
                 .unwrap_or_default();
-            let timeout =
-                Duration::from_secs(u64::try_from(self.options.timeout_seconds).unwrap_or_default());
+            let timeout = Duration::from_secs(
+                u64::try_from(self.options.timeout_seconds).unwrap_or_default(),
+            );
             let remaining = timeout.saturating_sub(elapsed);
             progress.milliseconds_remaining = progress
                 .milliseconds_remaining

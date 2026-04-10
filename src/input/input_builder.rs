@@ -1,7 +1,6 @@
 use crate::{
     ChoiceData, ChooserData, Constraint, ConstraintExtra, ConstraintTarget, ConstraintType,
-    InputData, InputError, SlotData,
-    UnionFind, constraints,
+    InputData, InputError, SlotData, UnionFind, constraints,
 };
 
 use super::input_reader::InputReader;
@@ -215,7 +214,9 @@ impl InputDataBuilder {
                         ConstraintType::ChoicesHaveOffset,
                         left,
                         ConstraintTarget::Choice(right),
-                        ConstraintExtra::Offset(i32::try_from(j - i).expect("offset must fit in i32")),
+                        ConstraintExtra::Offset(
+                            i32::try_from(j - i).expect("offset must fit in i32"),
+                        ),
                     ));
                 }
             }
@@ -311,9 +312,7 @@ impl InputDataBuilder {
                         .push(constraint);
                     input_data
                         .choice_constraint_map
-                        .get_mut(
-                            &constraint.other_choice(),
-                        )
+                        .get_mut(&constraint.other_choice())
                         .expect("choice map entry must exist")
                         .push(constraint);
                 }

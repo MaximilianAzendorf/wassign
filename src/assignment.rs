@@ -48,7 +48,12 @@ impl Assignment {
         choices
     }
 
-    pub(crate) fn is_in_choice(&self, input_data: &InputData, chooser: usize, choice: usize) -> bool {
+    pub(crate) fn is_in_choice(
+        &self,
+        input_data: &InputData,
+        chooser: usize,
+        choice: usize,
+    ) -> bool {
         (0..input_data.slots.len()).any(|slot| self.choice_of(chooser, slot) == choice)
     }
 }

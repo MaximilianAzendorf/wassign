@@ -28,11 +28,11 @@ mod scheduling_solver;
 mod score;
 mod scoring;
 mod shotgun_solver;
-mod threaded_solver;
 mod slot_data;
 mod solution;
 /// Terminal status output helpers for logging and progress bars.
 pub mod status;
+mod threaded_solver;
 mod union_find;
 mod util;
 
@@ -52,9 +52,9 @@ pub use rng::Rng;
 pub use scheduling::Scheduling;
 pub use scheduling_solver::SchedulingSolver;
 pub use scoring::Scoring;
-pub use threaded_solver::{ThreadedSolver, ThreadedSolverResult, ThreadedSolverRunning};
 pub use slot_data::SlotData;
 pub use solution::Solution;
+pub use threaded_solver::{ThreadedSolver, ThreadedSolverResult, ThreadedSolverRunning};
 
 pub(crate) use constraint::{
     Constraint, ConstraintExtra, ConstraintTarget, ConstraintType, SlotSizeLimitOp,

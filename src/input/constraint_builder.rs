@@ -271,7 +271,9 @@ impl ConstraintBuilder {
         extra: ConstraintExtra,
     ) -> crate::Result<()> {
         let right = match expression.right.kind {
-            AccessorType::Slot => ConstraintTarget::Slot(Self::resolve_accessor(data, &expression.right)?),
+            AccessorType::Slot => {
+                ConstraintTarget::Slot(Self::resolve_accessor(data, &expression.right)?)
+            }
             AccessorType::Choice => {
                 ConstraintTarget::Choice(Self::resolve_accessor(data, &expression.right)?)
             }

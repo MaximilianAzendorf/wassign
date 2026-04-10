@@ -1,11 +1,11 @@
 use std::collections::BTreeSet;
 use std::time::{Duration, SystemTime};
 
-use crate::{constraints, status};
+use crate::shotgun_solver::ProgressReporter;
 use crate::{
     Assignment, ConstraintType, MipFlow, MipFlowStaticData, Options, PreparedProblem, Scheduling,
 };
-use crate::shotgun_solver::ProgressReporter;
+use crate::{constraints, status};
 
 /// Computes an optimal assignment for a fixed scheduling.
 #[derive(Debug)]
@@ -114,8 +114,8 @@ impl<'a> AssignmentSolver<'a> {
                         if choice == constrained_choice || scheduling.slot_of(choice) != slot {
                             continue;
                         }
-                        let to = static_data.base_flow.node_map
-                            [&MipFlowStaticData::node_choice(choice)];
+                        let to =
+                            static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
                         blocked_edges.insert((from, to));
                     }
                 }
@@ -153,12 +153,12 @@ impl<'a> AssignmentSolver<'a> {
                 for choice in 0..input_data.choices.len() {
                     let from1 = static_data.base_flow.node_map
                         [&MipFlowStaticData::node_chooser(constraint.left, slot)];
-                    let to1 = static_data.base_flow.node_map
-                        [&MipFlowStaticData::node_choice(choice)];
+                    let to1 =
+                        static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
                     let from2 = static_data.base_flow.node_map
                         [&MipFlowStaticData::node_chooser(other_chooser, slot)];
-                    let to2 = static_data.base_flow.node_map
-                        [&MipFlowStaticData::node_choice(choice)];
+                    let to2 =
+                        static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
                     flow.create_edge_group_or_block_edges([
                         MipFlowStaticData::edge_id(from1, to1),
                         MipFlowStaticData::edge_id(from2, to2),
@@ -236,7 +236,8 @@ impl<'a> AssignmentSolver<'a> {
             flow.set_supply(
                 node,
                 -(i32::try_from(input_data.choosers.len()).expect("chooser count must fit in i32")
-                    - i32::try_from(covered_choosers).expect("covered chooser count must fit in i32")),
+                    - i32::try_from(covered_choosers)
+                        .expect("covered chooser count must fit in i32")),
             );
         }
 
@@ -254,9 +255,9 @@ impl<'a> AssignmentSolver<'a> {
                     if blocked_edges.contains(&(from, to)) {
                         continue;
                     }
-                    let cost =
-                        ((f64::from(input_data.choosers[chooser].preferences[choice]) + 1.0)
-                            .powf(self.options.preference_exponent)) as i64;
+                    let cost = ((f64::from(input_data.choosers[chooser].preferences[choice]) + 1.0)
+                        .powf(self.options.preference_exponent))
+                        as i64;
                     flow.add_keyed_edge(MipFlowStaticData::edge_id(from, to), from, to, 1, cost);
                 }
             }

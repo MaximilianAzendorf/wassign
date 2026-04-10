@@ -58,7 +58,8 @@ pub(crate) fn reduce_and_optimize(
                 },
                 if switch_sides {
                     match constraint.kind {
-                        ConstraintType::SlotContainsChoice | ConstraintType::SlotNotContainsChoice => {
+                        ConstraintType::SlotContainsChoice
+                        | ConstraintType::SlotNotContainsChoice => {
                             ConstraintTarget::Slot(constraint.left)
                         }
                         ConstraintType::ChoiceContainsChooser

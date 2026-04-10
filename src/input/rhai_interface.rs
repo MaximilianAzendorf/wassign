@@ -203,13 +203,11 @@ impl RhaiInterface {
             Tagged::new(Tag::Parts, vec![value as i32])
         });
         engine.register_fn("parts", |value: String| {
-            script_result(
-                parse_string_uint(&value).and_then(|value| {
-                    i32::try_from(value)
-                        .map(|value| Tagged::new(Tag::Parts, vec![value]))
-                        .map_err(|err| InputError::Message(err.to_string()))
-                }),
-            )
+            script_result(parse_string_uint(&value).and_then(|value| {
+                i32::try_from(value)
+                    .map(|value| Tagged::new(Tag::Parts, vec![value]))
+                    .map_err(|err| InputError::Message(err.to_string()))
+            }))
         });
         engine.register_fn("bounds", |min: i64, max: i64| {
             Tagged::new(Tag::Bounds, vec![min as i32, max as i32])
@@ -220,8 +218,10 @@ impl RhaiInterface {
                     Ok(Tagged::new(
                         Tag::Bounds,
                         vec![
-                            i32::try_from(min).map_err(|err| InputError::Message(err.to_string()))?,
-                            i32::try_from(max).map_err(|err| InputError::Message(err.to_string()))?,
+                            i32::try_from(min)
+                                .map_err(|err| InputError::Message(err.to_string()))?,
+                            i32::try_from(max)
+                                .map_err(|err| InputError::Message(err.to_string()))?,
                         ],
                     ))
                 })
@@ -397,18 +397,24 @@ fn choice(
     };
     for tag in tags {
         match tag.tag {
-            Tag::Min => proto.min = u32::try_from(tag.value(0))
-                .map_err(|err| InputError::Message(err.to_string()))?,
-            Tag::Max => proto.max = u32::try_from(tag.value(0))
-                .map_err(|err| InputError::Message(err.to_string()))?,
+            Tag::Min => {
+                proto.min = u32::try_from(tag.value(0))
+                    .map_err(|err| InputError::Message(err.to_string()))?
+            }
+            Tag::Max => {
+                proto.max = u32::try_from(tag.value(0))
+                    .map_err(|err| InputError::Message(err.to_string()))?
+            }
             Tag::Bounds => {
                 proto.min = u32::try_from(tag.value(0))
                     .map_err(|err| InputError::Message(err.to_string()))?;
                 proto.max = u32::try_from(tag.value(1))
                     .map_err(|err| InputError::Message(err.to_string()))?;
             }
-            Tag::Parts => proto.parts = u32::try_from(tag.value(0))
-                .map_err(|err| InputError::Message(err.to_string()))?,
+            Tag::Parts => {
+                proto.parts = u32::try_from(tag.value(0))
+                    .map_err(|err| InputError::Message(err.to_string()))?
+            }
             Tag::Optional => proto.optional = tag.value(0) == 1,
         }
     }
