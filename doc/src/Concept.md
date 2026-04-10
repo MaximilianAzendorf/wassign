@@ -11,7 +11,7 @@ The algorithm is based on [shotgun hill climbing](https://en.wikipedia.org/wiki/
    
 2. [Solving the assignment](#solving-assignments): Find the best possible assignment for the given scheduling by constructing a corresponding linear optimization or (depending on the given extra constraints) mixed integer programming problem instance and solving it using an MIP solver.
    
-3. [Perfoming hill climbing](#hill-climbing): Find a "neighbor scheduling" of the given scheduling (by moving a single event to another slot, if possible) and solve the assignment again. Repeat this until the solution of the neighbor scheduling is worse than the one before (this is the *hill climbing* part).
+3. [Performing hill climbing](#hill-climbing): Find a "neighbor scheduling" of the given scheduling (by moving a single choice to another slot or by applying a randomized swap perturbation) and solve the assignment again. Repeat this until no explored neighbor improves the current solution (this is the *hill climbing* part).
    
 4. [Performing *shotgun* hill climbing](#shotgun-hill-climbing): Do the above again and again until the timeout is reached (this is the *shotgun* part). The best solution found by then is the output of the program.
 
@@ -57,7 +57,7 @@ This part of the manual is rather theory-heavy, so we have to introduce some com
 
 #### Notation regarding the solutions
 
- - A scheduling (generally called $\Sched$) is a mapping $\Sched:\Choices\to\Slots$ (which means that a choice $w$ was scheduled to slot $\Sched(w)$ in a given scheduling). More on that in the the [respective section](#solving-schedulings).
+ - A scheduling (generally called $\Sched$) is a mapping $\Sched:\Choices\to\Slots\cup\{\bot\}$ where $\Sched(w)=\bot$ means that the optional choice $w$ is not scheduled. More on that in the the [respective section](#solving-schedulings).
 
  - An assignment (generally called $\Ass$) is a mapping $\Ass:\Choosers\times\Slots\to\Choices$ (which means that a chooser $p$ was assigned to the choice $\Ass(p, s)$ in slot $s$). More on that in the [respective section](#solving-assignments).
 
@@ -71,7 +71,7 @@ This part of the manual is rather theory-heavy, so we have to introduce some com
 
 *It is very important to note* that throughout this section, preferences are "mirrored", meaning a lower preference given by a chooser to a choice means that the chooser "likes" the choice more. This is because
 
- - The forumla used to score solutions does not work the other way around, and therefore
+ - The formula used to score solutions does not work the other way around, and therefore
  - the program also handles preferences this way (they are converted after the input is read).
 
 So, for example, if a chooser has the preferences
@@ -85,17 +85,17 @@ assuming that 100 is the maximum preference given in the whole input.
 
 ### The problem
 
-When we want to compute a scheduling, we want to assign each of the choices one of the slots available. Given a scheduling $\Sched$, $\Sched(c)=s$ means that the choice $c$ was assigned to the slot $s$. We also define $\InvSched(s)=\left\{w\mid \Sched(w)=s\right\}$ as the inverse scheduling (the set of all choices that are scheduled to be in slot $s$).
+When we want to compute a scheduling, we want to assign each choice either one of the slots available or leave it unscheduled if it is optional. Given a scheduling $\Sched$, $\Sched(c)=s$ means that the choice $c$ was assigned to the slot $s$, while $\Sched(c)=\bot$ means that it is omitted entirely. We also define $\InvSched(s)=\left\{w\mid \Sched(w)=s\right\}$ as the inverse scheduling (the set of all choices that are scheduled to be in slot $s$).
 
 This scheduling $\Sched$ has to adhere to some rules because we want to also calculate an assignment based on the scheduling:
 
- 1. The sum of the minima and maxima of all choices in a slot have to allow for the number of choosers, so 
+ 1. For every slot, the sum of the minima and maxima of the choices scheduled into that slot have to allow for the number of choosers, so 
  $$\sum_{w\in\InvSched(s)}\min(w) \,\leq \,|\Choosers|\, \leq \sum_{w\in\InvSched(s)}\max(w)$$ 
  has to hold for each slot $s$, because else it would be impossible to assign every chooser to a choice in a slot where this constraint is violated.
    
- 1. Additional constraints that are present in the input have to be satisfied.
+ 2. Additional scheduling constraints from the input have to be satisfied.
    
- 2. Ideally, we also want to get schedulings that allow for a better assignment solution. We use [critical set analysis](#critical-set-analysis) as a heuristic for this.
+ 3. Ideally, we also want to get schedulings that allow for a better assignment solution. We use [critical set analysis](#critical-set-analysis) as a heuristic for this.
 
 Because of the first requirement (sum of minima and maxima), this problem is NP-hard ([proof](#proof-sched-np-hard)).
  
@@ -103,7 +103,7 @@ Because of the first requirement (sum of minima and maxima), this problem is NP-
 
 Fortunately, despite the problem being NP-hard, it generally isn't hard at all to find valid schedulings for real-world input data.
 
-Because of this, valid schedulings are generated using a randomized (meaning solutions are visited in a semi-randomized order) depth-first backtracking search. A single backtracking step consists of deciding the slot of a single choice.
+Because of this, valid schedulings are generated using a randomized (meaning solutions are visited in a semi-randomized order) depth-first backtracking search. A single backtracking step consists of deciding the slot of a single choice; for optional choices, the solver may also leave the choice unscheduled.
 
 There are multiple heuristics at play to improve the performance of the scheduling solver.
 
@@ -120,7 +120,7 @@ There are multiple heuristics at play to improve the performance of the scheduli
 
 When we want to compute an assignment $\Ass$ based on a given scheduling $\Sched$, we want to assign each chooser to exactly one choice per slot (so for every pair of a slot $s$ and a chooser $p$, there is exactly one choice $\Ass(s, p)$).
 
-We also want the resultion solution $\Sol=(\Sched, \Ass)$ to be the "best" one for the given scheduling, but we first have to define a metric for how "good" a solution is in order to be able to compare it to other solutions.
+We also want the resulting solution $\Sol=(\Sched, \Ass)$ to be the "best" one for the given scheduling, but we first have to define a metric for how "good" a solution is in order to be able to compare it to other solutions.
 
 ### Solution scoring
 
@@ -128,13 +128,20 @@ We define a scoring function $F:\Sols\to\mathbb{R}^2$ as follows
 
 $$F(\Sol)=\left(\prefm(\Sol), \sum_{s\in\Slots,p\in\Choosers} \pref_p\left(\Ass_\Sol(s,p)\right)^{\gamma}\right)$$
 
-where $\gamma\in\mathbb{R}^+$ is the so-called *preference exponent* that can be choosen freely and affects which solutions are favored over others. It can be thought of as the "fairness paramter". For more information on this parameter see [the respective section in the manual](#preference-exponent).
+where $\gamma\in\mathbb{R}^+$ is the so-called *preference exponent* that can be chosen freely and affects which solutions are favored over others. It can be thought of as the "fairness parameter". For more information on this parameter see [the respective section in the manual](#preference-exponent).
 
 We use this function to assign a score to each solution, where lower scores (defined by the usual order relation $<$ over $\mathbb{R}^2$) are assigned to "better" solutions.
 
 Note that we have a scoring function with two components, the first one being $\prefm(\Sol)$. This means that a solution $\Sol_1$ is always "better" than a solution $\Sol_2$ if $\prefm(\Sol_1)<\prefm(\Sol_2)$.
 
 We may also look at the two components of the scoring function separately. We then call them the *major* and *minor term* $F_\maj$ and $F_\min$ of $F$, so $F(\Sol)=\left(F_\maj(\Sol), F_\min(\Sol)\right)$.
+
+In the Rust implementation, these terms are evaluated in two different places:
+
+ - The major term is exactly the maximum mirrored preference that appears in the finished assignment.
+ - The minor term is the normalized sum of $\pref^\gamma$ over the finished assignment.
+
+During assignment solving, however, the flow model uses edge costs of $(\pref + 1)^\gamma$ for admissible chooser-to-choice edges. This shifts all feasible edge costs away from zero without changing the ordering of assignments that stay within the same major preference bound.
 
 ### Algorithm
 
@@ -182,7 +189,7 @@ We calculate the optimal assignment for a given scheduling by modelling the prob
     (7.6,1.9) -- (7.7,1.9) -- (7.7,2.9) -- (7.6,2.9);
 
     \path
-    (7.8,1) node[draw=none, anchor=west, align=left] (x1) {$\text{capacity}=1$ \\ $\text{cost}=\text{preference}^\gamma$}
+    (7.8,1) node[draw=none, anchor=west, align=left] (x1) {$\text{capacity}=1$ \\ $\text{cost}=(\text{preference}+1)^\gamma$}
     (7.8,2.4) node[draw=none, anchor=west, align=left] (x1) {$\text{capacity}=\text{\#choosers}-\min$ \\ $\text{cost}=0$};
 
     \draw[->] 
@@ -227,43 +234,22 @@ Or more formally: Given a scheduling $\Sched$, we can construct a minimum-cost f
    - $c(w,s)=\max(w)-\min(w)$
    - $a(w,s)=0$.
    - $c(q^p_s, w)=1$.
-   - $a(q^p_s, w)=\pref_p(w)^\gamma$.
+   - $a(q^p_s, w)=\left(\pref_p(w)+1\right)^\gamma$.
 
 The optimal flow $f$ of $N$ then is also directly the optimal assignment $\Ass$ with the following conversion:
 $$f(q^p_s, w)=1 \Leftrightarrow \Ass(p, s) = w \text{ .}$$
-Note that due to the flow integrality theorem, the resulting optimal flow is guaranteed to have integer flow values for every edge.
+Note that the implementation models this network as an integer linear program and solves it with an MIP backend even in the plain flow case, so integer assignments are enforced directly by the solver model.
 
-Furthermore, because how we defined our edge costs, the total cost of the flow is also the minor score $F_\min((\Sched, \Ass))$ of the resulting solution.
+Furthermore, because how we defined our edge costs, the total cost of the flow is a monotone proxy for the minor score $F_\min((\Sched, \Ass))$ of the resulting solution inside a fixed major preference limit.
 
-#### Handling inter-edge constraints
+#### Handling additional assignment constraints
 
-To model many kinds of additional assignment constraints one may want the solution to adhere to, we need to expand the standard model of a minimum-cost flow problem by what we from here on call the set of *edge implications* $I\subseteq E^2$ that have the following semantics:
-$$ (u,v)\in I \Leftrightarrow f(u)\leq f(v) $$
-So, if $(u,v)\in I$, a flow of $f(u)=1$ *implies* a flow of $f(v)=1$ on the other edge.
+The implementation handles additional assignment constraints in two ways:
 
-Because such a modified network $N=(V,E,I,z,c,a)$ is not a regular minimu-cost flow instance when $I\neq\emptyset$ and we have to make sure that the flow we are computing still is integer, we are going to translate the network into an [mixed integer programming](https://en.wikipedia.org/wiki/Integer_programming) instance (where each edge is a variable and constraints are based on flow conservation in flow networks) and solve it using a general MIP solver instead.
+ - Some constraints directly block chooser-to-choice edges before the model is solved. For example, `chooser("X").choices.contains_not(choice("Y"))` removes all corresponding assignment edges.
+ - Equality-style assignment constraints are encoded as *edge groups*. Each group is controlled by a binary switch variable that forces all grouped edges to act together.
 
-#### Implication graph
-
-Because we gave to make sure that the flow we are calculating still consists of integer values when $I$ is not empty, we have to declare some variables in our MIP problem as integer variables. The naive approach to this would be to simply make every variable an integer variable, but because integer variables are the main hurdle for finding solutions to an MIP problem fast, we generally want to minimize the number of integer variables we have to introduce.
-
-To find out which variables we need to make integer we can view the pair $(E, I)$ as a directed graph (called the *implication graph*). Note that the edges of the flow network (or equivalently the variables of the respective MIP instance) are the *vertices* of the implication graph and every implication is a directed edge. To avoid confusion, we will from now on call the vertices of the implication graph $variables$ and the edges $implications$.
-
-We then can calculate which variables we need to declare as integer variables so that the whole optimal flow stays integer in a two-step process.
-
-The first step becomes obvious if we observe that all variables in a [strongly connected components](https://en.wikipedia.org/wiki/Strongly_connected_component) (abbreviated as SCC) of the implication graph have to have the same value ([proof](#proof-scc-eq)). This means that for every SCC, we have to make one arbitrary variable in the SCC an integer variable in order for every variable in the SCC to become integer too. Let the set of these variables be $D_1$.
-
-The second step is based on the observation that for an implication $(u,v)$, it is sufficient that either $v$ or $w$ are integer variables (because then the implication becomes a normal integer constraint in each subproblem inside the branch-and-cut process of the MIP solver which does not violate the prerequisites of the integrality theorem). To use this fact, we just have to look at the remaining implication graph $(E', I')$ where we removed
-
- - all variables (and incident implications) that were part of a SCC (because we already have "dealt" with them in the first step) and in turn
- - all variables with degree zero, because they either 
-   - are not affected by any implications to begin with or 
-   - they were adjacent to one or more SCCs in the original implication graph (so such particular variable $v$ is only affected by some implications $v\leq w$ or $v\geq w$ where $w$ is already guaranteed to be integer).
-
-We then calculate a [dominating set](https://en.wikipedia.org/wiki/Dominating_set) $D_2$ of $(E', I')$. Because finding the minimal dominating set is an NP-hard problem we can resort to a simple [greedy algorithm](https://en.wikipedia.org/wiki/Set_cover_problem#Greedy_algorithm).
-
-This whole process gives us a set of variables $D=D_1\cup D_2$ that we have to declare as integer variables in order for the optimal flow to be also integer.
-
+This is used both for chooser-equality constraints and for dependent-choice groups induced by the constraint system. The result is an integer programming model that stays close to the flow formulation while still supporting the extra combinatorial restrictions.
 
 #### Binary search through preference levels
 
@@ -318,9 +304,9 @@ $$\CSets(\pref)=\left\{C\in\CSets\mid\pref_C\geq\pref\right\} \text{ .}$$
 
 ## Hill climbing
 
-So far, we only optimize the solution *for a given scheduling*. In order to find a locally optimal scheduling (and the corresponding optimal assignment), we perform [first-choice hill climbing](https://en.wikipedia.org/wiki/Hill_climbing) by first finding any valid scheduling $S$ (using the [scheduling solving algorithm](#solving-schedulings) as described above) and then modifying this scheduling by moving a single event to a different slot (we call this scheduling a neighbor of $S$) until we can not find any neighbors of $S$ that has a better solution than $S$ itself.
+So far, we only optimize the solution *for a given scheduling*. In order to find a locally optimal scheduling (and the corresponding optimal assignment), we first find any valid scheduling $S$ (using the [scheduling solving algorithm](#solving-schedulings) as described above) and then inspect a bounded set of neighbor schedulings. These neighbors are generated by moving a single choice to another slot and, in the current Rust implementation, also by random swap-style perturbations between multiple choices.
 
-Because the number of neighbors can be very large (and solving the assignment is quite expensive), we limit the number of neighbors that get considered as the next step.
+Because the number of neighbors can be very large (and solving the assignment is quite expensive), only a bounded number of feasible neighbors are explored in each iteration. If any explored neighbor improves the score, the best improving neighbor becomes the next current solution; otherwise hill climbing stops at the current local optimum.
 
 ### Shotgun hill climbing
 

@@ -1,5 +1,3 @@
-#![expect(clippy::float_cmp, reason = "score ordering intentionally treats equal and paired-NaN major components specially")]
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Score {
     pub(crate) major: f32,
@@ -38,7 +36,9 @@ impl Ord for Score {
             return std::cmp::Ordering::Less;
         }
 
-        if self.major == other.major || (self.major.is_nan() && other.major.is_nan()) {
+        if self.major.partial_cmp(&other.major) == Some(std::cmp::Ordering::Equal)
+            || (self.major.is_nan() && other.major.is_nan())
+        {
             self.minor.total_cmp(&other.minor)
         } else {
             self.major.total_cmp(&other.major)

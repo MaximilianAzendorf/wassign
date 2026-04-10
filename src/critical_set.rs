@@ -1,11 +1,11 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CriticalSet {
-    pub(crate) preference: i32,
+    pub(crate) preference: u32,
     pub(crate) data: Vec<usize>,
 }
 
 impl CriticalSet {
-    pub(crate) fn new(preference: i32, data: Vec<usize>) -> Self {
+    pub(crate) fn new(preference: u32, data: Vec<usize>) -> Self {
         Self { preference, data }
     }
 

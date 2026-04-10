@@ -29,6 +29,10 @@ missing_docs = "deny"
 pedantic = { level = "warn", priority = -1 }
 correctness = { level = "deny", priority = -1 }
 suspicious = { level = "warn", priority = -1 }
+cast_possible_truncation = { level = "allow", priority = 1 }
+cast_precision_loss = { level = "allow", priority = 1 }
+too_many_lines = { level = "allow", priority = 1 }
+struct_excessive_bools = { level = "allow", priority = 1 }
 redundant_closure_for_method_calls = "warn"
 semicolon_if_nothing_returned = "warn"
 manual_let_else = "warn"

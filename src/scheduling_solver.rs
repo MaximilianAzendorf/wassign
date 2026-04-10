@@ -1,18 +1,15 @@
-#![expect(
-    clippy::bool_to_int_with_if,
-    clippy::cast_precision_loss,
-    clippy::comparison_chain,
-    reason = "the scheduler uses branch-heavy heuristic search and display-oriented depth reporting"
-)]
-
 use std::cmp::{Reverse, max, min};
 use std::collections::BTreeMap;
-use std::time::{Duration, SystemTime};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
 
-use crate::{Constraint, ConstraintType, CriticalSet, CriticalSetAnalysis, InputData, Options, Rng, Scheduling, Status};
-use crate::util::{riffle_shuffle, time_never, time_now};
 use crate::shotgun_solver::ShotgunSolverProgress;
+use crate::status;
+use crate::util::{riffle_shuffle, time_never, time_now};
+use crate::{
+    Constraint, ConstraintType, CriticalSet, CriticalSetAnalysis, InputData, Options, Rng,
+    Scheduling,
+};
 
 /// Enumerates feasible schedulings for a given input.
 #[derive(Debug)]
@@ -33,7 +30,11 @@ impl SchedulingSolver {
 
     /// Creates a new scheduling solver.
     #[must_use]
-    pub fn new(input_data: Arc<InputData>, cs_analysis: Arc<CriticalSetAnalysis>, options: Arc<Options>) -> Self {
+    pub fn new(
+        input_data: Arc<InputData>,
+        cs_analysis: Arc<CriticalSetAnalysis>,
+        options: Arc<Options>,
+    ) -> Self {
         Self::new_with_rng(input_data, cs_analysis, options, Rng::from_global_seed())
     }
 
@@ -71,15 +72,17 @@ impl SchedulingSolver {
         self.current_depth = 0;
         self.max_depth_reached = 0;
         let mut preference_limit = if self.rng.next_in_range(0, Self::PREF_RELAXATION) == 0 {
-            self.input_data.max_preference()
+            self.input_data.max_preference
         } else {
             self.cs_analysis.preference_bound()
         };
-        Status::trace(&format!("Starting scheduling search with preference limit {preference_limit}."));
+        status::trace(&format!(
+            "Starting scheduling search with preference limit {preference_limit}."
+        ));
 
         let slots = loop {
             let cs_sets = self.cs_analysis.for_preference(preference_limit);
-            let time_limit = if preference_limit == self.input_data.max_preference() {
+            let time_limit = if preference_limit == self.input_data.max_preference {
                 time_never()
             } else {
                 time_now()
@@ -92,24 +95,28 @@ impl SchedulingSolver {
 
             let slots = self.solve_scheduling(cs_sets.as_ref(), time_limit);
             if !slots.is_empty() {
-                Status::trace(&format!("Scheduling search succeeded with preference limit {preference_limit}."));
+                status::trace(&format!(
+                    "Scheduling search succeeded with preference limit {preference_limit}."
+                ));
                 break slots;
             }
 
-            if preference_limit == self.input_data.max_preference() {
-                Status::debug("Scheduling search exhausted all preference limits without a solution.");
+            if preference_limit == self.input_data.max_preference {
+                status::debug(
+                    "Scheduling search exhausted all preference limits without a solution.",
+                );
                 self.has_solution = false;
                 self.current_solution = None;
                 return false;
             }
 
-            Status::trace(&format!(
+            status::trace(&format!(
                 "No scheduling found at preference limit {preference_limit}; relaxing limit."
             ));
             preference_limit = self.input_data.preference_after(preference_limit);
         };
 
-        let mut scheduling = vec![Scheduling::NOT_SCHEDULED; self.input_data.choice_count()];
+        let mut scheduling = vec![Scheduling::NOT_SCHEDULED; self.input_data.choices.len()];
         for (slot_index, choices) in slots.iter().enumerate() {
             for &choice in choices {
                 scheduling[choice] = i32::try_from(slot_index).expect("slot index must fit in i32");
@@ -117,10 +124,13 @@ impl SchedulingSolver {
         }
 
         self.has_solution = true;
-        self.current_depth = self.input_data.choice_count();
+        self.current_depth = self.input_data.choices.len();
         self.publish_depth_progress();
-        self.current_solution = Some(Arc::new(Scheduling::with_data(self.input_data.clone(), scheduling)));
-        Status::trace("Produced a new feasible scheduling.");
+        self.current_solution = Some(Arc::new(Scheduling::with_data(
+            self.input_data.clone(),
+            scheduling,
+        )));
+        status::trace("Produced a new feasible scheduling.");
         true
     }
 
@@ -142,7 +152,7 @@ impl SchedulingSolver {
         decisions: &BTreeMap<usize, i32>,
         critical_sets: &[CriticalSet],
     ) -> bool {
-        let slot_count = self.input_data.slot_count();
+        let slot_count = self.input_data.slots.len();
         for set in critical_sets {
             let mut covered_slots = std::collections::BTreeSet::new();
             let mut missing = 0_usize;
@@ -185,7 +195,8 @@ impl SchedulingSolver {
                 }
                 ConstraintType::ChoicesAreInSameSlot => {
                     let other = if constraint.left == choice {
-                        usize::try_from(constraint.right).expect("choice index must be non-negative")
+                        usize::try_from(constraint.right)
+                            .expect("choice index must be non-negative")
                     } else {
                         constraint.left
                     };
@@ -197,7 +208,8 @@ impl SchedulingSolver {
                 }
                 ConstraintType::ChoicesAreNotInSameSlot => {
                     let other = if constraint.left == choice {
-                        usize::try_from(constraint.right).expect("choice index must be non-negative")
+                        usize::try_from(constraint.right)
+                            .expect("choice index must be non-negative")
                     } else {
                         constraint.left
                     };
@@ -210,7 +222,8 @@ impl SchedulingSolver {
                 }
                 ConstraintType::ChoicesHaveOffset => {
                     let other = if constraint.left == choice {
-                        usize::try_from(constraint.right).expect("choice index must be non-negative")
+                        usize::try_from(constraint.right)
+                            .expect("choice index must be non-negative")
                     } else {
                         constraint.left
                     };
@@ -220,7 +233,9 @@ impl SchedulingSolver {
                         constraint.extra
                     };
                     if let Some(&other_slot) = decisions.get(&other) {
-                        if (other_slot == Scheduling::NOT_SCHEDULED) != (slot == Scheduling::NOT_SCHEDULED) {
+                        if (other_slot == Scheduling::NOT_SCHEDULED)
+                            != (slot == Scheduling::NOT_SCHEDULED)
+                        {
                             return false;
                         }
                         if slot == Scheduling::NOT_SCHEDULED {
@@ -232,8 +247,11 @@ impl SchedulingSolver {
 
                         let min_slot = max(0, -offset);
                         let max_slot = min(
-                            i32::try_from(self.input_data.slot_count()).expect("slot count must fit in i32"),
-                            i32::try_from(self.input_data.slot_count()).expect("slot count must fit in i32") - offset,
+                            i32::try_from(self.input_data.slots.len())
+                                .expect("slot count must fit in i32"),
+                            i32::try_from(self.input_data.slots.len())
+                                .expect("slot count must fit in i32")
+                                - offset,
                         );
                         if slot < min_slot || slot >= max_slot {
                             return false;
@@ -249,7 +267,7 @@ impl SchedulingSolver {
                         continue;
                     }
 
-                    let mut limit = constraint.right - if constraint.extra == -3 { 1 } else { 0 };
+                    let mut limit = constraint.right - i32::from(constraint.extra == -3);
                     for &decision_slot in decisions.values() {
                         if decision_slot == slot {
                             limit -= 1;
@@ -263,7 +281,7 @@ impl SchedulingSolver {
             }
         }
 
-        if decisions.len() + 1 == self.input_data.choice_count() {
+        if decisions.len() + 1 == self.input_data.choices.len() {
             self.check_slot_size_constraints(choice, slot, decisions)
         } else {
             true
@@ -288,13 +306,14 @@ impl SchedulingSolver {
             }
 
             let sizes = slot_sizes.get_or_insert_with(|| {
-                let mut sizes = vec![0_i32; self.input_data.slot_count()];
+                let mut sizes = vec![0_i32; self.input_data.slots.len()];
                 sizes[usize::try_from(slot).expect("slot id must be non-negative")] += 1;
                 for (&decision_choice, &decision_slot) in decisions {
                     if decision_choice == choice || decision_slot == Scheduling::NOT_SCHEDULED {
                         continue;
                     }
-                    sizes[usize::try_from(decision_slot).expect("slot id must be non-negative")] += 1;
+                    sizes[usize::try_from(decision_slot).expect("slot id must be non-negative")] +=
+                        1;
                 }
                 sizes
             });
@@ -317,8 +336,12 @@ impl SchedulingSolver {
         true
     }
 
-    fn has_impossibilities(&self, decisions: &BTreeMap<usize, i32>, available_max_push: i32) -> bool {
-        for slot in 0..self.input_data.slot_count() {
+    fn has_impossibilities(
+        &self,
+        decisions: &BTreeMap<usize, i32>,
+        available_max_push: i32,
+    ) -> bool {
+        for slot in 0..self.input_data.slots.len() {
             let slot_i32 = i32::try_from(slot).expect("slot index must fit in i32");
             let mut sum = available_max_push;
             for (&choice, &decision_slot) in decisions {
@@ -326,7 +349,10 @@ impl SchedulingSolver {
                     sum += self.input_data.choices[choice].max;
                 }
             }
-            if sum < i32::try_from(self.input_data.chooser_count()).expect("chooser count must fit in i32") {
+            if sum
+                < i32::try_from(self.input_data.choosers.len())
+                    .expect("chooser count must fit in i32")
+            {
                 return true;
             }
         }
@@ -340,7 +366,7 @@ impl SchedulingSolver {
         choice: usize,
     ) -> Vec<i32> {
         let mut critical_slots = Vec::new();
-        for slot in 0..self.input_data.slot_count() {
+        for slot in 0..self.input_data.slots.len() {
             let slot_i32 = i32::try_from(slot).expect("slot index must fit in i32");
             let mut sum = available_max_push - self.input_data.choices[choice].max;
             for (&other_choice, &decision_slot) in decisions {
@@ -348,7 +374,10 @@ impl SchedulingSolver {
                     sum += self.input_data.choices[other_choice].max;
                 }
             }
-            if sum < i32::try_from(self.input_data.chooser_count()).expect("chooser count must fit in i32") {
+            if sum
+                < i32::try_from(self.input_data.choosers.len())
+                    .expect("chooser count must fit in i32")
+            {
                 critical_slots.push(slot_i32);
             }
         }
@@ -381,7 +410,7 @@ impl SchedulingSolver {
         for (slot, &is_low_priority) in low_priority_slot
             .iter()
             .enumerate()
-            .take(self.input_data.slot_count())
+            .take(self.input_data.slots.len())
         {
             let slot_i32 = i32::try_from(slot).expect("slot index must fit in i32");
             let mut sum = self.input_data.choices[choice].min;
@@ -391,7 +420,9 @@ impl SchedulingSolver {
                 }
             }
 
-            if sum > i32::try_from(self.input_data.chooser_count()).expect("chooser count must fit in i32")
+            if sum
+                > i32::try_from(self.input_data.choosers.len())
+                    .expect("chooser count must fit in i32")
                 || !self.satisfies_scheduling_constraints(choice, slot_i32, decisions)
             {
                 continue;
@@ -409,18 +440,18 @@ impl SchedulingSolver {
     }
 
     fn get_choice_scramble(&mut self) -> Vec<usize> {
-        let mut scramble = (0..self.input_data.choice_count()).collect::<Vec<_>>();
+        let mut scramble = (0..self.input_data.choices.len()).collect::<Vec<_>>();
         self.rng.shuffle(&mut scramble);
         scramble.sort_by_key(|&choice| Reverse(self.scheduling_constraints(choice).len()));
         scramble
     }
 
     fn get_low_priority_slots(&self) -> Vec<bool> {
-        vec![false; self.input_data.slot_count()]
+        vec![false; self.input_data.slots.len()]
     }
 
     fn convert_decisions(&self, decisions: &BTreeMap<usize, i32>) -> Vec<Vec<usize>> {
-        let mut result = vec![Vec::new(); self.input_data.slot_count()];
+        let mut result = vec![Vec::new(); self.input_data.slots.len()];
         for (&choice, &slot) in decisions {
             if slot >= 0 {
                 result[usize::try_from(slot).expect("slot id must be non-negative")].push(choice);
@@ -429,7 +460,11 @@ impl SchedulingSolver {
         result
     }
 
-    fn solve_scheduling(&mut self, critical_sets: &[CriticalSet], time_limit: std::time::SystemTime) -> Vec<Vec<usize>> {
+    fn solve_scheduling(
+        &mut self,
+        critical_sets: &[CriticalSet],
+        time_limit: std::time::SystemTime,
+    ) -> Vec<Vec<usize>> {
         let choice_scramble = self.get_choice_scramble();
         let low_priority_slots = self.get_low_priority_slots();
         let mut decisions = BTreeMap::<usize, i32>::new();
@@ -441,7 +476,7 @@ impl SchedulingSolver {
             self.max_depth_reached = self.max_depth_reached.max(depth);
             self.publish_depth_progress();
             if time_now() > time_limit {
-                Status::debug("Scheduling search hit its current time limit.");
+                status::debug("Scheduling search hit its current time limit.");
                 return Vec::new();
             }
 
@@ -453,17 +488,24 @@ impl SchedulingSolver {
                 {
                     Vec::new()
                 } else {
-                    let critical_slots = self.calculate_critical_slots(&decisions, available_max_push, choice);
-                    if critical_slots.len() == 1 {
-                        if self.satisfies_scheduling_constraints(choice, critical_slots[0], &decisions) {
-                            critical_slots
-                        } else {
-                            Vec::new()
+                    let critical_slots =
+                        self.calculate_critical_slots(&decisions, available_max_push, choice);
+                    match critical_slots.len().cmp(&1) {
+                        std::cmp::Ordering::Equal => {
+                            if self.satisfies_scheduling_constraints(
+                                choice,
+                                critical_slots[0],
+                                &decisions,
+                            ) {
+                                critical_slots
+                            } else {
+                                Vec::new()
+                            }
                         }
-                    } else if critical_slots.len() > 1 {
-                        Vec::new()
-                    } else {
-                        self.calculate_feasible_slots(&decisions, &low_priority_slots, choice)
+                        std::cmp::Ordering::Greater => Vec::new(),
+                        std::cmp::Ordering::Less => {
+                            self.calculate_feasible_slots(&decisions, &low_priority_slots, choice)
+                        }
                     }
                 };
                 backtracking.push(candidates);
@@ -498,7 +540,10 @@ impl SchedulingSolver {
             return;
         };
 
-        progress_sink.lock().expect("progress mutex poisoned").sched_depth = self.current_depth as f32;
+        progress_sink
+            .lock()
+            .expect("progress mutex poisoned")
+            .sched_depth = u16::try_from(self.current_depth).map_or(f32::INFINITY, f32::from);
     }
 
     fn scheduling_constraints(&self, choice: usize) -> &[Constraint] {

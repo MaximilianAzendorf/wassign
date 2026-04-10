@@ -18,9 +18,9 @@ impl Assignment {
     /// inner dimension does not match the slot count.
     #[must_use]
     pub fn new(input_data: std::sync::Arc<InputData>, data: Vec<Vec<usize>>) -> Self {
-        assert_eq!(data.len(), input_data.chooser_count());
+        assert_eq!(data.len(), input_data.choosers.len());
         for slots in &data {
-            assert_eq!(slots.len(), input_data.slot_count());
+            assert_eq!(slots.len(), input_data.slots.len());
         }
 
         Self { input_data, data }
@@ -32,8 +32,8 @@ impl Assignment {
 
     pub(crate) fn choosers_ordered(&self, choice: usize) -> Vec<usize> {
         let mut choosers = Vec::new();
-        for chooser in 0..self.input_data.chooser_count() {
-            for slot in 0..self.input_data.slot_count() {
+        for chooser in 0..self.input_data.choosers.len() {
+            for slot in 0..self.input_data.slots.len() {
                 if self.choice_of(chooser, slot) == choice {
                     choosers.push(chooser);
                 }
@@ -44,7 +44,7 @@ impl Assignment {
     }
 
     pub(crate) fn choices_ordered(&self, chooser: usize) -> Vec<usize> {
-        let mut choices = (0..self.input_data.slot_count())
+        let mut choices = (0..self.input_data.slots.len())
             .map(|slot| self.choice_of(chooser, slot))
             .collect::<Vec<_>>();
         choices.sort_unstable();
@@ -52,6 +52,6 @@ impl Assignment {
     }
 
     pub(crate) fn is_in_choice(&self, chooser: usize, choice: usize) -> bool {
-        (0..self.input_data.slot_count()).any(|slot| self.choice_of(chooser, slot) == choice)
+        (0..self.input_data.slots.len()).any(|slot| self.choice_of(chooser, slot) == choice)
     }
 }

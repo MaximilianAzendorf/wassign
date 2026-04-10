@@ -29,15 +29,18 @@ set_name(chooser("q5"), "p5");
 
     let data = parse_data(input);
 
-    assert_eq!(data.slot_count(), 3);
-    assert_eq!(data.choice_count(), 5);
-    assert_eq!(data.chooser_count(), 5);
+    assert_eq!(data.slots.len(), 3);
+    assert_eq!(data.choices.len(), 5);
+    assert_eq!(data.choosers.len(), 5);
     assert_eq!(
-        data.slots().iter().map(SlotData::name).collect::<BTreeSet<_>>(),
+        data.slots
+            .iter()
+            .map(SlotData::name)
+            .collect::<BTreeSet<_>>(),
         BTreeSet::from([".", "a-b'c d", "x"])
     );
     assert_eq!(
-        data.choices()
+        data.choices
             .iter()
             .map(ChoiceData::name)
             .filter(|name| !name.starts_with('~'))
@@ -45,11 +48,14 @@ set_name(chooser("q5"), "p5");
         BTreeSet::from(["w1", "w2", "w3"])
     );
     assert_eq!(
-        data.choosers().iter().map(ChooserData::name).collect::<BTreeSet<_>>(),
+        data.choosers
+            .iter()
+            .map(ChooserData::name)
+            .collect::<BTreeSet<_>>(),
         BTreeSet::from(["p1", "p2", "p3", "p4", "p5"])
     );
-    assert_eq!(data.scheduling_constraints().len(), 6);
-    assert_eq!(data.assignment_constraints().len(), 3);
+    assert_eq!(data.scheduling_constraints.len(), 6);
+    assert_eq!(data.assignment_constraints.len(), 3);
 }
 
 #[test]
@@ -65,7 +71,7 @@ fn should_create_scheduling_constraints_for_multi_part_choices() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.scheduling_constraints().len(), 6);
+    assert_eq!(data.scheduling_constraints.len(), 6);
 }
 
 #[test]
@@ -76,7 +82,7 @@ fn should_auto_generate_set_if_none_is_given() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.slot_count(), 1);
+    assert_eq!(data.slots.len(), 1);
 }
 
 #[test]
@@ -171,9 +177,9 @@ fn should_parse_slots() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.slot_count(), 2);
-    assert_eq!(data.slots()[0].name(), "a");
-    assert_eq!(data.slots()[1].name(), "b");
+    assert_eq!(data.slots.len(), 2);
+    assert_eq!(data.slots[0].name(), "a");
+    assert_eq!(data.slots[1].name(), "b");
 }
 
 #[test]
@@ -187,29 +193,29 @@ fn should_parse_choices() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.choice_count(), 4);
-    assert_eq!(data.choices()[0].name(), "a");
-    assert_eq!(data.choices()[0].min(), 1);
-    assert_eq!(data.choices()[0].max(), 1);
-    assert_eq!(data.choices()[0].continuation(), None);
+    assert_eq!(data.choices.len(), 4);
+    assert_eq!(data.choices[0].name(), "a");
+    assert_eq!(data.choices[0].min(), 1);
+    assert_eq!(data.choices[0].max(), 1);
+    assert_eq!(data.choices[0].continuation(), None);
 
-    assert_eq!(data.choices()[1].name(), "b");
-    assert_eq!(data.choices()[1].min(), 2);
-    assert_eq!(data.choices()[1].max(), 3);
-    assert_eq!(data.choices()[1].continuation(), None);
-    assert!(data.choices()[1].is_optional());
+    assert_eq!(data.choices[1].name(), "b");
+    assert_eq!(data.choices[1].min(), 2);
+    assert_eq!(data.choices[1].max(), 3);
+    assert_eq!(data.choices[1].continuation(), None);
+    assert!(data.choices[1].is_optional());
 
-    assert_eq!(data.choices()[2].name(), "c");
-    assert_eq!(data.choices()[2].min(), 5);
-    assert_eq!(data.choices()[2].max(), 7);
-    assert_eq!(data.choices()[2].continuation(), Some(3));
+    assert_eq!(data.choices[2].name(), "c");
+    assert_eq!(data.choices[2].min(), 5);
+    assert_eq!(data.choices[2].max(), 7);
+    assert_eq!(data.choices[2].continuation(), Some(3));
 
-    assert!(data.choices()[3].name().starts_with("~[2] c"));
-    assert_eq!(data.choices()[3].min(), 5);
-    assert_eq!(data.choices()[3].max(), 7);
-    assert_eq!(data.choices()[3].continuation(), None);
+    assert!(data.choices[3].name().starts_with("~[2] c"));
+    assert_eq!(data.choices[3].min(), 5);
+    assert_eq!(data.choices[3].max(), 7);
+    assert_eq!(data.choices[3].continuation(), None);
 
-    assert_eq!(data.choosers()[0].preferences(), &[6, 4, 0, 0]);
+    assert_eq!(data.choosers[0].preferences(), &[6, 4, 0, 0]);
 }
 
 #[test]
@@ -223,11 +229,11 @@ fn should_parse_choosers() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.chooser_count(), 2);
-    assert_eq!(data.choosers()[0].name(), "a");
-    assert_eq!(data.choosers()[0].preferences(), &[5, 4]);
-    assert_eq!(data.choosers()[1].name(), "b");
-    assert_eq!(data.choosers()[1].preferences(), &[2, 0]);
+    assert_eq!(data.choosers.len(), 2);
+    assert_eq!(data.choosers[0].name(), "a");
+    assert_eq!(data.choosers[0].preferences(), &[5, 4]);
+    assert_eq!(data.choosers[1].name(), "b");
+    assert_eq!(data.choosers[1].preferences(), &[2, 0]);
 }
 
 #[test]
@@ -264,9 +270,9 @@ let p2 = +chooser("d", [0, 0]);
 
     let data = parse_data(input);
     let constraints = data
-        .scheduling_constraints()
+        .scheduling_constraints
         .iter()
-        .chain(data.assignment_constraints().iter())
+        .chain(data.assignment_constraints.iter())
         .map(|constraint| format!("{constraint:?}"))
         .collect::<BTreeSet<_>>();
     let required = BTreeSet::from([
@@ -301,8 +307,8 @@ fn should_accept_string_preferences_and_range() {
 "#;
 
     let data = parse_data(input);
-    assert_eq!(data.choice_count(), 2);
-    assert_eq!(data.chooser_count(), 2);
+    assert_eq!(data.choices.len(), 2);
+    assert_eq!(data.choosers.len(), 2);
 }
 
 #[test]
@@ -326,8 +332,8 @@ for row in file.rows.slice(1, end) {{
     );
 
     let data = parse_data(&input);
-    assert_eq!(data.choice_count(), 2);
-    assert_eq!(data.chooser_count(), 1);
+    assert_eq!(data.choices.len(), 2);
+    assert_eq!(data.choosers.len(), 1);
 
     let _ = std::fs::remove_file(csv_path);
 }

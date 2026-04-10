@@ -1,22 +1,16 @@
-#![expect(
-    clippy::cast_precision_loss,
-    clippy::cast_sign_loss,
-    reason = "threaded progress reporting converts bounded counters and durations for display"
-)]
-
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::any::Any;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
 
-use crate::{
-    CriticalSetAnalysis, InputData, InputError, MipFlowStaticData, Options, Result, Rng, Score, Scoring,
-    ShotgunSolver, Solution,
-};
 use crate::shotgun_solver::ShotgunSolverProgress;
-use crate::Status;
+use crate::status;
 use crate::util::{time_never, time_now};
+use crate::{
+    CriticalSetAnalysis, InputData, InputError, MipFlowStaticData, Options, Result, Rng, Score,
+    Scoring, ShotgunSolver, Solution,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ShotgunSolverThreadedProgress {
@@ -72,7 +66,9 @@ impl ShotgunSolverThreaded {
     }
 
     pub(crate) fn is_running(&self) -> bool {
-        self.handles.iter().any(|handle| handle.as_ref().is_some_and(|join| !join.is_finished()))
+        self.handles
+            .iter()
+            .any(|handle| handle.as_ref().is_some_and(|join| !join.is_finished()))
     }
 
     pub(crate) fn timeout_seconds(&self) -> i32 {
@@ -95,14 +91,15 @@ impl ShotgunSolverThreaded {
         }
 
         self.cancel()?;
-        Status::debug("Preparing threaded solver state.");
+        status::debug("Preparing threaded solver state.");
 
-        let num_threads = if self.input_data.slot_count() == 1 {
+        let num_threads = if self.input_data.slots.len() == 1 {
             1
         } else {
-            usize::try_from(self.options.thread_count.max(1)).expect("thread count must be positive")
+            usize::try_from(self.options.thread_count.max(1))
+                .expect("thread count must be positive")
         };
-        Status::debug(&format!(
+        status::debug(&format!(
             "Starting solving phase with {num_threads} worker thread(s) and timeout {}s.",
             self.options.timeout_seconds
         ));
@@ -128,31 +125,31 @@ impl ShotgunSolverThreaded {
             self.thread_start_times[tid] = time_now();
 
             let handle = std::thread::spawn(move || {
-                Status::trace(&format!("Worker {tid} started."));
-                let mut solver =
-                    ShotgunSolver::new_with_seed(
-                        input_data.clone(),
-                        cs_analysis,
-                        static_data,
-                        scoring,
-                        options.clone(),
-                        Some(progress.clone()),
-                        worker_seed,
-                    );
+                status::trace(&format!("Worker {tid} started."));
+                let mut solver = ShotgunSolver::new_with_seed(
+                    input_data.clone(),
+                    &cs_analysis,
+                    &static_data,
+                    scoring,
+                    options.clone(),
+                    Some(progress.clone()),
+                    worker_seed,
+                );
                 let start_time = time_now();
-                let timeout = Duration::from_secs(options.timeout_seconds as u64);
+                let timeout =
+                    Duration::from_secs(u64::try_from(options.timeout_seconds).unwrap_or_default());
                 let deadline = start_time + timeout;
 
                 while !cancellation.load(Ordering::Relaxed) && time_now() <= deadline {
                     let iterations_done = solver.iterate(1, Some(deadline));
                     *progress.lock().expect("progress mutex poisoned") = solver.progress().clone();
-                    if input_data.slot_count() == 1 || iterations_done < 1 {
+                    if input_data.slots.len() == 1 || iterations_done < 1 {
                         break;
                     }
                 }
 
                 *progress.lock().expect("progress mutex poisoned") = solver.progress().clone();
-                Status::trace(&format!("Worker {tid} finished."));
+                status::trace(&format!("Worker {tid} finished."));
 
                 solver
             });
@@ -189,11 +186,12 @@ impl ShotgunSolverThreaded {
     pub(crate) fn progress(&self) -> ShotgunSolverThreadedProgress {
         let mut progress = ShotgunSolverThreadedProgress {
             sched_depth: 0.0,
-            max_sched_depth: self.input_data.choice_count() as f32,
+            max_sched_depth: u16::try_from(self.input_data.choices.len())
+                .map_or(f32::INFINITY, f32::from),
             iterations: 0,
             assignments: 0,
             lp: 0,
-            best_solution: Solution::invalid(),
+            best_solution: Solution::Invalid,
             best_score: Score {
                 major: f32::INFINITY,
                 minor: f32::INFINITY,
@@ -204,18 +202,29 @@ impl ShotgunSolverThreaded {
         let thread_count = self.handles.len().max(1);
         for (index, maybe_handle) in self.handles.iter().enumerate() {
             let elapsed = time_now()
-                .duration_since(self.thread_start_times.get(index).copied().unwrap_or_else(time_never))
+                .duration_since(
+                    self.thread_start_times
+                        .get(index)
+                        .copied()
+                        .unwrap_or_else(time_never),
+                )
                 .unwrap_or_default();
-            let timeout = Duration::from_secs(self.options.timeout_seconds as u64);
+            let timeout = Duration::from_secs(
+                u64::try_from(self.options.timeout_seconds).unwrap_or_default(),
+            );
             let remaining = timeout.saturating_sub(elapsed);
-            progress.milliseconds_remaining =
-                progress.milliseconds_remaining.max(i64::try_from(remaining.as_millis()).unwrap_or(i64::MAX));
+            progress.milliseconds_remaining = progress
+                .milliseconds_remaining
+                .max(i64::try_from(remaining.as_millis()).unwrap_or(i64::MAX));
 
             let _ = maybe_handle;
             let Some(thread_progress) = self.thread_progress.get(index) else {
                 continue;
             };
-            let thread_progress = thread_progress.lock().expect("progress mutex poisoned").clone();
+            let thread_progress = thread_progress
+                .lock()
+                .expect("progress mutex poisoned")
+                .clone();
             if thread_progress.best_score < progress.best_score {
                 progress.best_score = thread_progress.best_score;
                 progress.best_solution = thread_progress.best_solution.clone();
@@ -226,7 +235,7 @@ impl ShotgunSolverThreaded {
             progress.lp += thread_progress.lp;
         }
 
-        progress.sched_depth /= thread_count as f32;
+        progress.sched_depth /= u16::try_from(thread_count).map_or(f32::INFINITY, f32::from);
         progress
     }
 
@@ -240,8 +249,8 @@ impl ShotgunSolverThreaded {
             for index in start_len..self.handles.len() {
                 self.thread_solvers.push(ShotgunSolver::new_with_seed(
                     self.input_data.clone(),
-                    self.cs_analysis.clone(),
-                    self.static_data.clone(),
+                    &self.cs_analysis,
+                    &self.static_data,
                     self.scoring.clone(),
                     self.options.clone(),
                     None,
@@ -259,7 +268,9 @@ impl ShotgunSolverThreaded {
             }
 
             let Some(handle) = self.handles[index].take() else {
-                return Err(InputError::Message("solver worker handle was unexpectedly missing".to_owned()));
+                return Err(InputError::Message(
+                    "solver worker handle was unexpectedly missing".to_owned(),
+                ));
             };
             match handle.join() {
                 Ok(solver) => {
@@ -270,7 +281,7 @@ impl ShotgunSolverThreaded {
                     }
                 }
                 Err(payload) => {
-                    return Err(InputError::WorkerPanic(panic_message(payload)));
+                    return Err(InputError::WorkerPanic(panic_message(&payload)));
                 }
             }
         }
@@ -285,7 +296,7 @@ fn empty_progress() -> ShotgunSolverProgress {
         iterations: 0,
         assignments: 0,
         lp: 0,
-        best_solution: Solution::invalid(),
+        best_solution: Solution::Invalid,
         best_score: Score {
             major: f32::INFINITY,
             minor: f32::INFINITY,
@@ -293,8 +304,7 @@ fn empty_progress() -> ShotgunSolverProgress {
     }
 }
 
-#[expect(clippy::needless_pass_by_value, reason = "panic payloads are owned by JoinHandle::join")]
-fn panic_message(payload: Box<dyn Any + Send + 'static>) -> String {
+fn panic_message(payload: &Box<dyn Any + Send + 'static>) -> String {
     if let Some(message) = payload.downcast_ref::<String>() {
         return message.clone();
     }

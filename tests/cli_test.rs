@@ -6,11 +6,15 @@ use std::io::Write;
 use std::process::{Command, Output, Stdio};
 
 use common::{temp_file_path, write_temp_file};
-use wassign::WASSIGN_VERSION;
+
+const WASSIGN_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn run_cli(args: &[&str], stdin: Option<&str>) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_wassign"));
-    command.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
+    command
+        .args(args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
     if stdin.is_some() {
         command.stdin(Stdio::piped());
     }
@@ -32,7 +36,7 @@ fn help_lists_supported_flags_without_verbosity() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains(&format!("wassign [Version {WASSIGN_VERSION}]")));
+    assert!(stdout.contains("Usage: wassign"));
     assert!(stdout.contains("--max-neighbors"));
     assert!(stdout.contains("--no-cs-simp"));
     assert!(!stdout.contains("--verbosity"));
@@ -44,7 +48,10 @@ fn version_reports_the_binary_version() {
     let output = run_cli(&["--version"], None);
 
     assert!(output.status.success());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), WASSIGN_VERSION);
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout).trim(),
+        format!("wassign {WASSIGN_VERSION}")
+    );
 }
 
 #[test]
@@ -54,7 +61,7 @@ fn legacy_verbosity_flag_is_rejected() {
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("-v"));
-    assert!(stderr.contains("Invalid arguments."));
+    assert!(stderr.contains("unexpected argument"));
 }
 
 #[test]
@@ -77,16 +84,29 @@ let c2 = +choice("c2", bounds(2, 2));
     let output_prefix = output_prefix.to_string_lossy().into_owned();
 
     let output = run_cli(
-        &["--input", &input_path.to_string_lossy(), "--output", &output_prefix, "--timeout", "1s"],
+        &[
+            "--input",
+            &input_path.to_string_lossy(),
+            "--output",
+            &output_prefix,
+            "--timeout",
+            "1s",
+        ],
         None,
     );
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     let scheduling_path = format!("{output_prefix}.scheduling.csv");
     let assignment_path = format!("{output_prefix}.assignment.csv");
-    let scheduling = std::fs::read_to_string(&scheduling_path).expect("scheduling file should exist");
-    let assignment = std::fs::read_to_string(&assignment_path).expect("assignment file should exist");
+    let scheduling =
+        std::fs::read_to_string(&scheduling_path).expect("scheduling file should exist");
+    let assignment =
+        std::fs::read_to_string(&assignment_path).expect("assignment file should exist");
 
     assert_eq!(
         scheduling,
@@ -120,7 +140,11 @@ let c2 = +choice("c2", bounds(2, 2));
         ),
     );
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         "\"Choice\", \"Slot\"\n\"c1\", \"s1\"\n\"c2\", \"s2\"\n\n\"Chooser\", \"s1\", \"s2\"\n\"p1\", \"c1\", \"c2\"\n\"p2\", \"c1\", \"c2\"\n\n"

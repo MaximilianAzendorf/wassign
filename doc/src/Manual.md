@@ -8,35 +8,30 @@ Input files are [Rhai scripts](https://rhai.rs/), so all typical programming con
 
 ### Adding slots, choices choosers and constraints
 
-+---+
+| Function |
+|---|
 | `slot(name)` |
-+===+
 | Creates a new slot with the given name or returns the slot with the given name if a slot with such name was already created. Note that if you create a new slot you still have to add it to the input with `add` or `+`. |
-+---+ 
 
-+---+
+| Function |
+|---|
 | `choice(name)`<br>`choice(name, args...)` |
-+===+
-| Creates a new choice with the given name and arguments (see [choice arguments](#choice-arguments) for more information) or (if just a name is given) returns the choice with the given name if a choice with such name was already created. Note that if you create a new choice you still have to add it to the input with `add` or `+`. |
-+---+ 
+| Creates a new choice with the given name and choice arguments (see [choice arguments](#choice-arguments) for more information) or (if just a name is given) returns the choice with the given name if a choice with such name was already created. Note that if you create a new choice you still have to add it to the input with `add` or `+`. |
 
-+---+
+| Function |
+|---|
 | `chooser(name)`<br>`chooser(name, preferences)` |
-+===+
 | Creates a new chooser with the given name and preference list (e.g. `chooser("Karl", [100, 50, 0])`) or (if just a name is given) returns the chooser with the given name if a chooser with such name was already created. The preferences have to be in the same order in which the corresponding choices were added to the input. Note that if you create a new choice you still have to add it to the input with `add` or `+`. |
-+---+ 
 
-+---+
+| Function |
+|---|
 | `constraint(expression)` |
-+===+
-| Creates a new constraint from the given expression. For more information on how to construct constraint expressions, see the [respective section](#constraints) Note that if you create a new constraint you still have to add it to the input with `add` or `+`. |
-+---+ 
+| Creates a new constraint from the given expression. For more information on how to construct constraint expressions, see the [respective section](#constraints). Note that if you create a new constraint you still have to add it to the input with `add` or `+`. |
 
-+---+
+| Function |
+|---|
 | `add(arg)`<br>`+arg` (operator) |
-+===+
 | Adds the given argument `arg` (a newly created slot, choice, chooser or constraint) to the input. |
-+---+ 
 
 The preference list may also contain numeric strings, which are parsed as integers. This is useful when the preferences come from CSV data.
 
@@ -61,58 +56,49 @@ As an example, a choice named `Foo` that must have between 5 and 12 participants
 
 #### Constraint objects
 
-Constraints are relations between two *constaint objects*. All slots, choices and choosers are *simple* constraint objects. In addition to them, the following derived constraint objects can be used to construct constraints:
+Constraints are relations between two *constraint objects*. All slots, choices and choosers are *simple* constraint objects. In addition to them, the following derived constraint objects can be used to construct constraints:
 
-+---+
-| `SLOT.choices`
-+===+
+| Constraint object |
+|---|
+| `SLOT.choices` |
 | A *list* constraint object describing all choices that are scheduled to the slot `SLOT`. |
-+---+ 
 
-+---+
-| `SLOT.size`
-+===+
+| Constraint object |
+|---|
+| `SLOT.size` |
 | A *numerical* constraint object describing the number of choices that are scheduled to the slot `SLOT`. |
-+---+ 
 
-+---+
-| `CHOICE.slot`<br>
-| `CHOICE.slot(part)`
-+===+
+| Constraint object |
+|---|
+| `CHOICE.slot`<br>`CHOICE.slot(part)` |
 | A *simple* constraint object describing the the slot to which choice `CHOICE` is scheduled to. You can specify a part index (starting at 0) to refer to a specific part of the choice; by default, `part=0`. |
-+---+ 
 
-+---+
-| `CHOICE.choosers`
-+===+
+| Constraint object |
+|---|
+| `CHOICE.choosers` |
 | A *list* constraint object describing the the list of choosers that are assigned to the choice `CHOICE`. |
-+---+ 
 
-+---+
-| `CHOOSER.choices`
-+===+
+| Constraint object |
+|---|
+| `CHOOSER.choices` |
 | A *list* constraint object describing the the list of choices that the chooser `CHOOSER` is assigned to. |
-+---+ 
 
 #### Relational operators
 
-+---+
-| Relations between simple constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)
-+===+
-| States that the simple constraint object `left` must be equal (or inequal) to the simple constraint object `right`. |
-+---+ 
+| Relation |
+|---|
+| Relations between simple constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality) |
+| States that the simple constraint object `left` must be equal (or unequal) to the simple constraint object `right`. |
 
-+---+
+| Relation |
+|---|
 | Relations between numerical constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)<br>`left > right` (greater-than)<br>`left >= right` (greater-or-equal-than)<br>`left < right` (less-than)<br>`left <= right` (less-or-equal-than) |
-+===+
 | States that the given relation must hold true between the numerical constraint object `left` and the numerical constraint object `right`. Note that `right` can also be a numerical constant. |
-+---+ 
 
-+---+
+| Relation |
+|---|
 | Relations between list constraint objects<br><br>`left == right` (equality)<br>`left != right` (inequality)<br>`left.contains(right)` (contains-relation)<br>`left.contains_not(right)` (contains-not-relation) |
-+===+
 | States that the given relation must hold true between the list constraint object `left` and the list constraint object `right`, or (in the case of `contains` and `contains_not`) the *simple* constraint object `right`. |
-+---+ 
 
 #### Examples
 
@@ -122,42 +108,37 @@ Constraints are relations between two *constaint objects*. All slots, choices an
 
 ### Reading from CSV files
 
-+---+
+| Function |
+|---|
 | `read_csv(filename)`<br>`read_csv(filename, separator)` |
-+===+
 | Reads the given file as a [CSV file](https://en.wikipedia.org/wiki/Comma-separated_values), optionally specifying a separator (the default is `,`). |
-+---+ 
 
-+---+
+| Function |
+|---|
 | `readFile(filename)` |
-+===+
 | Reads the given file and returns its full contents as a string. |
-+---+
 
-+---+
+| Function |
+|---|
 | `set_arguments(args)` |
-+===+
 | Parses CLI-style arguments for the current input reader. |
-+---+
 
-+---+
+| Function |
+|---|
 | `CSVFILE.row(n)`<br>`CSVFILE[n]` |
-+===+
-| Returns the row with number `n` (numbering starting at 0) of the `CSVFILE` (returned by `read_csv`). Rows are just plain lists of the row values, so individual values of a row can be accessed with the `[]` operator.|
-+---+ 
+| Returns the row with number `n` (numbering starting at 0) of the `CSVFILE` (returned by `read_csv`). Rows are just plain lists of the row values, so individual values of a row can be accessed with the `[]` operator. |
 
-+---+
+| Function |
+|---|
 | `CSVFILE.rows` |
-+===+
 | Returns all rows of the `CSVFILE` (returned by `read_csv`). |
-+---+
 
 #### Example
 
 Given is the following CSV file called `workshops.csv`:
 
 ```
-"Choice", "minimum", "maxiumum", "optional?"
+"Choice", "minimum", "maximum", "optional?"
 "A",      5,         10,         "no"
 "B",      5,         20,         "no"
 "C",      10,        30,         "yes"
@@ -180,23 +161,20 @@ Because `read_csv` keeps cell values as strings, helper functions such as `min`,
 
 ### Utility functions
 
-+---+
+| Function |
+|---|
 | `LIST.slice(x, y)` |
-+===+
 | Returns a list that only contains the element of the list `LIST` with indices between `x` (inclusive) and `y` (inclusive). Note that index numbering starts at 0. You can give `end` as the value for `y` as a replacement for `LIST.length - 1`. |
-+---+
 
-+---+
+| Function |
+|---|
 | `end` |
-+===+
 | Sentinel value used with `slice` to indicate the last element. |
-+---+
 
-+---+
+| Function |
+|---|
 | `range(x, y)` |
-+===+
 | Returns a list that contains all integers between `x` (inclusive) and `y` (inclusive) in order. |
-+---+
 
 ## Program options
 
@@ -210,6 +188,7 @@ Because `read_csv` keeps cell values as strings, helper functions such as `min`,
 `-t [time]`, `--timeout [time]`     Sets the optimization timeout. The syntax for this argument is described under the [respective section](#time-format).
 `--cs-timeout [time]`               Sets the timeout for attempting to satisfy critical sets of a certain preference level. Higher values may lead to better initial solutions, but it may take longer to find an initial solution in the first place. The syntax for this argument is described under the [respective section](#time-format).
 `--no-cs`                           If this option is given, no critical set analysis is performed.
+`--no-cs-simp`                      If this option is given, critical set simplification is disabled.
 `-j [n]`, `--threads [n]`           Specifies the maximum number of computation threads. By default, wassign will use as many threads as there are logical CPU cores on the system.
 `-n [n]`, `--max-neighbors [n]`     Specifies the maximum number of neighbor schedulings that will be explored per hill climbing iteration.
 `-g`, `--greedy`                    If this option is given, wassign will not use the worst-preference scoring as a primary score and will instead just use sum-based scoring instead.

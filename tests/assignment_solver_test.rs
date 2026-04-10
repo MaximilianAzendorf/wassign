@@ -29,27 +29,40 @@ fn assignment_input(extra_constraint: &str) -> String {
 #[test]
 fn minimal() {
     let data = parse_data(INPUT_MINIMAL);
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), true), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), true),
+        sd(&data),
+        default_options(),
+    );
 
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
     expect_assignment(&sol(scheduling, assignment), "p,e");
 }
 
 #[test]
-#[ignore = "Intentionally disabled due to equivalent-solution nondeterminism"]
-fn large() {}
-
-#[test]
 fn works_without_constraints() {
     let data = parse_data(&assignment_input(""));
 
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), false), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), false),
+        sd(&data),
+        default_options(),
+    );
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0, 0, 1, 1]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
-    expect_assignment(&sol(scheduling, assignment), "p1,c1,c3;p2,c1,c3;p3,c2,c4;p4,c2,c4");
+    expect_assignment(
+        &sol(scheduling, assignment),
+        "p1,c1,c3;p2,c1,c3;p3,c2,c4;p4,c2,c4",
+    );
 }
 
 #[test]
@@ -58,11 +71,21 @@ fn choices_have_same_choosers_constraint_works() {
         r#"+constraint(choice("c1").choosers == choice("c4").choosers);"#,
     ));
 
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), false), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), false),
+        sd(&data),
+        default_options(),
+    );
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0, 0, 1, 1]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
-    expect_assignment(&sol(scheduling, assignment), "p1,c1,c4;p2,c1,c4;p3,c2,c3;p4,c2,c3");
+    expect_assignment(
+        &sol(scheduling, assignment),
+        "p1,c1,c4;p2,c1,c4;p3,c2,c3;p4,c2,c3",
+    );
 }
 
 #[test]
@@ -71,11 +94,21 @@ fn chooser_is_in_choice_constraint_works() {
         r#"+constraint(chooser("p1").choices.contains(choice("c4")));"#,
     ));
 
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), false), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), false),
+        sd(&data),
+        default_options(),
+    );
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0, 0, 1, 1]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
-    expect_assignment(&sol(scheduling, assignment), "p1,c1,c4;p2,c1,c3;p3,c2,c4;p4,c2,c3");
+    expect_assignment(
+        &sol(scheduling, assignment),
+        "p1,c1,c4;p2,c1,c3;p3,c2,c4;p4,c2,c3",
+    );
 }
 
 #[test]
@@ -84,11 +117,21 @@ fn chooser_is_not_in_choice_constraint_works() {
         r#"+constraint(chooser("p1").choices.contains_not(choice("c3")));"#,
     ));
 
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), false), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), false),
+        sd(&data),
+        default_options(),
+    );
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0, 0, 1, 1]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
-    expect_assignment(&sol(scheduling, assignment), "p1,c1,c4;p2,c1,c3;p3,c2,c4;p4,c2,c3");
+    expect_assignment(
+        &sol(scheduling, assignment),
+        "p1,c1,c4;p2,c1,c3;p3,c2,c4;p4,c2,c3",
+    );
 }
 
 #[test]
@@ -110,9 +153,19 @@ fn choosers_have_same_choices_constraint_works() {
 "#,
     );
 
-    let mut solver = AssignmentSolver::new(data.clone(), csa(data.clone(), false), sd(&data), default_options());
+    let mut solver = AssignmentSolver::new(
+        data.clone(),
+        csa(data.clone(), false),
+        sd(&data),
+        default_options(),
+    );
     let scheduling = Arc::new(Scheduling::with_data(data, vec![0, 0, 1, 1]));
-    let assignment = solver.solve(scheduling.clone()).expect("expected assignment");
+    let assignment = solver
+        .solve(&scheduling)
+        .expect("expected assignment");
 
-    expect_assignment(&sol(scheduling, assignment), "p1,c1,c3;p2,c2,c4;p3,c2,c4;p4,c1,c3");
+    expect_assignment(
+        &sol(scheduling, assignment),
+        "p1,c1,c3;p2,c2,c4;p3,c2,c4;p4,c1,c3",
+    );
 }

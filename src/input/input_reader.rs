@@ -2,11 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use rhai::Engine;
 
-use crate::{InputData, Options, Status};
+use crate::{InputData, Options, status};
 
 use super::{
-    constraint_expression::ConstraintExpression, input_builder::InputDataBuilder, input_chooser_data::InputChooserData,
-    input_choice_data::InputChoiceData, input_slot_data::InputSlotData, rhai_interface::{ReaderState, RhaiInterface},
+    constraint_expression::ConstraintExpression,
+    input_builder::InputDataBuilder,
+    input_choice_data::InputChoiceData,
+    input_chooser_data::InputChooserData,
+    input_slot_data::InputSlotData,
+    rhai_interface::{ReaderState, RhaiInterface},
 };
 
 /// Parses the input DSL into processed [`crate::InputData`].
@@ -32,8 +36,8 @@ impl InputReader {
         let state = Arc::new(Mutex::new(ReaderState::default()));
         let options = Arc::new(Mutex::new(options.as_ref().clone()));
         let mut engine = Engine::new();
-        RhaiInterface::register_interface(&mut engine, state.clone(), options.clone());
-        Status::trace("Initialized Rhai input engine.");
+        RhaiInterface::register_interface(&mut engine, &state, &options);
+        status::trace("Initialized Rhai input engine.");
 
         Self {
             engine,
@@ -60,16 +64,23 @@ impl InputReader {
     ///
     /// Panics if the internal reader state mutex is poisoned.
     pub fn read_input(&mut self, input: &str) -> crate::Result<Arc<InputData>> {
-        Status::debug("Resetting input reader state.");
-        *self.state.lock().expect("input reader state mutex poisoned") = ReaderState::default();
+        status::debug("Resetting input reader state.");
+        *self
+            .state
+            .lock()
+            .expect("input reader state mutex poisoned") = ReaderState::default();
         let mut scope = RhaiInterface::build_scope();
-        Status::debug(&format!("Evaluating input with {} line(s).", input.lines().count()));
-        let _ = self.engine
+        status::debug(&format!(
+            "Evaluating input with {} line(s).",
+            input.lines().count()
+        ));
+        let _ = self
+            .engine
             .eval_with_scope::<rhai::Dynamic>(&mut scope, input)
             .map_err(|err| crate::InputError::Message(err.to_string()))?;
 
         self.sync_from_state();
-        Status::debug(&format!(
+        status::debug(&format!(
             "Reader registered {} slot(s), {} choice(s), {} chooser(s), and {} constraint expression(s).",
             self.sets.len(),
             self.choices.len(),
@@ -87,35 +98,58 @@ impl InputReader {
         }
 
         if self.choices.is_empty() {
-            return Err(crate::InputError::Message("No choices defined in input.".to_owned()));
+            return Err(crate::InputError::Message(
+                "No choices defined in input.".to_owned(),
+            ));
         }
         if self.choosers.is_empty() {
-            return Err(crate::InputError::Message("No choosers defined in input.".to_owned()));
+            return Err(crate::InputError::Message(
+                "No choosers defined in input.".to_owned(),
+            ));
         }
 
         let mut builder = InputDataBuilder::default();
         builder.process_input_reader(self)?;
-        Status::debug("Finished building input data.");
+        status::debug("Finished building input data.");
         Ok(builder.get_input_data())
     }
 
     fn sync_from_state(&mut self) {
-        let state = self.state.lock().expect("input reader state mutex poisoned").clone();
+        let state = self
+            .state
+            .lock()
+            .expect("input reader state mutex poisoned")
+            .clone();
 
         self.set_map = state
             .registered_set_ids
             .iter()
-            .map(|&id| (state.slots[id].slot.name.clone(), Arc::new(state.slots[id].clone())))
+            .map(|&id| {
+                (
+                    state.slots[id].slot.name.clone(),
+                    Arc::new(state.slots[id].clone()),
+                )
+            })
             .collect();
         self.choice_map = state
             .registered_choice_ids
             .iter()
-            .map(|&id| (state.choices[id].choice.name.clone(), Arc::new(state.choices[id].clone())))
+            .map(|&id| {
+                (
+                    state.choices[id].choice.name.clone(),
+                    Arc::new(state.choices[id].clone()),
+                )
+            })
             .collect();
         self.chooser_map = state
             .registered_chooser_ids
             .iter()
-            .map(|&id| (state.choosers[id].chooser.name.clone(), Arc::new(state.choosers[id].clone())))
+            .map(|&id| {
+                (
+                    state.choosers[id].chooser.name.clone(),
+                    Arc::new(state.choosers[id].clone()),
+                )
+            })
             .collect();
         self.sets = state
             .registered_set_ids
@@ -149,7 +183,12 @@ impl InputReader {
     /// Panics if the internal options mutex is poisoned.
     #[must_use]
     pub fn effective_options(&self) -> Arc<Options> {
-        Arc::new(self.options.lock().expect("reader options mutex poisoned").clone())
+        Arc::new(
+            self.options
+                .lock()
+                .expect("reader options mutex poisoned")
+                .clone(),
+        )
     }
 }
 
@@ -187,19 +226,31 @@ let p1 = +chooser("var chooser", [0]);
 
         let data = reader.read_input(input).expect("input should parse");
 
-        assert_eq!(data.slot_count(), 1);
-        assert_eq!(data.choice_count(), 1);
-        assert_eq!(data.chooser_count(), 1);
+        assert_eq!(data.slots.len(), 1);
+        assert_eq!(data.choices.len(), 1);
+        assert_eq!(data.choosers.len(), 1);
         assert_eq!(
-            reader.set_map.keys().next().expect("slot should be registered"),
+            reader
+                .set_map
+                .keys()
+                .next()
+                .expect("slot should be registered"),
             "var slot"
         );
         assert_eq!(
-            reader.choice_map.keys().next().expect("choice should be registered"),
+            reader
+                .choice_map
+                .keys()
+                .next()
+                .expect("choice should be registered"),
             "var choice"
         );
         assert_eq!(
-            reader.chooser_map.keys().next().expect("chooser should be registered"),
+            reader
+                .chooser_map
+                .keys()
+                .next()
+                .expect("chooser should be registered"),
             "var chooser"
         );
     }
@@ -217,7 +268,10 @@ set_arguments(["-t", "5s", "-j", "4", "-n", "9", "--greedy"]);
 
         reader.read_input(input).expect("input should parse");
 
-        let options = reader.options.lock().expect("reader options mutex poisoned");
+        let options = reader
+            .options
+            .lock()
+            .expect("reader options mutex poisoned");
         assert_eq!(options.timeout_seconds, 5);
         assert_eq!(options.thread_count, 4);
         assert_eq!(options.max_neighbors, 9);
@@ -242,8 +296,15 @@ let label = readFile("{}");
         );
 
         let data = reader.read_input(&input).expect("input should parse");
-        assert_eq!(data.slot_count(), 1);
-        assert_eq!(reader.set_map.keys().next().expect("slot should be registered"), "from file");
+        assert_eq!(data.slots.len(), 1);
+        assert_eq!(
+            reader
+                .set_map
+                .keys()
+                .next()
+                .expect("slot should be registered"),
+            "from file"
+        );
 
         let _ = fs::remove_file(path);
     }
@@ -272,7 +333,7 @@ let second = file[2];
         );
 
         let data = reader.read_input(&input).expect("input should parse");
-        assert_eq!(data.choice_count(), 2);
+        assert_eq!(data.choices.len(), 2);
 
         let _ = fs::remove_file(path);
     }

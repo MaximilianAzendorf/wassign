@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use crate::{CriticalSet, InputData, Status};
+use crate::status;
+use crate::{CriticalSet, InputData};
 
 /// Critical-set analysis used by the scheduling solver as a heuristic.
 #[derive(Debug, Clone)]
@@ -18,6 +19,11 @@ impl CriticalSetAnalysis {
     ///
     /// When `analyze` is `false`, the instance contains only dummy data and a
     /// conservative preference bound.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a preference value does not fit in `u32` or `i32` during cache
+    /// construction.
     pub fn new(input_data: Arc<InputData>, analyze: bool, simplify: bool) -> Self {
         let mut analysis = Self {
             sets: Vec::new(),
@@ -29,15 +35,18 @@ impl CriticalSetAnalysis {
 
         if analyze {
             analysis.analyze(simplify);
-            analysis.preference_bound = analysis.input_data.max_preference();
+            analysis.preference_bound = analysis.input_data.max_preference;
             for pref_level in analysis.input_data.preference_levels.iter().copied() {
                 let min_size = analysis
                     .sets
                     .iter()
-                    .filter(|set| set.preference >= pref_level)
+                    .filter(|set| {
+                        set.preference
+                            >= u32::try_from(pref_level).expect("preferences must be non-negative")
+                    })
                     .map(CriticalSet::size)
                     .min();
-                if min_size.is_some_and(|min_size| min_size >= analysis.input_data.slot_count()) {
+                if min_size.is_some_and(|min_size| min_size >= analysis.input_data.slots.len()) {
                     analysis.preference_bound = analysis.preference_bound.min(pref_level);
                 }
             }
@@ -47,6 +56,9 @@ impl CriticalSetAnalysis {
         analysis
     }
 
+    // REF2: I'm questioning why we store (and return here) an Arc<[CriticalSet]>. It would be more
+    // idiomatic to return a &[CriticalSet]. Arc is unneeded because everything here should be
+    // immutable after construction anyway.
     pub(crate) fn for_preference(&self, preference: i32) -> Arc<[CriticalSet]> {
         self.cached_sets
             .get(&preference)
@@ -58,7 +70,10 @@ impl CriticalSetAnalysis {
         self.cached_sets.clear();
         let mut by_preference = BTreeMap::<i32, Vec<CriticalSet>>::new();
         for set in &self.sets {
-            by_preference.entry(set.preference).or_default().push(set.clone());
+            by_preference
+                .entry(i32::try_from(set.preference).expect("preference must fit in i32"))
+                .or_default()
+                .push(set.clone());
         }
 
         let mut minimal_sets = Vec::<CriticalSet>::new();
@@ -71,7 +86,8 @@ impl CriticalSetAnalysis {
             }
 
             minimal_sets.sort_by_key(CriticalSet::size);
-            self.cached_sets.insert(preference, Arc::from(minimal_sets.clone()));
+            self.cached_sets
+                .insert(preference, Arc::from(minimal_sets.clone()));
         }
     }
 
@@ -89,12 +105,11 @@ impl CriticalSetAnalysis {
     pub fn preference_bound(&self) -> i32 {
         self.preference_bound
     }
-}
 
-impl CriticalSetAnalysis {
     fn analyze(&mut self, simplify: bool) {
-        Status::debug("Starting critical-set analysis.");
-        let analysis_steps = self.input_data.preference_levels.len() * self.input_data.chooser_count();
+        status::debug("Starting critical-set analysis.");
+        let analysis_steps =
+            self.input_data.preference_levels.len() * self.input_data.choosers.len();
         let analysis_progress = if self.quiet {
             crate::status::hidden_progress()
         } else {
@@ -102,18 +117,18 @@ impl CriticalSetAnalysis {
         };
         let mut pref_index = 0_usize;
         for pref in self.input_data.preference_levels.iter().rev().copied() {
-            for chooser in 0..self.input_data.chooser_count() {
+            for chooser in 0..self.input_data.choosers.len() {
                 analysis_progress.inc(1);
                 analysis_progress.set_message(format!(
                     "p{pref} c{}/{} s{}",
                     chooser + 1,
-                    self.input_data.chooser_count(),
+                    self.input_data.choosers.len(),
                     self.sets.len()
                 ));
                 let mut set_data = Vec::new();
                 let mut min_count = 0_i32;
 
-                for choice in 0..self.input_data.choice_count() {
+                for choice in 0..self.input_data.choices.len() {
                     if self.input_data.choosers[chooser].preferences[choice] <= pref {
                         set_data.push(choice);
                         min_count += self.input_data.choices[choice].min;
@@ -122,18 +137,22 @@ impl CriticalSetAnalysis {
 
                 let chooser_slots = self
                     .input_data
-                    .chooser_count()
-                    .checked_mul(self.input_data.slot_count().saturating_sub(1))
+                    .choosers
+                    .len()
+                    .checked_mul(self.input_data.slots.len().saturating_sub(1))
                     .and_then(|value| i32::try_from(value).ok())
                     .expect("chooser-slot product must fit in i32");
                 if min_count > chooser_slots {
                     continue;
                 }
 
-                let candidate = CriticalSet::new(pref, set_data);
+                let candidate = CriticalSet::new(
+                    u32::try_from(pref).expect("preferences must be non-negative"),
+                    set_data,
+                );
                 let is_covered = self.sets.iter().any(|other| candidate.is_covered_by(other));
                 if !is_covered {
-                    Status::trace(&format!(
+                    status::trace(&format!(
                         "Accepted critical set at preference {pref} with {} choice(es).",
                         candidate.size()
                     ));
@@ -144,15 +163,16 @@ impl CriticalSetAnalysis {
             let _ = pref_index;
         }
         analysis_progress.finish_and_clear();
-        Status::info(&format!("Critical-set analysis complete: {} set(s).", self.sets.len()));
-        Status::debug(&format!("Critical-set analysis complete: {} set(s).", self.sets.len()));
-        Status::debug(&format!("Critical-set analysis produced {} set(s).", self.sets.len()));
+        status::info(&format!(
+            "Critical-set analysis complete: {} set(s).",
+            self.sets.len()
+        ));
 
         if !simplify {
             return;
         }
 
-        Status::debug("Starting critical-set simplification.");
+        status::debug("Starting critical-set simplification.");
         let mut remaining = self.sets.clone();
         let simplification_progress = if self.quiet {
             crate::status::hidden_progress()
@@ -172,11 +192,9 @@ impl CriticalSetAnalysis {
         }
         self.sets = remaining;
         simplification_progress.finish_and_clear();
-        Status::info(&format!(
+        status::info(&format!(
             "Critical-set simplification complete: {} set(s).",
             self.sets.len()
         ));
-        Status::debug(&format!("Critical-set simplification complete: {} set(s).", self.sets.len()));
-        Status::debug(&format!("Simplified critical sets down to {} set(s).", self.sets.len()));
     }
 }

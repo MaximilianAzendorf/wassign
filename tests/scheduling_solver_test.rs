@@ -70,7 +70,8 @@ fn minimal() {
     Rng::seed(12);
 
     let data = parse_data(INPUT_MINIMAL);
-    let mut solver = SchedulingSolver::new(data.clone(), csa(data.clone(), false), default_options());
+    let mut solver =
+        SchedulingSolver::new(data.clone(), csa(data.clone(), false), default_options());
 
     assert!(solver.next_scheduling(None));
     let scheduling = solver.scheduling().expect("expected scheduling");
@@ -92,7 +93,9 @@ fn works_without_constraints() {
 #[test]
 fn choice_is_in_slot_constraint_works() {
     Rng::seed(12);
-    let data = parse_data(&four_choice_input(r#"+constraint(choice("c1").slot == slot("s1"));"#));
+    let data = parse_data(&four_choice_input(
+        r#"+constraint(choice("c1").slot == slot("s1"));"#,
+    ));
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
@@ -106,7 +109,9 @@ fn choice_is_in_slot_constraint_works() {
 #[test]
 fn choice_is_not_in_slot_constraint_works() {
     Rng::seed(12);
-    let data = parse_data(&four_choice_input(r#"+constraint(choice("c1").slot != slot("s1"));"#));
+    let data = parse_data(&four_choice_input(
+        r#"+constraint(choice("c1").slot != slot("s1"));"#,
+    ));
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
@@ -120,7 +125,9 @@ fn choice_is_not_in_slot_constraint_works() {
 #[test]
 fn choices_are_in_same_slot_constraint_works() {
     Rng::seed(12);
-    let data = parse_data(&four_choice_input(r#"+constraint(choice("c1").slot == choice("c3").slot);"#));
+    let data = parse_data(&four_choice_input(
+        r#"+constraint(choice("c1").slot == choice("c3").slot);"#,
+    ));
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
@@ -134,7 +141,9 @@ fn choices_are_in_same_slot_constraint_works() {
 #[test]
 fn choices_are_not_in_same_slot_constraint_works() {
     Rng::seed(12);
-    let data = parse_data(&four_choice_input(r#"+constraint(choice("c1").slot != choice("c3").slot);"#));
+    let data = parse_data(&four_choice_input(
+        r#"+constraint(choice("c1").slot != choice("c3").slot);"#,
+    ));
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
@@ -188,12 +197,18 @@ fn count_slot_zero(scheduling: &wassign::Scheduling, choice_count: usize) -> i32
 fn slot_has_limited_size_eq_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size == 2);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert_eq!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count), 2);
+        assert_eq!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ),
+            2
+        );
     }
 }
 
@@ -201,12 +216,18 @@ fn slot_has_limited_size_eq_constraint_works() {
 fn slot_has_limited_size_neq_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size != 2);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert_ne!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count), 2);
+        assert_ne!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ),
+            2
+        );
     }
 }
 
@@ -214,12 +235,17 @@ fn slot_has_limited_size_neq_constraint_works() {
 fn slot_has_limited_size_lt_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size < 3);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count) < 3);
+        assert!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ) < 3
+        );
     }
 }
 
@@ -227,12 +253,17 @@ fn slot_has_limited_size_lt_constraint_works() {
 fn slot_has_limited_size_leq_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size <= 2);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count) <= 2);
+        assert!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ) <= 2
+        );
     }
 }
 
@@ -240,12 +271,17 @@ fn slot_has_limited_size_leq_constraint_works() {
 fn slot_has_limited_size_gt_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size > 2);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count) > 2);
+        assert!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ) > 2
+        );
     }
 }
 
@@ -253,11 +289,16 @@ fn slot_has_limited_size_gt_constraint_works() {
 fn slot_has_limited_size_geq_constraint_works() {
     Rng::seed(12);
     let data = parse_data(&five_choice_input(r#"+constraint(slot("s1").size >= 3);"#));
-    let choice_count = data.choice_count();
+    let choice_count = data.choices.len();
 
     let mut solver = SchedulingSolver::new(data.clone(), csa(data, false), default_options());
     for _ in 0..16 {
         assert!(solver.next_scheduling(None));
-        assert!(count_slot_zero(&solver.scheduling().expect("expected scheduling"), choice_count) >= 3);
+        assert!(
+            count_slot_zero(
+                &solver.scheduling().expect("expected scheduling"),
+                choice_count
+            ) >= 3
+        );
     }
 }

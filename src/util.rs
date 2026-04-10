@@ -57,9 +57,15 @@ mod tests {
         assert!(5.5_f64.to_string().starts_with("5.5"));
         assert_eq!(str_float(5.124, 2), "5.12");
         assert_eq!(format_duration(Duration::from_secs(5)), "00:00:05");
-        assert_eq!(format_duration(Duration::from_secs(3 * 3600 + 26 * 60 + 53)), "03:26:53");
+        assert_eq!(
+            format_duration(Duration::from_secs(3 * 3600 + 26 * 60 + 53)),
+            "03:26:53"
+        );
         assert_eq!(format_duration(Duration::from_millis(61_100)), "00:01:01");
-        assert_eq!(format_duration(Duration::from_nanos(123_000_000_000)), "00:02:03");
+        assert_eq!(
+            format_duration(Duration::from_nanos(123_000_000_000)),
+            "00:02:03"
+        );
     }
 
     #[test]

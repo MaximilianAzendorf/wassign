@@ -26,11 +26,17 @@ impl MipFlowStaticData {
     }
 
     pub(crate) fn node_slot(slot: usize) -> FlowId {
-        Self::make_long(SLOT_ID_HIGH, i32::try_from(slot).expect("slot index must fit in i32"))
+        Self::make_long(
+            SLOT_ID_HIGH,
+            i32::try_from(slot).expect("slot index must fit in i32"),
+        )
     }
 
     pub(crate) fn node_choice(choice: usize) -> FlowId {
-        Self::make_long(CHOICE_ID_HIGH, i32::try_from(choice).expect("choice index must fit in i32"))
+        Self::make_long(
+            CHOICE_ID_HIGH,
+            i32::try_from(choice).expect("choice index must fit in i32"),
+        )
     }
 
     pub(crate) fn edge_id(from: usize, to: usize) -> FlowId {
@@ -45,17 +51,17 @@ impl MipFlowStaticData {
     pub fn new(input_data: &InputData) -> Self {
         let mut base_flow = MipFlow::default();
 
-        for chooser in 0..input_data.chooser_count() {
-            for slot in 0..input_data.slot_count() {
+        for chooser in 0..input_data.choosers.len() {
+            for slot in 0..input_data.slots.len() {
                 base_flow.add_keyed_node(Self::node_chooser(chooser, slot));
             }
         }
 
-        for choice in 0..input_data.choice_count() {
+        for choice in 0..input_data.choices.len() {
             base_flow.add_keyed_node(Self::node_choice(choice));
         }
 
-        for slot in 0..input_data.slot_count() {
+        for slot in 0..input_data.slots.len() {
             base_flow.add_keyed_node(Self::node_slot(slot));
         }
 

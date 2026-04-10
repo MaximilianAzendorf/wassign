@@ -11,94 +11,91 @@ use log::{Level, LevelFilter};
 use crate::{Options, ShotgunSolverThreaded, Solution};
 
 /// Global status output helper used by the CLI.
-pub struct Status;
+///
+/// # Panics
+///
+/// Panics if the global status mutex is poisoned.
+pub fn enable_output(_options: &Arc<Options>) {
+    initialize_logger();
 
-impl Status {
-    /// Configures logging and progress reporting according to the given options.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the global status mutex is poisoned.
-    pub fn enable_output(_options: &Arc<Options>) {
-        initialize_logger();
+    let multi_progress = Arc::new(MultiProgress::with_draw_target(
+        ProgressDrawTarget::stderr_with_hz(10),
+    ));
+    let mut state = state().lock().expect("status mutex poisoned");
+    state.output = true;
+    state.multi_progress = Some(multi_progress);
+    state.active_bar = None;
+}
 
-        let multi_progress = Arc::new(MultiProgress::with_draw_target(ProgressDrawTarget::stderr_with_hz(10)));
-        let mut state = state().lock().expect("status mutex poisoned");
-        state.output = true;
-        state.multi_progress = Some(multi_progress);
-        state.active_bar = None;
-    }
+/// Emits a trace-level message when trace logging is enabled.
+pub fn trace(text: &str) {
+    emit(Level::Trace, text);
+}
 
-    /// Emits a trace-level message when trace logging is enabled.
-    pub fn trace(text: &str) {
-        emit(Level::Trace, text);
-    }
+/// Emits a debug-level message when debug logging is enabled.
+pub fn debug(text: &str) {
+    emit(Level::Debug, text);
+}
 
-    /// Emits a debug-level message when debug logging is enabled.
-    pub fn debug(text: &str) {
-        emit(Level::Debug, text);
-    }
+/// Prints an informational message.
+pub fn info(text: &str) {
+    emit(Level::Info, text);
+}
 
-    /// Prints an informational message.
-    pub fn info(text: &str) {
-        emit(Level::Info, text);
-    }
+/// Prints a highlighted informational message.
+pub fn info_important(text: &str) {
+    emit(Level::Info, text);
+}
 
-    /// Prints a highlighted informational message.
-    pub fn info_important(text: &str) {
-        emit(Level::Info, text);
-    }
+/// Prints a warning message.
+pub fn warning(text: &str) {
+    emit(Level::Warn, text);
+}
 
-    /// Prints a warning message.
-    pub fn warning(text: &str) {
-        emit(Level::Warn, text);
-    }
+/// Prints an error message.
+pub fn error(text: &str) {
+    emit(Level::Error, text);
+}
 
-    /// Prints an error message.
-    pub fn error(text: &str) {
-        emit(Level::Error, text);
-    }
+/// Tracks a running solver with a progress bar and returns its final solution.
+///
+/// # Errors
+///
+/// Returns an error if joining the worker threads fails or a worker panics.
+pub fn track_solver(solver: &mut ShotgunSolverThreaded) -> crate::Result<Solution> {
+    let timeout_ms = u64::try_from(solver.timeout_seconds().max(0)).unwrap_or(0) * 1_000;
+    let solving = solver_progress_bar(timeout_ms.max(1));
+    solving.set_message(format_solver_message(&solver.progress()));
 
-    /// Tracks a running solver with a progress bar and returns its final solution.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if joining the worker threads fails or a worker panics.
-    pub fn track_solver(solver: &mut ShotgunSolverThreaded) -> crate::Result<Solution> {
-        let timeout_ms = u64::try_from(solver.timeout_seconds().max(0)).unwrap_or(0) * 1_000;
-        let solving = solver_progress_bar(timeout_ms.max(1));
-        solving.set_message(format_solver_message(&solver.progress()));
-
-        while solver.is_running() {
-            let progress = solver.progress();
-            let remaining_ms = u64::try_from(progress.milliseconds_remaining.max(0)).unwrap_or(0);
-            let elapsed_ms = timeout_ms.saturating_sub(remaining_ms);
-            solving.set_position(elapsed_ms.min(timeout_ms.max(1)));
-            solving.set_message(format_solver_message(&progress));
-            sleep(Duration::from_millis(100));
-        }
-
-        let solution = match solver.wait_for_result() {
-            Ok(solution) => solution,
-            Err(err) => {
-                solving.finish_and_clear();
-                return Err(err);
-            }
-        };
-        let final_progress = solver.progress();
-        let remaining_ms = u64::try_from(final_progress.milliseconds_remaining.max(0)).unwrap_or(0);
+    while solver.is_running() {
+        let progress = solver.progress();
+        let remaining_ms = u64::try_from(progress.milliseconds_remaining.max(0)).unwrap_or(0);
         let elapsed_ms = timeout_ms.saturating_sub(remaining_ms);
         solving.set_position(elapsed_ms.min(timeout_ms.max(1)));
-        let summary = if solution.is_invalid() {
-            "No solution found.".to_owned()
-        } else {
-            format!("Solved {}", format_solver_summary(&final_progress))
-        };
-        solving.finish_and_clear();
-        Status::info_important(&summary);
-
-        Ok(solution)
+        solving.set_message(format_solver_message(&progress));
+        sleep(Duration::from_millis(100));
     }
+
+    let solution = match solver.wait_for_result() {
+        Ok(solution) => solution,
+        Err(err) => {
+            solving.finish_and_clear();
+            return Err(err);
+        }
+    };
+    let final_progress = solver.progress();
+    let remaining_ms = u64::try_from(final_progress.milliseconds_remaining.max(0)).unwrap_or(0);
+    let elapsed_ms = timeout_ms.saturating_sub(remaining_ms);
+    solving.set_position(elapsed_ms.min(timeout_ms.max(1)));
+    let summary = if solution == Solution::Invalid {
+        "No solution found.".to_owned()
+    } else {
+        format!("Solved {}", format_solver_summary(&final_progress))
+    };
+    solving.finish_and_clear();
+    info_important(&summary);
+
+    Ok(solution)
 }
 
 #[derive(Default)]
@@ -172,11 +169,17 @@ impl Write for IndicatifLogWriter {
 }
 
 pub(crate) fn progress_bar(prefix: &str, length: u64) -> StatusProgress {
-    create_progress_bar(prefix, ProgressBar::new(length.max(1)).with_style(progress_bar_style()))
+    create_progress_bar(
+        prefix,
+        ProgressBar::new(length.max(1)).with_style(progress_bar_style()),
+    )
 }
 
 pub(crate) fn solver_progress_bar(length: u64) -> StatusProgress {
-    create_progress_bar("", ProgressBar::new(length.max(1)).with_style(solver_progress_bar_style()))
+    create_progress_bar(
+        "",
+        ProgressBar::new(length.max(1)).with_style(solver_progress_bar_style()),
+    )
 }
 
 pub(crate) fn hidden_progress() -> StatusProgress {
@@ -233,10 +236,18 @@ fn emit(level: Level, text: &str) {
 fn format_solver_message(
     progress: &crate::shotgun_solver_threaded::ShotgunSolverThreadedProgress,
 ) -> String {
-    let counters = style(format!("{}/{}/{}", progress.iterations, progress.assignments, progress.lp))
-        .dim()
-        .to_string();
-    let depth = style(format!("d{:.1}/{:.1}", progress.sched_depth, progress.max_sched_depth)).dim().to_string();
+    let counters = style(format!(
+        "{}/{}/{}",
+        progress.iterations, progress.assignments, progress.lp
+    ))
+    .dim()
+    .to_string();
+    let depth = style(format!(
+        "d{:.1}/{:.1}",
+        progress.sched_depth, progress.max_sched_depth
+    ))
+    .dim()
+    .to_string();
 
     if progress.best_score.is_finite() {
         let score = style(progress.best_score.to_str()).yellow().to_string();
@@ -248,7 +259,9 @@ fn format_solver_message(
     }
 }
 
-fn format_solver_summary(progress: &crate::shotgun_solver_threaded::ShotgunSolverThreadedProgress) -> String {
+fn format_solver_summary(
+    progress: &crate::shotgun_solver_threaded::ShotgunSolverThreadedProgress,
+) -> String {
     if progress.best_score.is_finite() {
         format!(
             "{}; i/a/l {}/{}/{}; depth {:.1}/{:.1}",
@@ -265,7 +278,11 @@ fn format_solver_summary(progress: &crate::shotgun_solver_threaded::ShotgunSolve
 }
 
 fn print_log_line(line: &str) -> io::Result<()> {
-    let active_bar = state().lock().expect("status mutex poisoned").active_bar.clone();
+    let active_bar = state()
+        .lock()
+        .expect("status mutex poisoned")
+        .active_bar
+        .clone();
     if let Some(bar) = active_bar {
         bar.println(line);
         return Ok(());
@@ -276,11 +293,9 @@ fn print_log_line(line: &str) -> io::Result<()> {
 }
 
 fn progress_bar_style() -> ProgressStyle {
-    ProgressStyle::with_template(
-        "{prefix:.bold} [{wide_bar:.cyan/blue}] {percent:>3}% {msg}",
-    )
-    .expect("progress bar template should be valid")
-    .progress_chars("=>-")
+    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {percent:>3}% {msg}")
+        .expect("progress bar template should be valid")
+        .progress_chars("=>-")
 }
 
 fn solver_progress_bar_style() -> ProgressStyle {
@@ -301,8 +316,11 @@ fn initialize_logger() {
     }
 
     let default_filter = format!("{}=info", env!("CARGO_PKG_NAME"));
-    let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or(default_filter));
-    builder.target(env_logger::Target::Pipe(Box::new(IndicatifLogWriter::default())));
+    let mut builder =
+        env_logger::Builder::from_env(Env::default().default_filter_or(default_filter));
+    builder.target(env_logger::Target::Pipe(Box::new(
+        IndicatifLogWriter::default(),
+    )));
     if std::env::var_os("RUST_LOG_STYLE").is_none() {
         builder.write_style(WriteStyle::Always);
     }

@@ -42,7 +42,12 @@ pub struct Constraint {
 
 impl Constraint {
     pub fn new(kind: ConstraintType, left: usize, right: i32, extra: i32) -> Self {
-        Self { kind, left, right, extra }
+        Self {
+            kind,
+            left,
+            right,
+            extra,
+        }
     }
 
     pub fn negation(self) -> Self {
@@ -50,15 +55,23 @@ impl Constraint {
         match self.kind {
             ConstraintType::ChoiceIsInSlot => neg.kind = ConstraintType::ChoiceIsNotInSlot,
             ConstraintType::ChoiceIsNotInSlot => neg.kind = ConstraintType::ChoiceIsInSlot,
-            ConstraintType::ChoicesAreInSameSlot => neg.kind = ConstraintType::ChoicesAreNotInSameSlot,
-            ConstraintType::ChoicesAreNotInSameSlot => neg.kind = ConstraintType::ChoicesAreInSameSlot,
+            ConstraintType::ChoicesAreInSameSlot => {
+                neg.kind = ConstraintType::ChoicesAreNotInSameSlot;
+            }
+            ConstraintType::ChoicesAreNotInSameSlot => {
+                neg.kind = ConstraintType::ChoicesAreInSameSlot;
+            }
             ConstraintType::SlotHasLimitedSize => neg.extra = -neg.extra,
             ConstraintType::SlotContainsChoice => neg.kind = ConstraintType::SlotNotContainsChoice,
             ConstraintType::SlotNotContainsChoice => neg.kind = ConstraintType::SlotContainsChoice,
             ConstraintType::ChooserIsInChoice => neg.kind = ConstraintType::ChooserIsNotInChoice,
             ConstraintType::ChooserIsNotInChoice => neg.kind = ConstraintType::ChooserIsInChoice,
-            ConstraintType::ChoiceContainsChooser => neg.kind = ConstraintType::ChoiceNotContainsChooser,
-            ConstraintType::ChoiceNotContainsChooser => neg.kind = ConstraintType::ChoiceContainsChooser,
+            ConstraintType::ChoiceContainsChooser => {
+                neg.kind = ConstraintType::ChoiceNotContainsChooser;
+            }
+            ConstraintType::ChoiceNotContainsChooser => {
+                neg.kind = ConstraintType::ChoiceContainsChooser;
+            }
             ConstraintType::Invalid
             | ConstraintType::ChoicesHaveOffset
             | ConstraintType::SlotsHaveSameChoices
@@ -73,10 +86,12 @@ impl Constraint {
     }
 
     pub fn is_scheduling_constraint(self) -> bool {
-        (self.kind as i32) < CONSTRAINT_TYPE_DISCRIMINATION_LIMIT && self.kind != ConstraintType::Invalid
+        (self.kind as i32) < CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+            && self.kind != ConstraintType::Invalid
     }
 
     pub fn is_assignment_constraint(self) -> bool {
-        (self.kind as i32) >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT && self.kind != ConstraintType::Invalid
+        (self.kind as i32) >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+            && self.kind != ConstraintType::Invalid
     }
 }

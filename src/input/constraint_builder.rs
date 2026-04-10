@@ -9,7 +9,10 @@ use super::fuzzy_match::FuzzyMatch;
 pub struct ConstraintBuilder;
 
 impl ConstraintBuilder {
-    pub fn build(data: &InputData, expression: ConstraintExpression) -> crate::Result<Vec<Constraint>> {
+    pub fn build(
+        data: &InputData,
+        expression: ConstraintExpression,
+    ) -> crate::Result<Vec<Constraint>> {
         let mut expression = expression;
         let mut result = Vec::new();
 
@@ -21,49 +24,210 @@ impl ConstraintBuilder {
                 expression.right.kind,
                 expression.right.sub_type,
             ) {
-                (AccessorType::Choice, AccessorType::Slot, RelationType::Eq, AccessorType::Slot, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoiceIsInSlot, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                    RelationType::Eq,
+                    AccessorType::Slot,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoiceIsInSlot,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Slot, RelationType::Neq, AccessorType::Slot, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoiceIsNotInSlot, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                    RelationType::Neq,
+                    AccessorType::Slot,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoiceIsNotInSlot,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Slot, RelationType::Eq, AccessorType::Choice, AccessorType::Slot) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoicesAreInSameSlot, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                    RelationType::Eq,
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoicesAreInSameSlot,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Slot, RelationType::Neq, AccessorType::Choice, AccessorType::Slot) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoicesAreNotInSameSlot, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                    RelationType::Neq,
+                    AccessorType::Choice,
+                    AccessorType::Slot,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoicesAreNotInSameSlot,
+                        0,
+                    )?;
                 }
-                (AccessorType::Slot, AccessorType::Choice, RelationType::Contains, AccessorType::Choice, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::SlotContainsChoice, 0)?;
+                (
+                    AccessorType::Slot,
+                    AccessorType::Choice,
+                    RelationType::Contains,
+                    AccessorType::Choice,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::SlotContainsChoice,
+                        0,
+                    )?;
                 }
-                (AccessorType::Slot, AccessorType::Choice, RelationType::NotContains, AccessorType::Choice, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::SlotNotContainsChoice, 0)?;
+                (
+                    AccessorType::Slot,
+                    AccessorType::Choice,
+                    RelationType::NotContains,
+                    AccessorType::Choice,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::SlotNotContainsChoice,
+                        0,
+                    )?;
                 }
-                (AccessorType::Slot, AccessorType::Choice, RelationType::Eq, AccessorType::Slot, AccessorType::Choice) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::SlotsHaveSameChoices, 0)?;
+                (
+                    AccessorType::Slot,
+                    AccessorType::Choice,
+                    RelationType::Eq,
+                    AccessorType::Slot,
+                    AccessorType::Choice,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::SlotsHaveSameChoices,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Chooser, RelationType::Eq, AccessorType::Choice, AccessorType::Chooser) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoicesHaveSameChoosers, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Chooser,
+                    RelationType::Eq,
+                    AccessorType::Choice,
+                    AccessorType::Chooser,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoicesHaveSameChoosers,
+                        0,
+                    )?;
                 }
-                (AccessorType::Chooser, AccessorType::Choice, RelationType::Contains, AccessorType::Choice, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChooserIsInChoice, 0)?;
+                (
+                    AccessorType::Chooser,
+                    AccessorType::Choice,
+                    RelationType::Contains,
+                    AccessorType::Choice,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChooserIsInChoice,
+                        0,
+                    )?;
                 }
-                (AccessorType::Chooser, AccessorType::Choice, RelationType::NotContains, AccessorType::Choice, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChooserIsNotInChoice, 0)?;
+                (
+                    AccessorType::Chooser,
+                    AccessorType::Choice,
+                    RelationType::NotContains,
+                    AccessorType::Choice,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChooserIsNotInChoice,
+                        0,
+                    )?;
                 }
-                (AccessorType::Chooser, AccessorType::Choice, RelationType::Eq, AccessorType::Chooser, AccessorType::Choice) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoosersHaveSameChoices, 0)?;
+                (
+                    AccessorType::Chooser,
+                    AccessorType::Choice,
+                    RelationType::Eq,
+                    AccessorType::Chooser,
+                    AccessorType::Choice,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoosersHaveSameChoices,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Chooser, RelationType::Contains, AccessorType::Chooser, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoiceContainsChooser, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Chooser,
+                    RelationType::Contains,
+                    AccessorType::Chooser,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoiceContainsChooser,
+                        0,
+                    )?;
                 }
-                (AccessorType::Choice, AccessorType::Chooser, RelationType::NotContains, AccessorType::Chooser, AccessorType::NotSet) => {
-                    Self::add_constraint(data, &expression, &mut result, ConstraintType::ChoiceNotContainsChooser, 0)?;
+                (
+                    AccessorType::Choice,
+                    AccessorType::Chooser,
+                    RelationType::NotContains,
+                    AccessorType::Chooser,
+                    AccessorType::NotSet,
+                ) => {
+                    Self::add_constraint(
+                        data,
+                        &expression,
+                        &mut result,
+                        ConstraintType::ChoiceNotContainsChooser,
+                        0,
+                    )?;
                 }
                 (
                     AccessorType::Slot,
                     AccessorType::Size,
-                    RelationType::Eq | RelationType::Neq | RelationType::Gt | RelationType::Lt | RelationType::Geq | RelationType::Leq,
+                    RelationType::Eq
+                    | RelationType::Neq
+                    | RelationType::Gt
+                    | RelationType::Lt
+                    | RelationType::Geq
+                    | RelationType::Leq,
                     AccessorType::Integer,
                     AccessorType::NotSet,
                 ) => Self::add_constraint(
@@ -116,20 +280,35 @@ impl ConstraintBuilder {
         Ok(())
     }
 
-    fn resolve_accessor(data: &InputData, accessor: &ConstraintExpressionAccessor) -> crate::Result<usize> {
+    fn resolve_accessor(
+        data: &InputData,
+        accessor: &ConstraintExpressionAccessor,
+    ) -> crate::Result<usize> {
         match accessor.kind {
             AccessorType::Slot => Self::find_name(
                 &accessor.name,
-                &data.slots.iter().map(|slot| slot.name.clone()).collect::<Vec<_>>(),
+                &data
+                    .slots
+                    .iter()
+                    .map(|slot| slot.name.clone())
+                    .collect::<Vec<_>>(),
             ),
             AccessorType::Chooser => Self::find_name(
                 &accessor.name,
-                &data.choosers.iter().map(|chooser| chooser.name.clone()).collect::<Vec<_>>(),
+                &data
+                    .choosers
+                    .iter()
+                    .map(|chooser| chooser.name.clone())
+                    .collect::<Vec<_>>(),
             ),
             AccessorType::Choice => {
                 let mut choice = Self::find_name(
                     &accessor.name,
-                    &data.choices.iter().map(|choice| choice.name.clone()).collect::<Vec<_>>(),
+                    &data
+                        .choices
+                        .iter()
+                        .map(|choice| choice.name.clone())
+                        .collect::<Vec<_>>(),
                 )?;
                 let mut part = accessor.part;
                 while part > 0 {
@@ -157,7 +336,9 @@ impl ConstraintBuilder {
         match matches.as_slice() {
             [index] => Ok(*index),
             [] => Ok(usize::MAX),
-            _ => Err(InputError::Message(format!("The name \"{name}\" is ambiguous."))),
+            _ => Err(InputError::Message(format!(
+                "The name \"{name}\" is ambiguous."
+            ))),
         }
     }
 }

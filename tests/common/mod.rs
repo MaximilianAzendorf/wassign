@@ -1,4 +1,7 @@
-#![expect(dead_code, reason = "shared integration-test helpers are used selectively by each test crate")]
+#![allow(
+    dead_code,
+    reason = "shared test helpers are imported selectively by each integration test"
+)]
 
 use std::{
     path::PathBuf,
@@ -7,8 +10,8 @@ use std::{
 };
 
 use wassign::{
-    Assignment, CriticalSetAnalysis, InputData, InputReader, MipFlowStaticData, Options, OutputFormatter, Scoring,
-    Scheduling, ShotgunSolverThreaded, Solution, Status,
+    Assignment, CriticalSetAnalysis, InputData, InputReader, MipFlowStaticData, Options,
+    OutputFormatter, Scheduling, Scoring, ShotgunSolverThreaded, Solution, status,
 };
 
 pub const INPUT_MINIMAL: &str = r#"
@@ -33,7 +36,7 @@ pub fn default_options() -> Arc<Options> {
         timeout_seconds: 1,
         ..Options::default()
     });
-    Status::enable_output(&options);
+    status::enable_output(&options);
     options
 }
 
@@ -53,8 +56,8 @@ pub fn sol_scheduling(scheduling: Arc<Scheduling>) -> Solution {
     Solution::new(Some(scheduling), None)
 }
 
-pub fn sol_assignment(assignment: Arc<Assignment>) -> Solution {
-    Solution::new(None, Some(assignment))
+pub fn sol_assignment(_: Arc<Assignment>) -> Solution {
+    Solution::Invalid
 }
 
 pub fn sol(scheduling: Arc<Scheduling>, assignment: Arc<Assignment>) -> Solution {

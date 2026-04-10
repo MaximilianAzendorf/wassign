@@ -1,11 +1,13 @@
-sources := $(shell xargs -a order.txt echo)
+sources := $(shell tr '\n' ' ' < order.txt)
 
-informat  := markdown+raw_tex
+informat  := markdown+raw_tex+grid_tables
 headerin  := src/Header.md
 headerout := build/header.html
+docker_image ?= wassign-docs
+repo_root := $(abspath ..)
 
 build/doc.html: $(sources) $(headerin) filter/* headerbar.html order.txt style.css Makefile
-	mkdir -p ./build
+	mkdir -p ./build ./media
 	cp ./style.css ./build/style.css
 	pandoc \
 		--from=$(informat) \
@@ -26,9 +28,21 @@ build/doc.html: $(sources) $(headerin) filter/* headerbar.html order.txt style.c
 		--section-divs \
 		--number-sections \
 		--css=style.css \
-		--extract-media=./media\
+		--extract-media=./media \
 		-o $@ \
 		$(sources)
 	rm -rf ./build/media
 	mv ./media ./build/media
 	rm $(headerout)
+
+.PHONY: docker-image docker-build
+
+docker-image:
+	docker build -t $(docker_image) .
+
+docker-build: docker-image
+	docker run --rm \
+		-u "$$(id -u):$$(id -g)" \
+		-v "$(repo_root):/workspace" \
+		-w /workspace/doc \
+		$(docker_image)

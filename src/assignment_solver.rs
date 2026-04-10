@@ -1,19 +1,13 @@
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::needless_pass_by_value,
-    clippy::too_many_lines,
-    reason = "the assignment solver uses index-heavy graph assembly and one large branchy solve loop"
-)]
-
 use std::collections::BTreeSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
-use crate::{
-    Assignment, ConstraintType, Constraints, CriticalSetAnalysis, InputData, MipFlow, MipFlowStaticData, Options,
-    Scheduling, Status,
-};
 use crate::shotgun_solver::ShotgunSolverProgress;
+use crate::{
+    Assignment, ConstraintType, CriticalSetAnalysis, InputData, MipFlow, MipFlowStaticData,
+    Options, Scheduling,
+};
+use crate::{constraints, status};
 
 /// Computes an optimal assignment for a fixed scheduling.
 #[derive(Debug)]
@@ -59,13 +53,13 @@ impl AssignmentSolver {
     ///
     /// Returns `None` when no feasible assignment exists.
     #[must_use]
-    pub fn solve(&mut self, scheduling: Arc<Scheduling>) -> Option<Arc<Assignment>> {
+    pub fn solve(&mut self, scheduling: &Arc<Scheduling>) -> Option<Arc<Assignment>> {
         self.solve_until(scheduling, None)
     }
 
     pub(crate) fn solve_until(
         &mut self,
-        scheduling: Arc<Scheduling>,
+        scheduling: &Arc<Scheduling>,
         deadline: Option<SystemTime>,
     ) -> Option<Arc<Assignment>> {
         let levels = self.input_data.preference_levels.clone();
@@ -73,14 +67,14 @@ impl AssignmentSolver {
             .iter()
             .position(|&level| level >= self.cs_analysis.preference_bound())
             .unwrap_or_else(|| levels.len().saturating_sub(1));
-        Status::debug(&format!(
+        status::debug(&format!(
             "Starting assignment solve with preference search start index {start} and {} level(s).",
             levels.len()
         ));
 
         if self.options.greedy {
-            Status::debug("Greedy mode enabled; solving with maximum preference limit.");
-            return self.solve_with_limit(&scheduling, self.input_data.max_preference(), deadline);
+            status::debug("Greedy mode enabled; solving with maximum preference limit.");
+            return self.solve_with_limit(scheduling, self.input_data.max_preference, deadline);
         }
 
         let mut low = start;
@@ -90,19 +84,23 @@ impl AssignmentSolver {
         while low <= high {
             let mid = low + (high - low) / 2;
             let preference_limit = levels[mid];
-            Status::trace(&format!(
+            status::trace(&format!(
                 "Trying assignment solve with preference limit {preference_limit} (range {low}..={high})."
             ));
-            let assignment = self.solve_with_limit(&scheduling, preference_limit, deadline);
+            let assignment = self.solve_with_limit(scheduling, preference_limit, deadline);
             if assignment.is_some() {
-                Status::debug(&format!("Assignment feasible with preference limit {preference_limit}."));
+                status::debug(&format!(
+                    "Assignment feasible with preference limit {preference_limit}."
+                ));
                 best = assignment;
                 if mid == start {
                     break;
                 }
                 high = mid.saturating_sub(1);
             } else {
-                Status::trace(&format!("Assignment infeasible with preference limit {preference_limit}."));
+                status::trace(&format!(
+                    "Assignment infeasible with preference limit {preference_limit}."
+                ));
                 low = mid + 1;
             }
         }
@@ -116,8 +114,8 @@ impl AssignmentSolver {
         for constraint in &self.static_data.constraints {
             match constraint.kind {
                 ConstraintType::ChooserIsInChoice => {
-                    let constrained_choice =
-                        usize::try_from(constraint.right).expect("choice index must be non-negative");
+                    let constrained_choice = usize::try_from(constraint.right)
+                        .expect("choice index must be non-negative");
                     let slot = scheduling.slot_of(constrained_choice);
                     if slot < 0 {
                         continue;
@@ -126,26 +124,31 @@ impl AssignmentSolver {
                     let from = self.static_data.base_flow.node_map
                         [&MipFlowStaticData::node_chooser(constraint.left, slot_index)];
 
-                    for choice in 0..self.input_data.choice_count() {
+                    for choice in 0..self.input_data.choices.len() {
                         if choice == constrained_choice || scheduling.slot_of(choice) != slot {
                             continue;
                         }
-                        let to = self.static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
+                        let to = self.static_data.base_flow.node_map
+                            [&MipFlowStaticData::node_choice(choice)];
                         blocked_edges.insert((from, to));
                     }
                 }
                 ConstraintType::ChooserIsNotInChoice => {
-                    let blocked_choice =
-                        usize::try_from(constraint.right).expect("choice index must be non-negative");
-                    let to = self.static_data.base_flow.node_map[&MipFlowStaticData::node_choice(blocked_choice)];
-                    for slot in 0..self.input_data.slot_count() {
+                    let blocked_choice = usize::try_from(constraint.right)
+                        .expect("choice index must be non-negative");
+                    let to = self.static_data.base_flow.node_map
+                        [&MipFlowStaticData::node_choice(blocked_choice)];
+                    for slot in 0..self.input_data.slots.len() {
                         let from = self.static_data.base_flow.node_map
                             [&MipFlowStaticData::node_chooser(constraint.left, slot)];
                         blocked_edges.insert((from, to));
                     }
                 }
-                ConstraintType::ChoicesHaveSameChoosers | ConstraintType::ChoosersHaveSameChoices => {}
-                kind => panic!("This kind of constraint is not compatible with the min cost flow solver: {kind:?}."),
+                ConstraintType::ChoicesHaveSameChoosers
+                | ConstraintType::ChoosersHaveSameChoices => {}
+                kind => panic!(
+                    "This kind of constraint is not compatible with the min cost flow solver: {kind:?}."
+                ),
             }
         }
 
@@ -153,20 +156,23 @@ impl AssignmentSolver {
     }
 
     fn create_edge_groups(&self, scheduling: &Scheduling, flow: &mut MipFlow<u64, u64>) {
-        for constraint in self.input_data.assignment_constraints() {
+        for constraint in &self.input_data.assignment_constraints {
             if constraint.kind != ConstraintType::ChoosersHaveSameChoices {
                 continue;
             }
 
-            let other_chooser = usize::try_from(constraint.right).expect("chooser index must be non-negative");
-            for slot in 0..self.input_data.slot_count() {
-                for choice in 0..self.input_data.choice_count() {
+            let other_chooser =
+                usize::try_from(constraint.right).expect("chooser index must be non-negative");
+            for slot in 0..self.input_data.slots.len() {
+                for choice in 0..self.input_data.choices.len() {
                     let from1 = self.static_data.base_flow.node_map
                         [&MipFlowStaticData::node_chooser(constraint.left, slot)];
-                    let to1 = self.static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
+                    let to1 = self.static_data.base_flow.node_map
+                        [&MipFlowStaticData::node_choice(choice)];
                     let from2 = self.static_data.base_flow.node_map
                         [&MipFlowStaticData::node_chooser(other_chooser, slot)];
-                    let to2 = self.static_data.base_flow.node_map[&MipFlowStaticData::node_choice(choice)];
+                    let to2 = self.static_data.base_flow.node_map
+                        [&MipFlowStaticData::node_choice(choice)];
                     flow.create_edge_group_or_block_edges([
                         MipFlowStaticData::edge_id(from1, to1),
                         MipFlowStaticData::edge_id(from2, to2),
@@ -175,15 +181,15 @@ impl AssignmentSolver {
             }
         }
 
-        for group in Constraints::get_dependent_choices(
-            self.input_data.assignment_constraints(),
-            self.input_data.choice_count(),
+        for group in constraints::get_dependent_choices(
+            &self.input_data.assignment_constraints,
+            self.input_data.choices.len(),
         ) {
             if group.len() == 1 {
                 continue;
             }
 
-            for chooser in 0..self.input_data.chooser_count() {
+            for chooser in 0..self.input_data.choosers.len() {
                 let mut edge_group = Vec::new();
                 for choice in group.iter().copied() {
                     let slot = scheduling.slot_of(choice);
@@ -208,7 +214,7 @@ impl AssignmentSolver {
         deadline: Option<SystemTime>,
     ) -> Option<Arc<Assignment>> {
         if deadline.is_some_and(|deadline| deadline <= SystemTime::now()) {
-            Status::debug("Skipping assignment solve because the worker deadline is exhausted.");
+            status::debug("Skipping assignment solve because the worker deadline is exhausted.");
             return None;
         }
 
@@ -216,14 +222,14 @@ impl AssignmentSolver {
         let mut blocked_edges = self.get_blocked_constraint_edges(scheduling);
         blocked_edges.extend(self.static_data.blocked_edges.iter().copied());
 
-        for chooser in 0..self.input_data.chooser_count() {
-            for slot in 0..self.input_data.slot_count() {
+        for chooser in 0..self.input_data.choosers.len() {
+            for slot in 0..self.input_data.slots.len() {
                 let node = flow.node_map[&MipFlowStaticData::node_chooser(chooser, slot)];
                 flow.set_supply(node, 1);
             }
         }
 
-        for choice in 0..self.input_data.choice_count() {
+        for choice in 0..self.input_data.choices.len() {
             if scheduling.slot_of(choice) == Scheduling::NOT_SCHEDULED {
                 continue;
             }
@@ -231,25 +237,29 @@ impl AssignmentSolver {
             flow.set_supply(node, -self.input_data.choices[choice].min);
         }
 
-        for slot in 0..self.input_data.slot_count() {
+        for slot in 0..self.input_data.slots.len() {
             let mut covered_choosers = 0_i32;
-            for choice in 0..self.input_data.choice_count() {
-                if scheduling.slot_of(choice) == i32::try_from(slot).expect("slot index must fit in i32") {
+            for choice in 0..self.input_data.choices.len() {
+                if scheduling.slot_of(choice)
+                    == i32::try_from(slot).expect("slot index must fit in i32")
+                {
                     covered_choosers += self.input_data.choices[choice].min;
                 }
             }
             let node = flow.node_map[&MipFlowStaticData::node_slot(slot)];
             flow.set_supply(
                 node,
-                -(i32::try_from(self.input_data.chooser_count()).expect("chooser count must fit in i32")
+                -(i32::try_from(self.input_data.choosers.len())
+                    .expect("chooser count must fit in i32")
                     - covered_choosers),
             );
         }
 
-        for chooser in 0..self.input_data.chooser_count() {
-            for slot in 0..self.input_data.slot_count() {
-                for choice in 0..self.input_data.choice_count() {
-                    if scheduling.slot_of(choice) != i32::try_from(slot).expect("slot index must fit in i32")
+        for chooser in 0..self.input_data.choosers.len() {
+            for slot in 0..self.input_data.slots.len() {
+                for choice in 0..self.input_data.choices.len() {
+                    if scheduling.slot_of(choice)
+                        != i32::try_from(slot).expect("slot index must fit in i32")
                         || self.input_data.choosers[chooser].preferences[choice] > preference_limit
                     {
                         continue;
@@ -268,7 +278,7 @@ impl AssignmentSolver {
             }
         }
 
-        for choice in 0..self.input_data.choice_count() {
+        for choice in 0..self.input_data.choices.len() {
             let slot = scheduling.slot_of(choice);
             if slot < 0 {
                 continue;
@@ -290,7 +300,7 @@ impl AssignmentSolver {
 
         self.lp_count += 1;
         self.publish_lp_progress();
-        Status::trace(&format!(
+        status::trace(&format!(
             "Solving assignment LP/MIP instance #{} with {} node(s) and {} edge(s).",
             self.lp_count,
             flow.node_count(),
@@ -298,32 +308,39 @@ impl AssignmentSolver {
         ));
         let remaining = remaining_duration(deadline);
         if remaining.is_some_and(|remaining| remaining.is_zero()) {
-            Status::debug("Skipping assignment flow solve because no time remains.");
+            status::debug("Skipping assignment flow solve because no time remains.");
             return None;
         }
         if !flow.solve(remaining) {
             if deadline.is_some() {
-                Status::debug("Assignment flow solve stopped before producing a feasible solution.");
+                status::debug(
+                    "Assignment flow solve stopped before producing a feasible solution.",
+                );
             }
-            Status::trace("Assignment flow solve reported infeasibility.");
+            status::trace("Assignment flow solve reported infeasibility.");
             return None;
         }
 
-        let mut data = vec![vec![usize::MAX; self.input_data.slot_count()]; self.input_data.chooser_count()];
+        let mut data =
+            vec![vec![usize::MAX; self.input_data.slots.len()]; self.input_data.choosers.len()];
         for (chooser, slots) in data.iter_mut().enumerate() {
             for (slot, choice_slot) in slots.iter_mut().enumerate() {
-                for choice in 0..self.input_data.choice_count() {
+                for choice in 0..self.input_data.choices.len() {
                     let from = flow.node_map[&MipFlowStaticData::node_chooser(chooser, slot)];
                     let to = flow.node_map[&MipFlowStaticData::node_choice(choice)];
                     if flow.solution_value_at(&MipFlowStaticData::edge_id(from, to)) == 1 {
                         *choice_slot = choice;
                     }
                 }
-                assert_ne!(*choice_slot, usize::MAX, "each chooser/slot must be assigned a choice");
+                assert_ne!(
+                    *choice_slot,
+                    usize::MAX,
+                    "each chooser/slot must be assigned a choice"
+                );
             }
         }
 
-        Status::trace("Assignment flow solve succeeded.");
+        status::trace("Assignment flow solve succeeded.");
         Some(Arc::new(Assignment::new(self.input_data.clone(), data)))
     }
 }
@@ -339,5 +356,9 @@ impl AssignmentSolver {
 }
 
 fn remaining_duration(deadline: Option<SystemTime>) -> Option<Duration> {
-    deadline.map(|deadline| deadline.duration_since(SystemTime::now()).unwrap_or(Duration::ZERO))
+    deadline.map(|deadline| {
+        deadline
+            .duration_since(SystemTime::now())
+            .unwrap_or(Duration::ZERO)
+    })
 }

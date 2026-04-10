@@ -9,7 +9,9 @@ use common::{csa, default_options, parse_data_result, scoring, sd};
 use wassign::ShotgunSolverThreaded;
 
 fn root_fixture(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/inputs").join(name)
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/inputs")
+        .join(name)
 }
 
 fn smoke_solve_fixture(name: &str) {
@@ -27,27 +29,31 @@ fn smoke_solve_fixture(name: &str) {
         options,
     );
     solver.start().expect("smoke solver should start");
-    let _ = solver.wait_for_result().expect("smoke solver should finish");
+    let _ = solver
+        .wait_for_result()
+        .expect("smoke solver should finish");
 }
 
 #[test]
 fn realistic120_should_parse() {
-    let input = std::fs::read_to_string(root_fixture("realistic120.wassign")).expect("fixture should be readable");
+    let input = std::fs::read_to_string(root_fixture("realistic120.wassign"))
+        .expect("fixture should be readable");
     let data = parse_data_result(&input).expect("fixture should parse");
 
-    assert!(data.slot_count() > 1);
-    assert!(data.choice_count() >= 10);
-    assert!(data.chooser_count() > 10);
+    assert!(data.slots.len() > 1);
+    assert!(data.choices.len() >= 10);
+    assert!(data.choosers.len() > 10);
 }
 
 #[test]
 fn realistic300_should_parse() {
-    let input = std::fs::read_to_string(root_fixture("realistic300.wassign")).expect("fixture should be readable");
+    let input = std::fs::read_to_string(root_fixture("realistic300.wassign"))
+        .expect("fixture should be readable");
     let data = parse_data_result(&input).expect("fixture should parse");
 
-    assert!(data.slot_count() > 1);
-    assert!(data.choice_count() > 10);
-    assert!(data.chooser_count() > 10);
+    assert!(data.slots.len() > 1);
+    assert!(data.choices.len() > 10);
+    assert!(data.choosers.len() > 10);
 }
 
 #[test]

@@ -4,25 +4,60 @@ use crate::{Assignment, Scheduling};
 
 /// Combined scheduling and assignment result.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Solution {
-    pub(crate) scheduling: Option<Arc<Scheduling>>,
-    pub(crate) assignment: Option<Arc<Assignment>>,
+pub enum Solution {
+    /// No usable scheduling or assignment is available.
+    Invalid,
+    /// A feasible scheduling exists, but no assignment has been found for it.
+    Scheduling(Arc<Scheduling>),
+    /// Both scheduling and assignment are available.
+    Complete {
+        /// The scheduling stage result.
+        scheduling: Arc<Scheduling>,
+        /// The assignment stage result for the scheduling.
+        assignment: Arc<Assignment>,
+    },
 }
 
 impl Solution {
     /// Creates a solution from its scheduling and assignment parts.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an assignment is provided without a scheduling.
     #[must_use]
     pub fn new(scheduling: Option<Arc<Scheduling>>, assignment: Option<Arc<Assignment>>) -> Self {
-        Self { scheduling, assignment }
+        match (scheduling, assignment) {
+            (Some(scheduling), Some(assignment)) => Self::Complete {
+                scheduling,
+                assignment,
+            },
+            (Some(scheduling), None) => Self::Scheduling(scheduling),
+            (None, None) => Self::Invalid,
+            (None, Some(_)) => {
+                panic!("a solution cannot contain an assignment without a scheduling")
+            }
+        }
     }
 
-    /// Returns `true` when the solution is incomplete.
+    /// Returns `true` when the solution does not contain both parts.
     #[must_use]
     pub fn is_invalid(&self) -> bool {
-        self.scheduling.is_none() || self.assignment.is_none()
+        !matches!(self, Self::Complete { .. })
     }
 
-    pub(crate) fn invalid() -> Self {
-        Self::new(None, None)
+    #[must_use]
+    pub(crate) fn scheduling(&self) -> Option<&Arc<Scheduling>> {
+        match self {
+            Self::Invalid => None,
+            Self::Scheduling(scheduling) | Self::Complete { scheduling, .. } => Some(scheduling),
+        }
+    }
+
+    #[must_use]
+    pub(crate) fn assignment(&self) -> Option<&Arc<Assignment>> {
+        match self {
+            Self::Complete { assignment, .. } => Some(assignment),
+            Self::Invalid | Self::Scheduling(_) => None,
+        }
     }
 }

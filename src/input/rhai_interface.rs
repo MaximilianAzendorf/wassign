@@ -1,10 +1,3 @@
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::needless_pass_by_value,
-    clippy::too_many_lines,
-    reason = "the Rhai interface converts script values and shared handles at the embedding boundary"
-)]
-
 use std::sync::{Arc, Mutex};
 
 use rhai::{Array, Dynamic, Engine, EvalAltResult, Scope};
@@ -12,11 +5,12 @@ use rhai::{Array, Dynamic, Engine, EvalAltResult, Scope};
 use crate::{ChooserData, InputError, Options, SlotData};
 
 use super::constraint_expression::{
-    AccessorType, ConstraintExpression, ConstraintExpressionAccessor, ConstraintExpressionRelation, RelationType,
+    AccessorType, ConstraintExpression, ConstraintExpressionAccessor, ConstraintExpressionRelation,
+    RelationType,
 };
 use super::fuzzy_match::FuzzyMatch;
-use super::input_chooser_data::InputChooserData;
 use super::input_choice_data::InputChoiceData;
+use super::input_chooser_data::InputChooserData;
 use super::input_object::InputObject;
 use super::input_slot_data::InputSlotData;
 use super::proto_choice_data::ProtoChoiceData;
@@ -61,7 +55,11 @@ pub struct RhaiInterface;
 type ScriptResult<T> = std::result::Result<T, Box<EvalAltResult>>;
 
 impl RhaiInterface {
-    pub fn register_interface(engine: &mut Engine, state: Arc<Mutex<ReaderState>>, options: Arc<Mutex<Options>>) {
+    pub fn register_interface(
+        engine: &mut Engine,
+        state: &Arc<Mutex<ReaderState>>,
+        options: &Arc<Mutex<Options>>,
+    ) {
         engine.register_type_with_name::<Tagged>("Tagged");
         engine.register_type_with_name::<SlotRef>("slot");
         engine.register_type_with_name::<ChoiceRef>("choice");
@@ -107,12 +105,14 @@ impl RhaiInterface {
         engine.register_fn("chooser", {
             let state = state.clone();
             move |name: &str, prefs: Array| {
-                script_result(array_to_i32(&prefs).and_then(|prefs| chooser(state.clone(), name, prefs)))
+                script_result(
+                    array_to_i32(&prefs).and_then(|prefs| chooser(state.clone(), name, prefs)),
+                )
             }
         });
         engine.register_fn("set_arguments", {
             let options = options.clone();
-            move |args: Array| script_result(set_arguments(options.clone(), args))
+            move |args: Array| script_result(set_arguments(&options, args))
         });
         engine.register_fn("set_name", |mut slot_ref: SlotRef, name: &str| {
             slot_ref.set_name(name.to_owned());
@@ -127,13 +127,19 @@ impl RhaiInterface {
             chooser_ref
         });
 
-        engine.register_fn("+", |slot_ref: SlotRef| script_result(register_slot(slot_ref)));
-        engine.register_fn("+", |choice_ref: ChoiceRef| script_result(register_choice(choice_ref)));
-        engine.register_fn("+", |chooser_ref: ChooserRef| script_result(register_chooser(chooser_ref)));
+        engine.register_fn("+", |slot_ref: SlotRef| {
+            script_result(register_slot(slot_ref))
+        });
+        engine.register_fn("+", |choice_ref: ChoiceRef| {
+            script_result(register_choice(choice_ref))
+        });
+        engine.register_fn("+", |chooser_ref: ChooserRef| {
+            script_result(register_chooser(chooser_ref))
+        });
         engine.register_fn("+", {
             let state = state.clone();
             move |expression: ConstraintExpression| {
-                script_result(register_constraint(state.clone(), expression))
+                script_result(register_constraint(&state, expression))
             }
         });
         engine.register_fn("constraint", |expression: ConstraintExpression| expression);
@@ -173,31 +179,44 @@ impl RhaiInterface {
         engine.register_fn("+", |left: String, right: i64| format!("{left}{right}"));
         engine.register_fn("+", |left: i64, right: String| format!("{left}{right}"));
 
-        engine.register_fn("min", |value: i64| Tagged::new(Tag::Min, vec![value as i32]));
+        engine.register_fn("min", |value: i64| {
+            Tagged::new(Tag::Min, vec![value as i32])
+        });
         engine.register_fn("min", |value: String| {
             script_result(parse_string_int(&value).map(|value| Tagged::new(Tag::Min, vec![value])))
         });
-        engine.register_fn("max", |value: i64| Tagged::new(Tag::Max, vec![value as i32]));
+        engine.register_fn("max", |value: i64| {
+            Tagged::new(Tag::Max, vec![value as i32])
+        });
         engine.register_fn("max", |value: String| {
             script_result(parse_string_int(&value).map(|value| Tagged::new(Tag::Max, vec![value])))
         });
-        engine.register_fn("parts", |value: i64| Tagged::new(Tag::Parts, vec![value as i32]));
+        engine.register_fn("parts", |value: i64| {
+            Tagged::new(Tag::Parts, vec![value as i32])
+        });
         engine.register_fn("parts", |value: String| {
-            script_result(parse_string_int(&value).map(|value| Tagged::new(Tag::Parts, vec![value])))
+            script_result(
+                parse_string_int(&value).map(|value| Tagged::new(Tag::Parts, vec![value])),
+            )
         });
         engine.register_fn("bounds", |min: i64, max: i64| {
             Tagged::new(Tag::Bounds, vec![min as i32, max as i32])
         });
         engine.register_fn("bounds", |min: String, max: String| {
-            script_result(
-                parse_string_int(&min)
-                    .and_then(|min| parse_string_int(&max).map(|max| Tagged::new(Tag::Bounds, vec![min, max]))),
-            )
+            script_result(parse_string_int(&min).and_then(|min| {
+                parse_string_int(&max).map(|max| Tagged::new(Tag::Bounds, vec![min, max]))
+            }))
         });
-        engine.register_fn("optional_if", |value: bool| Tagged::new(Tag::Optional, vec![i32::from(value)]));
+        engine.register_fn("optional_if", |value: bool| {
+            Tagged::new(Tag::Optional, vec![i32::from(value)])
+        });
 
-        engine.register_fn("readFile", |filename: String| script_result(read_file_string(&filename)));
-        engine.register_fn("read_csv", |filename: String| script_result(read_file_csv(&filename, ',')));
+        engine.register_fn("readFile", |filename: String| {
+            script_result(read_file_string(&filename))
+        });
+        engine.register_fn("read_csv", |filename: String| {
+            script_result(read_file_csv(&filename, ','))
+        });
         engine.register_fn("read_csv", |filename: String, separator: String| {
             let separator = separator.chars().next().unwrap_or(',');
             script_result(read_file_csv(&filename, separator))
@@ -207,7 +226,7 @@ impl RhaiInterface {
         });
         engine.register_fn("range", |from: i64, to: i64| range(from, to));
         engine.register_fn("slice", |array: Array, from: i64, to: i64| {
-            script_result(slice(array, from, to))
+            script_result(slice(&array, from, to))
         });
     }
 
@@ -223,40 +242,65 @@ fn script_result<T>(result: crate::Result<T>) -> ScriptResult<T> {
     result.map_err(|err| err.to_string().into())
 }
 
-fn reader_state(state: &Arc<Mutex<ReaderState>>) -> crate::Result<std::sync::MutexGuard<'_, ReaderState>> {
+fn reader_state(
+    state: &Arc<Mutex<ReaderState>>,
+) -> crate::Result<std::sync::MutexGuard<'_, ReaderState>> {
     state
         .lock()
         .map_err(|_| InputError::Message("reader state mutex poisoned".to_owned()))
 }
 
-fn reader_options(options: &Arc<Mutex<Options>>) -> crate::Result<std::sync::MutexGuard<'_, Options>> {
+fn reader_options(
+    options: &Arc<Mutex<Options>>,
+) -> crate::Result<std::sync::MutexGuard<'_, Options>> {
     options
         .lock()
         .map_err(|_| InputError::Message("reader options mutex poisoned".to_owned()))
 }
 
 fn register_relation(engine: &mut Engine, op: &str, relation: RelationType) {
-    engine.register_fn(op, move |left: ConstraintExpressionAccessor, right: ConstraintExpressionAccessor| {
-        build_expression(left, relation, right)
-    });
-    engine.register_fn(op, move |left: ConstraintExpressionAccessor, right: SlotRef| {
-        build_expression(left, relation, slot_to_accessor(right))
-    });
-    engine.register_fn(op, move |left: SlotRef, right: ConstraintExpressionAccessor| {
-        build_expression(slot_to_accessor(left), relation, right)
-    });
-    engine.register_fn(op, move |left: ConstraintExpressionAccessor, right: ChoiceRef| {
-        build_expression(left, relation, choice_to_accessor(right))
-    });
-    engine.register_fn(op, move |left: ChoiceRef, right: ConstraintExpressionAccessor| {
-        build_expression(choice_to_accessor(left), relation, right)
-    });
-    engine.register_fn(op, move |left: ConstraintExpressionAccessor, right: ChooserRef| {
-        build_expression(left, relation, chooser_to_accessor(right))
-    });
-    engine.register_fn(op, move |left: ChooserRef, right: ConstraintExpressionAccessor| {
-        build_expression(chooser_to_accessor(left), relation, right)
-    });
+    engine.register_fn(
+        op,
+        move |left: ConstraintExpressionAccessor, right: ConstraintExpressionAccessor| {
+            build_expression(left, relation, right)
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: ConstraintExpressionAccessor, right: SlotRef| {
+            build_expression(left, relation, slot_to_accessor(&right))
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: SlotRef, right: ConstraintExpressionAccessor| {
+            build_expression(slot_to_accessor(&left), relation, right)
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: ConstraintExpressionAccessor, right: ChoiceRef| {
+            build_expression(left, relation, choice_to_accessor(&right))
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: ChoiceRef, right: ConstraintExpressionAccessor| {
+            build_expression(choice_to_accessor(&left), relation, right)
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: ConstraintExpressionAccessor, right: ChooserRef| {
+            build_expression(left, relation, chooser_to_accessor(&right))
+        },
+    );
+    engine.register_fn(
+        op,
+        move |left: ChooserRef, right: ConstraintExpressionAccessor| {
+            build_expression(chooser_to_accessor(&left), relation, right)
+        },
+    );
     engine.register_fn(op, move |left: ConstraintExpressionAccessor, right: i64| {
         build_expression(left, relation, integer_accessor(right))
     });
@@ -266,15 +310,24 @@ fn register_relation(engine: &mut Engine, op: &str, relation: RelationType) {
 }
 
 fn register_contains(engine: &mut Engine, name: &str, relation: RelationType) {
-    engine.register_fn(name, move |left: ConstraintExpressionAccessor, right: SlotRef| {
-        build_expression(left, relation, slot_to_accessor(right))
-    });
-    engine.register_fn(name, move |left: ConstraintExpressionAccessor, right: ChoiceRef| {
-        build_expression(left, relation, choice_to_accessor(right))
-    });
-    engine.register_fn(name, move |left: ConstraintExpressionAccessor, right: ChooserRef| {
-        build_expression(left, relation, chooser_to_accessor(right))
-    });
+    engine.register_fn(
+        name,
+        move |left: ConstraintExpressionAccessor, right: SlotRef| {
+            build_expression(left, relation, slot_to_accessor(&right))
+        },
+    );
+    engine.register_fn(
+        name,
+        move |left: ConstraintExpressionAccessor, right: ChoiceRef| {
+            build_expression(left, relation, choice_to_accessor(&right))
+        },
+    );
+    engine.register_fn(
+        name,
+        move |left: ConstraintExpressionAccessor, right: ChooserRef| {
+            build_expression(left, relation, chooser_to_accessor(&right))
+        },
+    );
 }
 
 fn build_expression(
@@ -306,7 +359,11 @@ fn slot(state: Arc<Mutex<ReaderState>>, name: &str) -> crate::Result<SlotRef> {
     Ok(SlotRef { state, id })
 }
 
-fn choice(state: Arc<Mutex<ReaderState>>, name: &str, tags: Vec<Tagged>) -> crate::Result<ChoiceRef> {
+fn choice(
+    state: Arc<Mutex<ReaderState>>,
+    name: &str,
+    tags: Vec<Tagged>,
+) -> crate::Result<ChoiceRef> {
     if let Some(id) = find_registered_choice(&state, name)? {
         return Ok(ChoiceRef { state, id });
     }
@@ -341,7 +398,11 @@ fn choice(state: Arc<Mutex<ReaderState>>, name: &str, tags: Vec<Tagged>) -> crat
     Ok(ChoiceRef { state, id })
 }
 
-fn chooser(state: Arc<Mutex<ReaderState>>, name: &str, preferences: Vec<i32>) -> crate::Result<ChooserRef> {
+fn chooser(
+    state: Arc<Mutex<ReaderState>>,
+    name: &str,
+    preferences: Vec<i32>,
+) -> crate::Result<ChooserRef> {
     if let Some(id) = find_registered_chooser(&state, name)? {
         return Ok(ChooserRef { state, id });
     }
@@ -359,7 +420,7 @@ fn chooser(state: Arc<Mutex<ReaderState>>, name: &str, preferences: Vec<i32>) ->
     Ok(ChooserRef { state, id })
 }
 
-fn set_arguments(options: Arc<Mutex<Options>>, args: Array) -> crate::Result<()> {
+fn set_arguments(options: &Arc<Mutex<Options>>, args: Array) -> crate::Result<()> {
     let mut values = Vec::with_capacity(args.len() + 1);
     values.push("wassign".to_owned());
     for arg in args {
@@ -370,7 +431,7 @@ fn set_arguments(options: Arc<Mutex<Options>>, args: Array) -> crate::Result<()>
         values.push(text);
     }
 
-    let mut parsed = reader_options(&options)?;
+    let mut parsed = reader_options(options)?;
     let mut next = parsed.clone();
 
     let mut iter = values.iter().skip(1);
@@ -386,43 +447,43 @@ fn set_arguments(options: Arc<Mutex<Options>>, args: Array) -> crate::Result<()>
                 let value = iter
                     .next()
                     .ok_or_else(|| InputError::Message("Missing value for --output.".to_owned()))?;
-                next.output_file.clone_from(value);
+                next.output_file = Some(value.clone());
             }
             "-a" | "--any" => next.any = true,
             "-p" | "--pref-exp" => {
-                let value = iter
-                    .next()
-                    .ok_or_else(|| InputError::Message("Missing value for --pref-exp.".to_owned()))?;
+                let value = iter.next().ok_or_else(|| {
+                    InputError::Message("Missing value for --pref-exp.".to_owned())
+                })?;
                 next.preference_exponent = value
                     .parse::<f64>()
                     .map_err(|err| InputError::Message(err.to_string()))?;
             }
             "-t" | "--timeout" => {
-                let value = iter
-                    .next()
-                    .ok_or_else(|| InputError::Message("Missing value for --timeout.".to_owned()))?;
+                let value = iter.next().ok_or_else(|| {
+                    InputError::Message("Missing value for --timeout.".to_owned())
+                })?;
                 next.timeout_seconds = Options::parse_time(value)?;
             }
             "--cs-timeout" => {
-                let value = iter
-                    .next()
-                    .ok_or_else(|| InputError::Message("Missing value for --cs-timeout.".to_owned()))?;
+                let value = iter.next().ok_or_else(|| {
+                    InputError::Message("Missing value for --cs-timeout.".to_owned())
+                })?;
                 next.critical_set_timeout_seconds = Options::parse_time(value)?;
             }
             "--no-cs" => next.no_critical_sets = true,
             "--no-cs-simp" => next.no_critical_set_simplification = true,
             "-j" | "--threads" => {
-                let value = iter
-                    .next()
-                    .ok_or_else(|| InputError::Message("Missing value for --threads.".to_owned()))?;
+                let value = iter.next().ok_or_else(|| {
+                    InputError::Message("Missing value for --threads.".to_owned())
+                })?;
                 next.thread_count = value
                     .parse::<i32>()
                     .map_err(|err| InputError::Message(err.to_string()))?;
             }
             "-n" | "--max-neighbors" => {
-                let value = iter
-                    .next()
-                    .ok_or_else(|| InputError::Message("Missing value for --max-neighbors.".to_owned()))?;
+                let value = iter.next().ok_or_else(|| {
+                    InputError::Message("Missing value for --max-neighbors.".to_owned())
+                })?;
                 next.max_neighbors = value
                     .parse::<i32>()
                     .map_err(|err| InputError::Message(err.to_string()))?;
@@ -463,7 +524,9 @@ fn register_choice(choice_ref: ChoiceRef) -> crate::Result<ChoiceRef> {
         .iter()
         .any(|&id| id != choice_ref.id && state.choices[id].choice.name == name)
     {
-        return Err(InputError::Message(format!("Duplicate choice name '{name}'.")));
+        return Err(InputError::Message(format!(
+            "Duplicate choice name '{name}'."
+        )));
     }
     if !state.registered_choice_ids.contains(&choice_ref.id) {
         state.registered_choice_ids.push(choice_ref.id);
@@ -481,7 +544,9 @@ fn register_chooser(chooser_ref: ChooserRef) -> crate::Result<ChooserRef> {
         .iter()
         .any(|&id| id != chooser_ref.id && state.choosers[id].chooser.name == name)
     {
-        return Err(InputError::Message(format!("Duplicate chooser name '{name}'.")));
+        return Err(InputError::Message(format!(
+            "Duplicate chooser name '{name}'."
+        )));
     }
     if !state.registered_chooser_ids.contains(&chooser_ref.id) {
         state.registered_chooser_ids.push(chooser_ref.id);
@@ -492,53 +557,52 @@ fn register_chooser(chooser_ref: ChooserRef) -> crate::Result<ChooserRef> {
 }
 
 fn register_constraint(
-    state: Arc<Mutex<ReaderState>>,
+    state: &Arc<Mutex<ReaderState>>,
     expression: ConstraintExpression,
 ) -> crate::Result<ConstraintExpression> {
-    reader_state(&state)?.constraint_expressions.push(expression.clone());
+    reader_state(state)?
+        .constraint_expressions
+        .push(expression.clone());
     Ok(expression)
 }
 
-fn find_registered_slot(state: &Arc<Mutex<ReaderState>>, name: &str) -> crate::Result<Option<usize>> {
-    find_registered_name(
-        state,
-        name,
-        |state| {
-            state
-                .registered_set_ids
-                .iter()
-                .map(|&id| (id, state.slots[id].slot.name.clone()))
-                .collect()
-        },
-    )
+fn find_registered_slot(
+    state: &Arc<Mutex<ReaderState>>,
+    name: &str,
+) -> crate::Result<Option<usize>> {
+    find_registered_name(state, name, |state| {
+        state
+            .registered_set_ids
+            .iter()
+            .map(|&id| (id, state.slots[id].slot.name.clone()))
+            .collect()
+    })
 }
 
-fn find_registered_choice(state: &Arc<Mutex<ReaderState>>, name: &str) -> crate::Result<Option<usize>> {
-    find_registered_name(
-        state,
-        name,
-        |state| {
-            state
-                .registered_choice_ids
-                .iter()
-                .map(|&id| (id, state.choices[id].choice.name.clone()))
-                .collect()
-        },
-    )
+fn find_registered_choice(
+    state: &Arc<Mutex<ReaderState>>,
+    name: &str,
+) -> crate::Result<Option<usize>> {
+    find_registered_name(state, name, |state| {
+        state
+            .registered_choice_ids
+            .iter()
+            .map(|&id| (id, state.choices[id].choice.name.clone()))
+            .collect()
+    })
 }
 
-fn find_registered_chooser(state: &Arc<Mutex<ReaderState>>, name: &str) -> crate::Result<Option<usize>> {
-    find_registered_name(
-        state,
-        name,
-        |state| {
-            state
-                .registered_chooser_ids
-                .iter()
-                .map(|&id| (id, state.choosers[id].chooser.name.clone()))
-                .collect()
-        },
-    )
+fn find_registered_chooser(
+    state: &Arc<Mutex<ReaderState>>,
+    name: &str,
+) -> crate::Result<Option<usize>> {
+    find_registered_name(state, name, |state| {
+        state
+            .registered_chooser_ids
+            .iter()
+            .map(|&id| (id, state.choosers[id].chooser.name.clone()))
+            .collect()
+    })
 }
 
 fn find_registered_name(
@@ -548,10 +612,15 @@ fn find_registered_name(
 ) -> crate::Result<Option<usize>> {
     let state = reader_state(state)?;
     let values = values(&state);
-    let names = values.iter().map(|(_, value)| value.clone()).collect::<Vec<_>>();
+    let names = values
+        .iter()
+        .map(|(_, value)| value.clone())
+        .collect::<Vec<_>>();
     let matches = FuzzyMatch::find(name, &names);
     if matches.len() > 1 {
-        return Err(InputError::Message(format!("The name \"{name}\" is ambiguous.")));
+        return Err(InputError::Message(format!(
+            "The name \"{name}\" is ambiguous."
+        )));
     }
     Ok(matches.first().map(|&index| values[index].0))
 }
@@ -567,7 +636,9 @@ fn array_to_i32(array: &Array) -> crate::Result<Vec<i32>> {
             } else if let Some(text) = value.clone().try_cast::<String>() {
                 parse_string_int(&text)
             } else {
-                Err(InputError::Message("Unsupported chooser preference value.".to_owned()))
+                Err(InputError::Message(
+                    "Unsupported chooser preference value.".to_owned(),
+                ))
             }
         })
         .collect()
@@ -612,7 +683,7 @@ fn range(from: i64, to: i64) -> Array {
     result
 }
 
-fn slice(values: Array, from: i64, to: i64) -> crate::Result<Array> {
+fn slice(values: &Array, from: i64, to: i64) -> crate::Result<Array> {
     if from < 0 || to < 0 {
         return Err(InputError::Message(format!(
             "An array of length {} can not be sliced between {from} and {to}.",
@@ -666,7 +737,10 @@ impl CsvDocument {
         let Ok(index) = usize::try_from(index) else {
             return Array::new();
         };
-        self.rows.get(index).cloned().map_or_else(Array::new, row_to_array)
+        self.rows
+            .get(index)
+            .cloned()
+            .map_or_else(Array::new, row_to_array)
     }
 }
 
@@ -678,7 +752,7 @@ fn row_to_array(row: Vec<String>) -> Array {
     row.into_iter().map(Dynamic::from).collect()
 }
 
-fn slot_to_accessor(slot_ref: SlotRef) -> ConstraintExpressionAccessor {
+fn slot_to_accessor(slot_ref: &SlotRef) -> ConstraintExpressionAccessor {
     ConstraintExpressionAccessor {
         kind: AccessorType::Slot,
         sub_type: AccessorType::NotSet,
@@ -687,7 +761,7 @@ fn slot_to_accessor(slot_ref: SlotRef) -> ConstraintExpressionAccessor {
     }
 }
 
-fn choice_to_accessor(choice_ref: ChoiceRef) -> ConstraintExpressionAccessor {
+fn choice_to_accessor(choice_ref: &ChoiceRef) -> ConstraintExpressionAccessor {
     ConstraintExpressionAccessor {
         kind: AccessorType::Choice,
         sub_type: AccessorType::NotSet,
@@ -696,7 +770,7 @@ fn choice_to_accessor(choice_ref: ChoiceRef) -> ConstraintExpressionAccessor {
     }
 }
 
-fn chooser_to_accessor(chooser_ref: ChooserRef) -> ConstraintExpressionAccessor {
+fn chooser_to_accessor(chooser_ref: &ChooserRef) -> ConstraintExpressionAccessor {
     ConstraintExpressionAccessor {
         kind: AccessorType::Chooser,
         sub_type: AccessorType::NotSet,
@@ -716,7 +790,10 @@ fn integer_accessor(value: i64) -> ConstraintExpressionAccessor {
 
 impl SlotRef {
     fn name_value(&self) -> String {
-        self.state.lock().expect("reader state mutex poisoned").slots[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .slots[self.id]
             .slot
             .name
             .clone()
@@ -727,7 +804,10 @@ impl SlotRef {
     }
 
     fn set_name(&mut self, name: String) {
-        self.state.lock().expect("reader state mutex poisoned").slots[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .slots[self.id]
             .slot
             .name = name;
     }
@@ -753,7 +833,10 @@ impl SlotRef {
 
 impl ChoiceRef {
     fn name_value(&self) -> String {
-        self.state.lock().expect("reader state mutex poisoned").choices[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .choices[self.id]
             .choice
             .name
             .clone()
@@ -764,7 +847,10 @@ impl ChoiceRef {
     }
 
     fn set_name(&mut self, name: String) {
-        self.state.lock().expect("reader state mutex poisoned").choices[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .choices[self.id]
             .choice
             .name = name;
     }
@@ -808,7 +894,10 @@ impl ChoiceRef {
 
 impl ChooserRef {
     fn name_value(&self) -> String {
-        self.state.lock().expect("reader state mutex poisoned").choosers[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .choosers[self.id]
             .chooser
             .name
             .clone()
@@ -819,7 +908,10 @@ impl ChooserRef {
     }
 
     fn set_name(&mut self, name: String) {
-        self.state.lock().expect("reader state mutex poisoned").choosers[self.id]
+        self.state
+            .lock()
+            .expect("reader state mutex poisoned")
+            .choosers[self.id]
             .chooser
             .name = name;
     }

@@ -55,7 +55,7 @@ wassign -i our-input-file.txt -o output-file
 we promptly get back the following result as a CSV file (called `output-file.assignment.csv`):
 
 ```
-"Choice", "Generated Slot"
+"Chooser", "Generated Slot"
 
 "Ethan",  "Paleo cooking for beginners"
 "Fanny",  "Paleo cooking for beginners"
@@ -80,11 +80,11 @@ You may note the "Generated Slot" column header in the output file. This is pres
 
 ## Getting more complicated with slots
 
-Lets say that the time schedule of our convention (which is held in a single day) looks as follows:
+Let's say that the time schedule of our convention (which is held in a single day) looks as follows:
 
 -------------- ----------------------
 10:00 -- 11:00 Welcome speech
-11:00 -- 12:30 *Worshops I*
+11:00 -- 12:30 *Workshops I*
 12:30 -- 14:00 Lunch break
 14:00 -- 15:30 *Workshops II*
 15:30 -- 17:00 After-convention party

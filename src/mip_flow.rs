@@ -1,14 +1,9 @@
-#![expect(
-    clippy::cast_possible_truncation,
-    clippy::cast_precision_loss,
-    reason = "LP variables use f64 while solver domain values remain integer-valued"
-)]
-
 use std::collections::BTreeMap;
 use std::time::Duration;
 
 use good_lp::{
-    Expression, Solution as _, SolutionStatus, SolverModel, Variable, WithTimeLimit, constraint, variable, variables,
+    Expression, Solution as _, SolutionStatus, SolverModel, Variable, WithTimeLimit, constraint,
+    variable, variables,
 };
 
 #[derive(Debug, Clone)]
@@ -157,7 +152,9 @@ where
 
         for (group_index, group) in self.edge_groups.iter().enumerate() {
             for &edge in group {
-                model = model.with(constraint!(edge_variables[edge] - group_switches[group_index] == 0));
+                model = model.with(constraint!(
+                    edge_variables[edge] - group_switches[group_index] == 0
+                ));
             }
         }
 
@@ -168,11 +165,17 @@ where
         for node in 0..self.node_count() {
             let incoming = self.incoming[node]
                 .iter()
-                .fold(Expression::from(0.0), |expr, &edge| expr + edge_variables[edge]);
+                .fold(Expression::from(0.0), |expr, &edge| {
+                    expr + edge_variables[edge]
+                });
             let outgoing = self.outgoing[node]
                 .iter()
-                .fold(Expression::from(0.0), |expr, &edge| expr + edge_variables[edge]);
-            model = model.with(constraint!(incoming - outgoing == -f64::from(self.supply[node])));
+                .fold(Expression::from(0.0), |expr, &edge| {
+                    expr + edge_variables[edge]
+                });
+            model = model.with(constraint!(
+                incoming - outgoing == -f64::from(self.supply[node])
+            ));
         }
 
         let Ok(solution) = model.solve() else {
@@ -190,8 +193,13 @@ where
     }
 
     pub fn solution_value_at(&self, key: &EdgeKey) -> i32 {
-        assert!(!self.solution.is_empty(), "The MIP flow instance is not solved.");
-        self.edge_map.get(key).map_or(0, |&edge| self.solution[edge])
+        assert!(
+            !self.solution.is_empty(),
+            "The MIP flow instance is not solved."
+        );
+        self.edge_map
+            .get(key)
+            .map_or(0, |&edge| self.solution[edge])
     }
 
     pub fn node_count(&self) -> usize {

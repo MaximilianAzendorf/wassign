@@ -33,7 +33,10 @@ impl FuzzyMatch {
                 if only_first_token {
                     tokens.truncate(1);
                 }
-                tokens.into_iter().any(|token| token == key).then_some(index)
+                tokens
+                    .into_iter()
+                    .any(|token| token == key)
+                    .then_some(index)
             })
             .collect()
     }

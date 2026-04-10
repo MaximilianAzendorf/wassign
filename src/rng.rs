@@ -1,6 +1,6 @@
 use rand::rngs::StdRng;
-use rand::{Rng as _, SeedableRng};
 use rand::seq::SliceRandom;
+use rand::{Rng as _, SeedableRng};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static GLOBAL_SEED: AtomicU64 = AtomicU64::new(0);

@@ -17,7 +17,9 @@ where
         let mut elements = std::collections::BTreeMap::new();
         for value in 0..max_value {
             elements.insert(
-                T::try_from(value).ok().expect("element must convert from i32"),
+                T::try_from(value)
+                    .ok()
+                    .expect("element must convert from i32"),
                 usize::try_from(value).expect("element index must be non-negative"),
             );
         }
@@ -60,7 +62,10 @@ where
     pub(crate) fn groups(&self) -> Vec<Vec<T>> {
         let mut group_map = std::collections::BTreeMap::<usize, Vec<T>>::new();
         for &element in self.elements.keys() {
-            group_map.entry(self.find(element)).or_default().push(element);
+            group_map
+                .entry(self.find(element))
+                .or_default()
+                .push(element);
         }
         group_map.into_values().collect()
     }

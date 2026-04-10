@@ -7,12 +7,12 @@
 
 We reduce [PARTITION](https://en.wikipedia.org/wiki/Partition_problem) to SCHEDULING.
 
-Given a PARTITION-Instance $S=\{n_1, n_2, ..., n_k\}$, let $\sigma=\frac{1}{2}\sum_{i=1}^k n_k$. We define the following slot, choice and chooser sets
+Given a PARTITION-Instance $S=\{n_1, n_2, ..., n_k\}$, let $\sigma=\frac{1}{2}\sum_{i=1}^k n_i$. We define the following slot, choice and chooser sets
 $$\Slots = \{s_1, s_2\},\; \Choices=\{w_1, w_2, ..., w_k\},\; \Choosers=\{p_1, p_2, ..., p_{\sigma}\}$$
 with
-$$\min(w_k)=\max(w_k)=n_k \text{ .}$$
+$$\min(w_i)=\max(w_i)=n_i \text{ for all } i\in\{1,\dots,k\}\text{ .}$$
 
-Because $\min(w_k)=\max(w_k)=n_k$, the scheduling constraint (for a slot $s$)
+Because $\min(w_i)=\max(w_i)=n_i$ for all $i$, the scheduling constraint (for a slot $s$)
 $$\sum_{w\in\InvSched(s)}\min(w) \leq |\Choosers| \leq \sum_{w\in\InvSched(s)}\max(w)\text{ ,}$$
 implies
 $$\sum_{w\in\InvSched(s_1)}\min(w) = \sum_{w\in\InvSched(s_2)}\min(w)$$
