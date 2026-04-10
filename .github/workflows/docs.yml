@@ -30,8 +30,7 @@ jobs:
           enablement: true
 
       - name: Build documentation image
-        working-directory: doc
-        run: make docker-image
+        run: cd doc && make docker-image
 
       - name: Render documentation
         run: |
