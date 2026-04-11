@@ -289,13 +289,13 @@ fn print_log_line(line: &str) -> io::Result<()> {
 }
 
 fn progress_bar_style() -> ProgressStyle {
-    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {percent:>3}% {msg}")
+    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {percent:>3}% {msg} ")
         .expect("progress bar template should be valid")
         .progress_chars("=>-")
 }
 
 fn solver_progress_bar_style() -> ProgressStyle {
-    ProgressStyle::with_template("{elapsed_precise} [{wide_bar:.cyan/blue}] {msg}")
+    ProgressStyle::with_template("{elapsed_precise} [{wide_bar:.cyan/blue}] {msg} ")
         .expect("progress bar template should be valid")
         .progress_chars("=>-")
 }
