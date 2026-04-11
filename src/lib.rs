@@ -50,6 +50,7 @@ pub use output_formatter::OutputFormatter;
 pub use prepared_problem::PreparedProblem;
 pub use rng::Rng;
 pub use scheduling::Scheduling;
+pub use score::Score;
 pub use scheduling_solver::SchedulingSolver;
 pub use scoring::Scoring;
 pub use slot_data::SlotData;
@@ -62,5 +63,4 @@ pub(crate) use constraint::{
 pub(crate) use critical_set::CriticalSet;
 pub(crate) use hill_climbing_solver::HillClimbingSolver;
 pub(crate) use mip_flow::MipFlow;
-pub(crate) use score::Score;
 pub(crate) use union_find::UnionFind;

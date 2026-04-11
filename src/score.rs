@@ -1,10 +1,25 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
+/// Lexicographic objective value of a solution.
 pub struct Score {
     pub(crate) major: f32,
     pub(crate) minor: f32,
 }
 
 impl Score {
+    /// Returns the major score term.
+    #[must_use]
+    pub fn major(self) -> f32 {
+        self.major
+    }
+
+    /// Returns the minor score term.
+    #[must_use]
+    pub fn minor(self) -> f32 {
+        self.minor
+    }
+
+    /// Formats the score the same way the CLI prints it.
+    #[must_use]
     pub fn to_str(self) -> String {
         if self.major.is_nan() {
             crate::util::str_float(f64::from(self.minor), 5)
@@ -17,7 +32,9 @@ impl Score {
         }
     }
 
-    pub(crate) fn is_finite(self) -> bool {
+    /// Returns whether the score is finite and therefore usable.
+    #[must_use]
+    pub fn is_finite(self) -> bool {
         self.minor.is_finite() && (self.major.is_finite() || self.major.is_nan())
     }
 }
