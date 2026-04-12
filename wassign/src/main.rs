@@ -1,11 +1,12 @@
 //! Command-line entry point for `wassign`.
 
-use std::io::Read;
+use std::io::{BufWriter, Read, Write};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
 use wassign::{
-    InputReader, Options, OutputFormatter, PreparedProblem, Rng, ThreadedSolver, status,
+    InputReader, Options, OutputFormatter, PreparedProblem, ProgressStreamEvent, Rng,
+    ThreadedSolver, status,
 };
 
 fn main() {
@@ -103,7 +104,20 @@ fn try_run(input_string: &str, options: &Options) -> wassign::Result<()> {
     status::info("Generating static data and starting solver.");
     let solver = ThreadedSolver::new(problem, options.clone());
     let running = solver.start()?;
-    let result = status::track_solver(running)?;
+    let result = if options.progress_stream {
+        let stdout = std::io::stdout();
+        let mut writer = BufWriter::new(stdout.lock());
+        let result = status::track_solver_with_progress_callback(running, |progress| {
+            write_progress_event(&mut writer, &ProgressStreamEvent::Progress { progress })
+                .expect("progress event should be writable");
+        })?;
+        let score = (!result.solution.is_invalid())
+            .then(|| result.scoring.evaluate(&result.input_data, &result.solution));
+        write_progress_event(&mut writer, &ProgressStreamEvent::Finished { score })?;
+        result
+    } else {
+        status::track_solver(running)?
+    };
     let input_data = &result.input_data;
     let solution = &result.solution;
 
@@ -155,8 +169,25 @@ fn output_string(text: &str, file_suffix: &str, options: &Options) -> wassign::R
         status::info(&format!("Writing output to `{output_path}`."));
         std::fs::write(output_path, text)
             .map_err(|err| wassign::InputError::Message(err.to_string()))?;
+    } else if options.progress_stream {
+        return Ok(());
     } else {
         println!("{text}\n");
     }
+    Ok(())
+}
+
+fn write_progress_event(
+    writer: &mut dyn Write,
+    event: &ProgressStreamEvent,
+) -> wassign::Result<()> {
+    serde_json::to_writer(&mut *writer, event)
+        .map_err(|err| wassign::InputError::Message(err.to_string()))?;
+    writer
+        .write_all(b"\n")
+        .map_err(|err| wassign::InputError::Message(err.to_string()))?;
+    writer
+        .flush()
+        .map_err(|err| wassign::InputError::Message(err.to_string()))?;
     Ok(())
 }

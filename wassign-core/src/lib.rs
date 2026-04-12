@@ -22,6 +22,7 @@ mod mip_flow_static_data;
 mod options;
 mod output_formatter;
 mod prepared_problem;
+mod progress_stream;
 mod rng;
 mod scheduling;
 mod scheduling_solver;
@@ -48,6 +49,7 @@ pub use mip_flow_static_data::MipFlowStaticData;
 pub use options::Options;
 pub use output_formatter::OutputFormatter;
 pub use prepared_problem::PreparedProblem;
+pub use progress_stream::ProgressStreamEvent;
 pub use rng::Rng;
 pub use scheduling::Scheduling;
 pub use score::Score;
@@ -55,7 +57,9 @@ pub use scheduling_solver::SchedulingSolver;
 pub use scoring::Scoring;
 pub use slot_data::SlotData;
 pub use solution::Solution;
-pub use threaded_solver::{ThreadedSolver, ThreadedSolverResult, ThreadedSolverRunning};
+pub use threaded_solver::{
+    ThreadedSolver, ThreadedSolverProgress, ThreadedSolverResult, ThreadedSolverRunning,
+};
 
 pub(crate) use constraint::{
     Constraint, ConstraintExtra, ConstraintTarget, ConstraintType, SlotSizeLimitOp,

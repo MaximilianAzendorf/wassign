@@ -59,3 +59,9 @@ impl Solution {
         }
     }
 }
+
+impl Default for Solution {
+    fn default() -> Self {
+        Self::Invalid
+    }
+}

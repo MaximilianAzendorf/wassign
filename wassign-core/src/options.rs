@@ -41,6 +41,9 @@ pub struct Options {
     /// Enables greedy assignment solving.
     #[arg(short = 'g', long = "greedy")]
     pub greedy: bool,
+    /// Emits machine-readable progress events to standard output.
+    #[arg(long = "progress-stream", hide = true)]
+    pub progress_stream: bool,
 }
 
 impl Default for Options {
@@ -57,6 +60,7 @@ impl Default for Options {
             thread_count: default_thread_count(),
             max_neighbors: 12,
             greedy: false,
+            progress_stream: false,
         }
     }
 }

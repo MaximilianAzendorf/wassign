@@ -1,0 +1,7 @@
+iterations = 20
+runners = 3
+compare_commit = "newest"
+runs = [
+  "-i tests/inputs/realistic120.wassign -t 1s --no-cs",
+  "-i tests/inputs/realistic300.wassign -t 4s --no-cs",
+]

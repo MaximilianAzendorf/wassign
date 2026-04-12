@@ -8,7 +8,7 @@ use env_logger::{Env, WriteStyle};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use log::{Level, LevelFilter};
 
-use crate::{Options, Solution, ThreadedSolverResult, ThreadedSolverRunning};
+use crate::{Options, Solution, ThreadedSolverProgress, ThreadedSolverResult, ThreadedSolverRunning};
 
 /// Global status output helper used by the CLI.
 ///
@@ -96,6 +96,81 @@ pub fn track_solver(mut solver: ThreadedSolverRunning) -> crate::Result<Threaded
     info_important(&summary);
 
     Ok(result)
+}
+
+/// Tracks a running solver and forwards textual progress updates to a callback.
+///
+/// This variant is intended for non-CLI integrations such as benchmarks or
+/// terminal dashboards that want to display solver progress in a custom UI
+/// instead of using the global progress bar.
+///
+/// # Errors
+///
+/// Returns an error if joining the worker threads fails or a worker panics.
+pub fn track_solver_with_callback<F>(
+    mut solver: ThreadedSolverRunning,
+    mut callback: F,
+) -> crate::Result<ThreadedSolverResult>
+where
+    F: FnMut(String),
+{
+    let initial_message = format_solver_message(&solver.progress());
+    callback(initial_message.clone());
+    let mut last_message = Some(initial_message);
+
+    while solver.is_running() {
+        let progress = solver.progress();
+        let message = format_solver_message(&progress);
+        if last_message.as_ref() != Some(&message) {
+            callback(message.clone());
+            last_message = Some(message);
+        }
+        sleep(Duration::from_millis(100));
+    }
+
+    let final_progress = solver.progress();
+    let result = solver.wait()?;
+    let summary = if result.solution == Solution::Invalid {
+        "No solution found.".to_owned()
+    } else {
+        format!("Solved {}", format_solver_summary(&final_progress))
+    };
+    callback(summary);
+
+    Ok(result)
+}
+
+/// Tracks a running solver and forwards progress snapshots to a callback.
+///
+/// # Errors
+///
+/// Returns an error if joining the worker threads fails or a worker panics.
+pub fn track_solver_with_progress_callback<F>(
+    mut solver: ThreadedSolverRunning,
+    mut callback: F,
+) -> crate::Result<ThreadedSolverResult>
+where
+    F: FnMut(ThreadedSolverProgress),
+{
+    let initial_progress = solver.progress();
+    callback(initial_progress.clone());
+    let mut last_progress = initial_progress;
+
+    while solver.is_running() {
+        let progress = solver.progress();
+        if progress != last_progress {
+            callback(progress.clone());
+            last_progress = progress;
+        }
+        sleep(Duration::from_millis(100));
+    }
+
+    let final_progress = solver.progress();
+    if final_progress != last_progress {
+        callback(final_progress);
+    }
+
+    solver.wait()
 }
 
 #[derive(Default)]

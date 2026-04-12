@@ -3,6 +3,8 @@ use std::sync::mpsc::{self, Receiver};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime};
 
+use serde::{Deserialize, Serialize};
+
 use crate::cancellation::CancellationToken;
 use crate::shotgun_solver::{ShotgunSolver, ShotgunSolverProgress, WorkerProgressEvent};
 use crate::util::{time_never, time_now};
@@ -10,16 +12,26 @@ use crate::{
     InputData, InputError, Options, PreparedProblem, Result, Rng, Score, Scoring, Solution,
 };
 
-#[derive(Debug, Clone)]
+/// Aggregated progress snapshot for a running threaded solve session.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThreadedSolverProgress {
-    pub(crate) sched_depth: f32,
-    pub(crate) max_sched_depth: f32,
-    pub(crate) iterations: usize,
-    pub(crate) assignments: usize,
-    pub(crate) lp: usize,
-    pub(crate) best_solution: Solution,
-    pub(crate) best_score: Score,
-    pub(crate) milliseconds_remaining: i64,
+    /// Current average scheduling depth across worker threads.
+    pub sched_depth: f32,
+    /// Maximum scheduling depth for the problem.
+    pub max_sched_depth: f32,
+    /// Number of outer shotgun iterations explored.
+    pub iterations: usize,
+    /// Number of assignment attempts executed.
+    pub assignments: usize,
+    /// Number of linear-programming solves executed.
+    pub lp: usize,
+    #[serde(skip, default)]
+    /// Best solution found so far.
+    pub best_solution: Solution,
+    /// Best score found so far.
+    pub best_score: Score,
+    /// Milliseconds remaining until the configured timeout expires.
+    pub milliseconds_remaining: i64,
 }
 
 /// Idle threaded solver state before a solve session is started.
@@ -170,11 +182,15 @@ impl ThreadedSolver {
 }
 
 impl ThreadedSolverRunning {
-    pub(crate) fn is_running(&self) -> bool {
+    /// Returns whether the solve session is still running.
+    #[must_use]
+    pub fn is_running(&self) -> bool {
         !self.handle.is_finished()
     }
 
-    pub(crate) fn timeout_seconds(&self) -> i32 {
+    /// Returns the configured solve timeout in seconds.
+    #[must_use]
+    pub fn timeout_seconds(&self) -> i32 {
         self.options.timeout_seconds
     }
 
@@ -187,7 +203,9 @@ impl ThreadedSolverRunning {
         self.cancellation.cancel();
     }
 
-    pub(crate) fn progress(&mut self) -> ThreadedSolverProgress {
+    /// Polls and returns the latest aggregated progress snapshot.
+    #[must_use]
+    pub fn progress(&mut self) -> ThreadedSolverProgress {
         let mut progress = ThreadedSolverProgress {
             sched_depth: 0.0,
             max_sched_depth: self.max_sched_depth,

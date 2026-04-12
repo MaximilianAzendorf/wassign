@@ -1,5 +1,4 @@
 use std::cmp::{Reverse, max, min};
-use std::collections::BTreeMap;
 use std::time::{Duration, SystemTime};
 
 use crate::shotgun_solver::ProgressReporter;
@@ -18,6 +17,42 @@ pub struct SchedulingSolver<'a> {
     rng: Rng,
     pub(crate) current_depth: usize,
     pub(crate) max_depth_reached: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SchedulingDecision {
+    Undecided,
+    Omitted,
+    Slot(usize),
+}
+
+#[derive(Debug, Clone)]
+struct SchedulingSearchState {
+    decisions: Vec<SchedulingDecision>,
+    slot_min: Vec<u32>,
+    slot_max: Vec<u32>,
+    slot_choice_count: Vec<u32>,
+}
+
+impl SchedulingDecision {
+    fn slot(self) -> Option<usize> {
+        match self {
+            Self::Undecided => None,
+            Self::Omitted => None,
+            Self::Slot(slot) => Some(slot),
+        }
+    }
+}
+
+impl SchedulingSearchState {
+    fn new(choice_count: usize, slot_count: usize) -> Self {
+        Self {
+            decisions: vec![SchedulingDecision::Undecided; choice_count],
+            slot_min: vec![0; slot_count],
+            slot_max: vec![0; slot_count],
+            slot_choice_count: vec![0; slot_count],
+        }
+    }
 }
 
 impl<'a> SchedulingSolver<'a> {
@@ -138,35 +173,31 @@ impl<'a> SchedulingSolver<'a> {
         self.current_solution.clone()
     }
 
-    fn calculate_available_max_push(&self, choice_scramble: &[usize], depth: usize) -> u32 {
-        let input_data = &self.problem.input_data;
-        choice_scramble[depth..]
-            .iter()
-            .map(|&choice| input_data.choices[choice].max)
-            .sum()
-    }
-
     fn satisfies_critical_sets(
         &self,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        decisions: &[SchedulingDecision],
         critical_sets: &[CriticalSet],
     ) -> bool {
         let slot_count = self.problem.input_data.slots.len();
         for set in critical_sets {
-            let mut covered_slots = std::collections::BTreeSet::new();
+            let mut covered_slots = vec![false; slot_count];
+            let mut covered_count = 0_usize;
             let mut missing = 0_usize;
 
             for &element in &set.data {
-                match decisions.get(&element).copied() {
-                    None => missing += 1,
-                    Some(Some(slot)) => {
-                        covered_slots.insert(slot);
+                match decisions[element] {
+                    SchedulingDecision::Undecided => missing += 1,
+                    SchedulingDecision::Slot(slot) => {
+                        if !covered_slots[slot] {
+                            covered_slots[slot] = true;
+                            covered_count += 1;
+                        }
                     }
-                    Some(None) => {}
+                    SchedulingDecision::Omitted => {}
                 }
             }
 
-            if covered_slots.len() + missing < slot_count {
+            if covered_count + missing < slot_count {
                 return false;
             }
         }
@@ -178,7 +209,7 @@ impl<'a> SchedulingSolver<'a> {
         &self,
         choice: usize,
         slot: Option<usize>,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        state: &SchedulingSearchState,
     ) -> bool {
         let input_data = &self.problem.input_data;
         for constraint in input_data.scheduling_constraints_for(choice) {
@@ -199,7 +230,8 @@ impl<'a> SchedulingSolver<'a> {
                     } else {
                         constraint.left
                     };
-                    if let Some(&other_slot) = decisions.get(&other)
+                    let other_slot = state.decisions[other].slot();
+                    if state.decisions[other] != SchedulingDecision::Undecided
                         && other_slot != slot
                     {
                         return false;
@@ -211,7 +243,8 @@ impl<'a> SchedulingSolver<'a> {
                     } else {
                         constraint.left
                     };
-                    if let Some(&other_slot) = decisions.get(&other)
+                    let other_slot = state.decisions[other].slot();
+                    if state.decisions[other] != SchedulingDecision::Undecided
                         && other_slot == slot
                         && slot.is_some()
                     {
@@ -229,7 +262,8 @@ impl<'a> SchedulingSolver<'a> {
                     } else {
                         constraint.offset()
                     };
-                    if let Some(&other_slot) = decisions.get(&other) {
+                    if state.decisions[other] != SchedulingDecision::Undecided {
+                        let other_slot = state.decisions[other].slot();
                         if other_slot.is_some() != slot.is_some() {
                             return false;
                         }
@@ -277,11 +311,8 @@ impl<'a> SchedulingSolver<'a> {
                             constraint.slot_size_limit_op(),
                             crate::SlotSizeLimitOp::Lt
                         ));
-                    for &decision_slot in decisions.values() {
-                        if decision_slot == slot {
-                            limit -= 1;
-                        }
-                    }
+                    limit -= i32::try_from(slot.map_or(0, |slot| state.slot_choice_count[slot]))
+                        .expect("slot choice count must fit in i32");
                     if limit < 1 {
                         return false;
                     }
@@ -290,8 +321,15 @@ impl<'a> SchedulingSolver<'a> {
             }
         }
 
-        if decisions.len() + 1 == input_data.choices.len() {
-            self.check_slot_size_constraints(choice, slot, decisions)
+        if state
+            .decisions
+            .iter()
+            .filter(|&&decision| decision != SchedulingDecision::Undecided)
+            .count()
+            + 1
+            == input_data.choices.len()
+        {
+            self.check_slot_size_constraints(slot, &state.slot_choice_count)
         } else {
             true
         }
@@ -299,37 +337,17 @@ impl<'a> SchedulingSolver<'a> {
 
     fn check_slot_size_constraints(
         &self,
-        choice: usize,
         slot: Option<usize>,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        slot_choice_count: &[u32],
     ) -> bool {
         let input_data = &self.problem.input_data;
-        let Some(slot) = slot else {
-            return true;
-        };
-
-        let mut slot_sizes: Option<Vec<u32>> = None;
 
         for constraint in &input_data.scheduling_constraints {
             if constraint.kind != ConstraintType::SlotHasLimitedSize {
                 continue;
             }
-
-            let sizes = slot_sizes.get_or_insert_with(|| {
-                let mut sizes = vec![0_u32; input_data.slots.len()];
-                sizes[slot] += 1;
-                for (&decision_choice, &decision_slot) in decisions {
-                    if decision_choice == choice {
-                        continue;
-                    }
-                    if let Some(decision_slot) = decision_slot {
-                        sizes[decision_slot] += 1;
-                    }
-                }
-                sizes
-            });
-
-            let count = sizes[constraint.left];
+            let count = slot_choice_count[constraint.left]
+                + u32::from(slot == Some(constraint.left));
             let valid = match constraint.slot_size_limit_op() {
                 crate::SlotSizeLimitOp::Eq => count == constraint.limit(),
                 crate::SlotSizeLimitOp::Neq => count != constraint.limit(),
@@ -348,17 +366,12 @@ impl<'a> SchedulingSolver<'a> {
 
     fn has_impossibilities(
         &self,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        state: &SchedulingSearchState,
         available_max_push: u32,
     ) -> bool {
         let input_data = &self.problem.input_data;
         for slot in 0..input_data.slots.len() {
-            let mut sum = available_max_push;
-            for (&choice, &decision_slot) in decisions {
-                if decision_slot == Some(slot) {
-                    sum += input_data.choices[choice].max;
-                }
-            }
+            let sum = available_max_push + state.slot_max[slot];
             if sum
                 < u32::try_from(input_data.choosers.len()).expect("chooser count must fit in u32")
             {
@@ -370,19 +383,14 @@ impl<'a> SchedulingSolver<'a> {
 
     fn calculate_critical_slots(
         &self,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        state: &SchedulingSearchState,
         available_max_push: u32,
         choice: usize,
     ) -> Vec<Option<usize>> {
         let input_data = &self.problem.input_data;
         let mut critical_slots = Vec::new();
         for slot in 0..input_data.slots.len() {
-            let mut sum = available_max_push - input_data.choices[choice].max;
-            for (&other_choice, &decision_slot) in decisions {
-                if other_choice != choice && decision_slot == Some(slot) {
-                    sum += input_data.choices[other_choice].max;
-                }
-            }
+            let sum = available_max_push - input_data.choices[choice].max + state.slot_max[slot];
             if sum
                 < u32::try_from(input_data.choosers.len()).expect("chooser count must fit in u32")
             {
@@ -394,20 +402,15 @@ impl<'a> SchedulingSolver<'a> {
 
     fn slot_order_heuristic_score(
         &self,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        state: &SchedulingSearchState,
         slot: Option<usize>,
     ) -> u32 {
-        let input_data = &self.problem.input_data;
-        decisions
-            .iter()
-            .filter(|(_, decision_slot)| **decision_slot == slot)
-            .map(|(&choice, _)| input_data.choices[choice].max)
-            .sum()
+        slot.map_or(0, |slot| state.slot_max[slot])
     }
 
     fn calculate_feasible_slots(
         &mut self,
-        decisions: &BTreeMap<usize, Option<usize>>,
+        state: &SchedulingSearchState,
         low_priority_slot: &[bool],
         choice: usize,
     ) -> Vec<Option<usize>> {
@@ -416,7 +419,7 @@ impl<'a> SchedulingSolver<'a> {
         let mut low_slots = Vec::new();
 
         if input_data.choices[choice].is_optional
-            && self.satisfies_scheduling_constraints(choice, None, decisions)
+            && self.satisfies_scheduling_constraints(choice, None, state)
         {
             low_slots.push(None);
         }
@@ -426,16 +429,11 @@ impl<'a> SchedulingSolver<'a> {
             .enumerate()
             .take(input_data.slots.len())
         {
-            let mut sum = input_data.choices[choice].min;
-            for (&other_choice, &decision_slot) in decisions {
-                if decision_slot == Some(slot) {
-                    sum += input_data.choices[other_choice].min;
-                }
-            }
+            let sum = input_data.choices[choice].min + state.slot_min[slot];
 
             if sum
                 > u32::try_from(input_data.choosers.len()).expect("chooser count must fit in u32")
-                || !self.satisfies_scheduling_constraints(choice, Some(slot), decisions)
+                || !self.satisfies_scheduling_constraints(choice, Some(slot), state)
             {
                 continue;
             }
@@ -447,7 +445,7 @@ impl<'a> SchedulingSolver<'a> {
             }
         }
 
-        normal_slots.sort_by_key(|&slot| (self.slot_order_heuristic_score(decisions, slot), slot));
+        normal_slots.sort_by_key(|&slot| (self.slot_order_heuristic_score(state, slot), slot));
         riffle_shuffle(normal_slots, low_slots, &mut self.rng)
     }
 
@@ -464,14 +462,50 @@ impl<'a> SchedulingSolver<'a> {
         vec![false; self.problem.input_data.slots.len()]
     }
 
-    fn convert_decisions(&self, decisions: &BTreeMap<usize, Option<usize>>) -> Vec<Vec<usize>> {
+    fn convert_decisions(&self, decisions: &[SchedulingDecision]) -> Vec<Vec<usize>> {
         let mut result = vec![Vec::new(); self.problem.input_data.slots.len()];
-        for (&choice, &slot) in decisions {
-            if let Some(slot) = slot {
+        for (choice, &decision) in decisions.iter().enumerate() {
+            if let SchedulingDecision::Slot(slot) = decision {
                 result[slot].push(choice);
             }
         }
         result
+    }
+
+    fn apply_decision(
+        &self,
+        state: &mut SchedulingSearchState,
+        choice: usize,
+        slot: Option<usize>,
+    ) {
+        let previous = state.decisions[choice];
+        if let SchedulingDecision::Slot(previous_slot) = previous {
+            let data = &self.problem.input_data.choices[choice];
+            state.slot_min[previous_slot] -= data.min;
+            state.slot_max[previous_slot] -= data.max;
+            state.slot_choice_count[previous_slot] -= 1;
+        }
+
+        state.decisions[choice] = match slot {
+            Some(slot) => {
+                let data = &self.problem.input_data.choices[choice];
+                state.slot_min[slot] += data.min;
+                state.slot_max[slot] += data.max;
+                state.slot_choice_count[slot] += 1;
+                SchedulingDecision::Slot(slot)
+            }
+            None => SchedulingDecision::Omitted,
+        };
+    }
+
+    fn clear_decision(&self, state: &mut SchedulingSearchState, choice: usize) {
+        if let SchedulingDecision::Slot(slot) = state.decisions[choice] {
+            let data = &self.problem.input_data.choices[choice];
+            state.slot_min[slot] -= data.min;
+            state.slot_max[slot] -= data.max;
+            state.slot_choice_count[slot] -= 1;
+        }
+        state.decisions[choice] = SchedulingDecision::Undecided;
     }
 
     fn solve_scheduling(
@@ -482,9 +516,14 @@ impl<'a> SchedulingSolver<'a> {
         let input_data = &self.problem.input_data;
         let choice_scramble = self.get_choice_scramble();
         let low_priority_slots = self.get_low_priority_slots();
-        let mut decisions = BTreeMap::<usize, Option<usize>>::new();
+        let mut state = SchedulingSearchState::new(input_data.choices.len(), input_data.slots.len());
         let mut backtracking = Vec::<Vec<Option<usize>>>::new();
         let mut depth = 0_usize;
+        let mut available_max_suffix = vec![0_u32; choice_scramble.len() + 1];
+        for depth_index in (0..choice_scramble.len()).rev() {
+            available_max_suffix[depth_index] = available_max_suffix[depth_index + 1]
+                + input_data.choices[choice_scramble[depth_index]].max;
+        }
 
         while depth < choice_scramble.len() {
             self.current_depth = depth;
@@ -497,20 +536,20 @@ impl<'a> SchedulingSolver<'a> {
 
             let choice = choice_scramble[depth];
             if backtracking.len() <= depth {
-                let available_max_push = self.calculate_available_max_push(&choice_scramble, depth);
-                let candidates = if self.has_impossibilities(&decisions, available_max_push)
-                    || !self.satisfies_critical_sets(&decisions, critical_sets)
+                let available_max_push = available_max_suffix[depth];
+                let candidates = if self.has_impossibilities(&state, available_max_push)
+                    || !self.satisfies_critical_sets(&state.decisions, critical_sets)
                 {
                     Vec::new()
                 } else {
                     let critical_slots =
-                        self.calculate_critical_slots(&decisions, available_max_push, choice);
+                        self.calculate_critical_slots(&state, available_max_push, choice);
                     match critical_slots.len().cmp(&1) {
                         std::cmp::Ordering::Equal => {
                             if self.satisfies_scheduling_constraints(
                                 choice,
                                 critical_slots[0],
-                                &decisions,
+                                &state,
                             ) {
                                 critical_slots
                             } else {
@@ -519,11 +558,11 @@ impl<'a> SchedulingSolver<'a> {
                         }
                         std::cmp::Ordering::Greater => Vec::new(),
                         std::cmp::Ordering::Less => {
-                            self.calculate_feasible_slots(&decisions, &low_priority_slots, choice)
+                            self.calculate_feasible_slots(&state, &low_priority_slots, choice)
                         }
                     }
                 };
-                backtracking.push(candidates);
+                backtracking.push(candidates.into_iter().rev().collect());
             }
 
             if backtracking[depth].is_empty() {
@@ -532,22 +571,24 @@ impl<'a> SchedulingSolver<'a> {
                 }
 
                 backtracking.pop();
-                decisions.remove(&choice_scramble[depth - 1]);
+                self.clear_decision(&mut state, choice_scramble[depth - 1]);
                 depth -= 1;
                 self.current_depth = depth;
                 self.publish_depth_progress();
                 continue;
             }
 
-            let next_slot = backtracking[depth].remove(0);
-            decisions.insert(choice, next_slot);
+            let next_slot = backtracking[depth]
+                .pop()
+                .expect("backtracking bucket should contain a candidate");
+            self.apply_decision(&mut state, choice, next_slot);
             depth += 1;
             self.current_depth = depth;
             self.max_depth_reached = self.max_depth_reached.max(depth);
             self.publish_depth_progress();
         }
 
-        let result = self.convert_decisions(&decisions);
+        let result = self.convert_decisions(&state.decisions);
         let mut scheduling = vec![None; input_data.choices.len()];
         for (slot_index, choices) in result.iter().enumerate() {
             for &choice in choices {

@@ -1,0 +1,18 @@
+[package]
+name = "wassign-bench"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+clap = { version = "4.5.38", features = ["derive", "cargo"] }
+console = "0.15.10"
+crossterm = "0.28.1"
+ratatui = "0.29.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+toml = "0.8.23"
+wassign = { package = "wassign-core", path = "../wassign-core" }
+
+[lints]
+workspace = true

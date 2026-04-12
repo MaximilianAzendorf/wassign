@@ -56,6 +56,10 @@ impl Scheduling {
         self.0[choice]
     }
 
+    pub(crate) fn data(&self) -> &[Option<usize>] {
+        &self.0
+    }
+
     pub(crate) fn to_data(&self) -> Vec<Option<usize>> {
         self.0.clone()
     }
