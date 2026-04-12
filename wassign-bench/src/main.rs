@@ -33,7 +33,7 @@ use ratatui::{Frame, Terminal};
 use wassign::{ProgressStreamEvent, Score, ThreadedSolverProgress};
 
 const UI_TICK: Duration = Duration::from_millis(100);
-const PLAIN_PROGRESS_INTERVAL: Duration = Duration::from_secs(5 * 60);
+const PLAIN_PROGRESS_INTERVAL: Duration = Duration::from_mins(1);
 const MIN_RUNNER_PANEL_HEIGHT: u16 = 15;
 const MAX_UI_EVENTS_PER_FRAME: usize = 1024;
 const WORKTREE_PREFIX: &str = "wassign-benchmark-worktree-";
