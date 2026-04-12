@@ -111,8 +111,11 @@ fn try_run(input_string: &str, options: &Options) -> wassign::Result<()> {
             write_progress_event(&mut writer, &ProgressStreamEvent::Progress { progress })
                 .expect("progress event should be writable");
         })?;
-        let score = (!result.solution.is_invalid())
-            .then(|| result.scoring.evaluate(&result.input_data, &result.solution));
+        let score = (!result.solution.is_invalid()).then(|| {
+            result
+                .scoring
+                .evaluate(&result.input_data, &result.solution)
+        });
         write_progress_event(&mut writer, &ProgressStreamEvent::Finished { score })?;
         result
     } else {

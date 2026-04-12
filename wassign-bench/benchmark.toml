@@ -2,6 +2,6 @@ iterations = 2048
 runners = 8
 compare_commit = "HEAD"
 runs = [
-  "-i wassign-core/tests/inputs/realistic120.wassign -t 1s --no-cs",
+  "-i wassign-core/tests/inputs/realistic120.wassign -t 10s --no-cs",
   "-i wassign-core/tests/inputs/realistic300.wassign -t 3s",
 ]

@@ -20,6 +20,9 @@ where
     pub incoming: Vec<Vec<usize>>,
     pub edges_max: Vec<i32>,
     pub edges_cost: Vec<i64>,
+    pub edge_cost_multiplier: f64,
+    pub edge_objective_bounds: Vec<Option<i64>>,
+    pub objective_bound_multiplier: f64,
     pub edge_groups: Vec<Vec<usize>>,
     pub blocked_edges: Vec<usize>,
     pub solution: Vec<i32>,
@@ -39,6 +42,9 @@ where
             incoming: Vec::new(),
             edges_max: Vec::new(),
             edges_cost: Vec::new(),
+            edge_cost_multiplier: 1.0,
+            edge_objective_bounds: Vec::new(),
+            objective_bound_multiplier: 0.0,
             edge_groups: Vec::new(),
             blocked_edges: Vec::new(),
             solution: Vec::new(),
@@ -74,6 +80,7 @@ where
         self.solution.clear();
         self.edges_max.push(max);
         self.edges_cost.push(unit_cost);
+        self.edge_objective_bounds.push(None);
         let edge = self.edge_count() - 1;
         self.outgoing[from].push(edge);
         self.incoming[to].push(edge);
@@ -91,6 +98,17 @@ where
         let edge = self.add_edge(from, to, max, unit_cost);
         self.edge_map.insert(key, edge);
         edge
+    }
+
+    pub fn set_edge_objective_bound(&mut self, edge: usize, bound: i64) {
+        self.solution.clear();
+        self.edge_objective_bounds[edge] = Some(bound);
+    }
+
+    pub fn set_lexicographic_objective_scale(&mut self, big: i64) {
+        self.solution.clear();
+        self.edge_cost_multiplier = 1.0 / (big as f64);
+        self.objective_bound_multiplier = 1.0;
     }
 
     pub fn create_edge_group_or_block_edges<I>(&mut self, keys: I)
@@ -132,12 +150,18 @@ where
             })
             .collect::<Vec<_>>();
 
-        let objective = edge_variables
-            .iter()
-            .enumerate()
-            .fold(Expression::from(0.0), |expr, (index, &var)| {
-                expr + (self.edges_cost[index] as f64) * var
-            });
+        let objective_bound_variable = (self.objective_bound_multiplier > 0.0)
+            .then(|| vars.add(variable().min(0.0).name("major")));
+        let edge_cost_objective =
+            edge_variables
+                .iter()
+                .enumerate()
+                .fold(Expression::from(0.0), |expr, (index, &var)| {
+                    expr + self.edge_cost_multiplier * (self.edges_cost[index] as f64) * var
+                });
+        let objective = objective_bound_variable.map_or(edge_cost_objective.clone(), |var| {
+            edge_cost_objective + self.objective_bound_multiplier * var
+        });
 
         let mut group_switches = Vec::<Variable>::new();
         for (index, _) in self.edge_groups.iter().enumerate() {
@@ -149,6 +173,17 @@ where
                 return false;
             }
             model = model.with_time_limit(limit.as_secs_f64());
+        }
+
+        if let Some(objective_bound_variable) = objective_bound_variable {
+            for (edge, &bound) in self.edge_objective_bounds.iter().enumerate() {
+                let Some(bound) = bound else {
+                    continue;
+                };
+                model = model.with(constraint!(
+                    objective_bound_variable >= (bound as f64) * edge_variables[edge]
+                ));
+            }
         }
 
         for (group_index, group) in self.edge_groups.iter().enumerate() {

@@ -34,3 +34,6 @@ allow_attributes_without_reason = "deny"
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
 missing_safety_doc = "warn"
+
+[patch.crates-io]
+microlp = { path = "vendor/microlp" }

@@ -37,6 +37,23 @@ impl Scoring {
             [usize::try_from(preference).expect("preference must fit in usize")]
     }
 
+    pub(crate) fn assignment_lexicographic_big(&self, input_data: &InputData) -> Option<i64> {
+        let max_assignments = input_data
+            .choosers
+            .len()
+            .checked_mul(input_data.slots.len())?;
+        let max_minor_cost = self
+            .assignment_preference_costs
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(0);
+        i64::try_from(max_assignments)
+            .ok()?
+            .checked_mul(max_minor_cost)?
+            .checked_add(1)
+    }
+
     pub(crate) fn is_feasible(input_data: &InputData, solution: &Solution) -> bool {
         let scheduling = solution
             .scheduling()

@@ -15,7 +15,6 @@ pub struct AssignmentSolver<'a> {
     progress_reporter: ProgressReporter,
     pub(crate) lp_count: usize,
     cached_schedule_state: Option<AssignmentScheduleState>,
-    last_successful_preference_index: Option<usize>,
     cached_assignment: Option<CachedAssignment>,
 }
 
@@ -32,7 +31,6 @@ struct AssignmentScheduleState {
 struct CachedAssignment {
     slots_of_choices: Vec<Option<usize>>,
     assignment: Assignment,
-    preference_index: usize,
 }
 
 impl<'a> AssignmentSolver<'a> {
@@ -53,7 +51,6 @@ impl<'a> AssignmentSolver<'a> {
             progress_reporter,
             lp_count: 0,
             cached_schedule_state: None,
-            last_successful_preference_index: None,
             cached_assignment: None,
         }
     }
@@ -70,104 +67,36 @@ impl<'a> AssignmentSolver<'a> {
         deadline: Option<SystemTime>,
     ) -> Option<Assignment> {
         let input_data = &self.problem.input_data;
-        let levels = input_data.preference_levels.as_slice();
         let schedule_state = self.prepare_schedule_state(scheduling);
 
         if let Some(cached) = &self.cached_assignment
             && cached.slots_of_choices == schedule_state.slots_of_choices
         {
-            self.last_successful_preference_index = Some(cached.preference_index);
             return Some(cached.assignment.clone());
         }
-
-        let start = levels
-            .iter()
-            .position(|&level| level >= self.problem.critical_set_analysis.preference_bound())
-            .unwrap_or_else(|| levels.len().saturating_sub(1));
-        status::debug(&format!(
-            "Starting assignment solve with preference search start index {start} and {} level(s).",
-            levels.len()
-        ));
 
         if self.options.greedy {
             status::debug("Greedy mode enabled; solving with maximum preference limit.");
             let assignment =
-                self.solve_with_limit(&schedule_state, input_data.max_preference, deadline);
-            return self.finish_assignment_result(
-                assignment,
-                schedule_state.slots_of_choices,
-                levels.len().saturating_sub(1),
-            );
+                self.solve_with_limit(&schedule_state, input_data.max_preference, false, deadline);
+            return self.finish_assignment_result(assignment, schedule_state.slots_of_choices);
         }
 
-        let mut low = start;
-        let mut high = levels.len().checked_sub(1)?;
-        let mut best = None;
-        let mut best_index = None;
-
-        if let Some(warm_index) = self.warm_start_index(start, high, schedule_state.changed_choices)
-        {
-            let assignment = self.solve_with_limit(&schedule_state, levels[warm_index], deadline);
-            if assignment.is_some() {
-                best = assignment;
-                best_index = Some(warm_index);
-                if warm_index == start {
-                    return self.finish_assignment_result(
-                        best,
-                        schedule_state.slots_of_choices,
-                        warm_index,
-                    );
-                }
-                high = warm_index.saturating_sub(1);
-            } else {
-                low = warm_index + 1;
-            }
-        }
-
-        while low <= high {
-            let mid = low + (high - low) / 2;
-            let preference_limit = levels[mid];
-            status::trace(&format!(
-                "Trying assignment solve with preference limit {preference_limit} (range {low}..={high})."
-            ));
-            let assignment = self.solve_with_limit(&schedule_state, preference_limit, deadline);
-            if assignment.is_some() {
-                status::debug(&format!(
-                    "Assignment feasible with preference limit {preference_limit}."
-                ));
-                best = assignment;
-                best_index = Some(mid);
-                if mid == start {
-                    break;
-                }
-                high = mid.saturating_sub(1);
-            } else {
-                status::trace(&format!(
-                    "Assignment infeasible with preference limit {preference_limit}."
-                ));
-                low = mid + 1;
-            }
-        }
-
-        self.finish_assignment_result(
-            best,
-            schedule_state.slots_of_choices,
-            best_index.unwrap_or(start),
-        )
+        status::debug("Starting lexicographic assignment solve.");
+        let assignment =
+            self.solve_with_limit(&schedule_state, input_data.max_preference, true, deadline);
+        self.finish_assignment_result(assignment, schedule_state.slots_of_choices)
     }
 
     fn finish_assignment_result(
         &mut self,
         assignment: Option<Assignment>,
         slots_of_choices: Vec<Option<usize>>,
-        preference_index: usize,
     ) -> Option<Assignment> {
         if let Some(assignment) = assignment {
-            self.last_successful_preference_index = Some(preference_index);
             self.cached_assignment = Some(CachedAssignment {
                 slots_of_choices,
                 assignment: assignment.clone(),
-                preference_index,
             });
             Some(assignment)
         } else {
@@ -304,11 +233,6 @@ impl<'a> AssignmentSolver<'a> {
         blocked_edges
     }
 
-    fn warm_start_index(&self, low: usize, high: usize, changed_choices: usize) -> Option<usize> {
-        let warm_index = self.last_successful_preference_index?;
-        (changed_choices <= 2 && warm_index >= low && warm_index <= high).then_some(warm_index)
-    }
-
     fn create_edge_groups(
         &self,
         schedule_state: &AssignmentScheduleState,
@@ -360,6 +284,7 @@ impl<'a> AssignmentSolver<'a> {
         &mut self,
         schedule_state: &AssignmentScheduleState,
         preference_limit: u32,
+        lexicographic_objective: bool,
         deadline: Option<SystemTime>,
     ) -> Option<Assignment> {
         let input_data = &self.problem.input_data;
@@ -372,6 +297,14 @@ impl<'a> AssignmentSolver<'a> {
         let mut flow = static_data.base_flow.clone();
         let mut blocked_edges = schedule_state.blocked_edges.clone();
         blocked_edges.extend(static_data.blocked_edges.iter().copied());
+        if lexicographic_objective {
+            flow.set_lexicographic_objective_scale(
+                self.problem
+                    .scoring
+                    .assignment_lexicographic_big(input_data)
+                    .expect("lexicographic assignment objective weight must fit in i64"),
+            );
+        }
 
         for chooser in 0..input_data.choosers.len() {
             for slot in 0..input_data.slots.len() {
@@ -413,7 +346,19 @@ impl<'a> AssignmentSolver<'a> {
                     let cost = self.problem.scoring.assignment_preference_cost(
                         input_data.choosers[chooser].preferences[choice],
                     );
-                    flow.add_keyed_edge(MipFlowStaticData::edge_id(from, to), from, to, 1, cost);
+                    let edge = flow.add_keyed_edge(
+                        MipFlowStaticData::edge_id(from, to),
+                        from,
+                        to,
+                        1,
+                        cost,
+                    );
+                    if lexicographic_objective {
+                        flow.set_edge_objective_bound(
+                            edge,
+                            i64::from(input_data.choosers[chooser].preferences[choice]),
+                        );
+                    }
                 }
             }
         }

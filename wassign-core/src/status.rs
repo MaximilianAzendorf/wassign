@@ -6,7 +6,7 @@ use std::time::Duration;
 use console::style;
 use env_logger::{Env, WriteStyle};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
-use log::{Level, LevelFilter};
+use log::Level;
 
 use crate::{
     Options, Solution, ThreadedSolverProgress, ThreadedSolverResult, ThreadedSolverRunning,
@@ -388,7 +388,7 @@ fn initialize_logger() {
         return;
     }
 
-    let default_filter = format!("{}=info", env!("CARGO_PKG_NAME"));
+    let default_filter = "info";
     let mut builder =
         env_logger::Builder::from_env(Env::default().default_filter_or(default_filter));
     builder.target(env_logger::Target::Pipe(Box::new(
@@ -406,7 +406,6 @@ fn initialize_logger() {
             record.args()
         )
     });
-    builder.filter_module("microlp", LevelFilter::Off);
     let _ = builder.try_init();
     let _ = LOGGER_INIT.set(());
 }
