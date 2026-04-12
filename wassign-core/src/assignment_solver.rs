@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::time::{Duration, SystemTime};
 
 use crate::shotgun_solver::ProgressReporter;
+use crate::status;
 use crate::{
     Assignment, ConstraintType, MipFlow, MipFlowStaticData, Options, PreparedProblem, Scheduling,
 };
-use crate::status;
 
 /// Computes an optimal assignment for a fixed scheduling.
 #[derive(Debug)]
@@ -175,7 +175,10 @@ impl<'a> AssignmentSolver<'a> {
         }
     }
 
-    fn build_schedule_state_from_scratch(&self, scheduling: &Scheduling) -> AssignmentScheduleState {
+    fn build_schedule_state_from_scratch(
+        &self,
+        scheduling: &Scheduling,
+    ) -> AssignmentScheduleState {
         let input_data = &self.problem.input_data;
         let slots_of_choices = scheduling.data().to_vec();
         let mut scheduled_choices_by_slot = vec![Vec::new(); input_data.slots.len()];
@@ -286,7 +289,8 @@ impl<'a> AssignmentSolver<'a> {
                     let blocked_choice = constraint.other_choice();
                     let to = static_data.choice_nodes[blocked_choice];
                     for slot in 0..input_data.slots.len() {
-                        blocked_edges.insert((static_data.chooser_nodes[constraint.left][slot], to));
+                        blocked_edges
+                            .insert((static_data.chooser_nodes[constraint.left][slot], to));
                     }
                 }
                 ConstraintType::ChoicesHaveSameChoosers
@@ -406,9 +410,9 @@ impl<'a> AssignmentSolver<'a> {
                     if blocked_edges.contains(&(from, to)) {
                         continue;
                     }
-                    let cost = ((f64::from(input_data.choosers[chooser].preferences[choice]) + 1.0)
-                        .powf(self.options.preference_exponent))
-                        as i64;
+                    let cost = self.problem.scoring.assignment_preference_cost(
+                        input_data.choosers[chooser].preferences[choice],
+                    );
                     flow.add_keyed_edge(MipFlowStaticData::edge_id(from, to), from, to, 1, cost);
                 }
             }
@@ -419,7 +423,10 @@ impl<'a> AssignmentSolver<'a> {
                 continue;
             };
             flow.add_keyed_edge(
-                MipFlowStaticData::edge_id(static_data.choice_nodes[choice], static_data.slot_nodes[slot_index]),
+                MipFlowStaticData::edge_id(
+                    static_data.choice_nodes[choice],
+                    static_data.slot_nodes[slot_index],
+                ),
                 static_data.choice_nodes[choice],
                 static_data.slot_nodes[slot_index],
                 i32::try_from(input_data.choices[choice].max - input_data.choices[choice].min)

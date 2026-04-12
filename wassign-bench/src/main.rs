@@ -17,6 +17,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
 
+use clap::{Parser, ValueEnum};
 use console::style;
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyModifiers};
 use crossterm::execute;
@@ -43,6 +44,57 @@ struct BenchmarkConfig {
     runners: usize,
     runs: Vec<String>,
     compare_commit: Option<String>,
+}
+
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    /// Benchmark config TOML path.
+    config_path: Option<PathBuf>,
+    /// Only run one side of the comparison. Omit to run both.
+    #[arg(long, value_enum, value_name = "TARGET")]
+    only: Option<BenchmarkOnly>,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum BenchmarkOnly {
+    Working,
+    Commit,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum BenchmarkTarget {
+    Both,
+    Working,
+    Commit,
+}
+
+impl From<Option<BenchmarkOnly>> for BenchmarkTarget {
+    fn from(value: Option<BenchmarkOnly>) -> Self {
+        match value {
+            Some(BenchmarkOnly::Working) => Self::Working,
+            Some(BenchmarkOnly::Commit) => Self::Commit,
+            None => Self::Both,
+        }
+    }
+}
+
+impl BenchmarkTarget {
+    fn runs_working(self) -> bool {
+        matches!(self, Self::Both | Self::Working)
+    }
+
+    fn runs_commit(self) -> bool {
+        matches!(self, Self::Both | Self::Commit)
+    }
+
+    fn display(self) -> &'static str {
+        match self {
+            Self::Both => "both",
+            Self::Working => "working",
+            Self::Commit => "commit",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -147,7 +199,9 @@ fn main() {
 }
 
 fn run() -> Result<(), String> {
-    let config_path = benchmark_config_path();
+    let cli = Cli::parse();
+    let target = BenchmarkTarget::from(cli.only);
+    let config_path = benchmark_config_path(cli.config_path);
     let config = read_config(&config_path)?;
     let runs = config
         .runs
@@ -162,13 +216,23 @@ fn run() -> Result<(), String> {
         resolve_compare_commit(config.compare_commit.as_deref().unwrap_or("HEAD"))?;
     let working_short_commit = git_stdout(["rev-parse", "--short", "HEAD"])?;
     let compare_short_commit = git_stdout(["rev-parse", "--short", compare_commit.as_str()])?;
-    let worktree = create_temporary_worktree(&workspace_root, &compare_commit, cleaner.clone())?;
-    ensure_supported_comparison_checkout(&worktree.path)?;
-    build_release_binary(&workspace_root, "working checkout")?;
-    build_release_binary(
-        &worktree.path,
-        &format!("comparison checkout {compare_short_commit}"),
-    )?;
+    let worktree = if target.runs_commit() {
+        let worktree =
+            create_temporary_worktree(&workspace_root, &compare_commit, cleaner.clone())?;
+        ensure_supported_comparison_checkout(&worktree.path)?;
+        Some(worktree)
+    } else {
+        None
+    };
+    if target.runs_working() {
+        build_release_binary(&workspace_root, "working checkout")?;
+    }
+    if let Some(worktree) = &worktree {
+        build_release_binary(
+            &worktree.path,
+            &format!("comparison checkout {compare_short_commit}"),
+        )?;
+    }
 
     let mut app = AppState::new(
         runs.iter().map(|run| run.display_args.clone()).collect(),
@@ -182,10 +246,11 @@ fn run() -> Result<(), String> {
             &mut terminal,
             &mut app,
             &workspace_root,
-            &worktree.path,
+            worktree.as_ref().map(|worktree| worktree.path.as_path()),
             &runs,
             config.iterations,
             config.runners,
+            target,
         );
         restore_terminal(&mut terminal)?;
         run_result?;
@@ -197,14 +262,16 @@ fn run() -> Result<(), String> {
             config.iterations,
             config.runners,
             &runs,
+            target,
         );
         run_plain_dashboard(
             &mut app,
             &workspace_root,
-            &worktree.path,
+            worktree.as_ref().map(|worktree| worktree.path.as_path()),
             &runs,
             config.iterations,
             config.runners,
+            target,
         )?;
     }
 
@@ -219,9 +286,11 @@ fn print_plain_metadata(
     iterations: usize,
     runners: usize,
     runs: &[RunConfig],
+    target: BenchmarkTarget,
 ) {
     println!("Benchmark mode: non-interactive");
     println!("Config: {}", config_path.display());
+    println!("Target: {}", target.display());
     println!("Working commit: {working_short_commit}");
     println!("Comparison commit: {compare_short_commit}");
     println!("Iterations: {iterations}");
@@ -237,41 +306,48 @@ fn run_dashboard(
     terminal: &mut BenchTerminal,
     app: &mut AppState,
     workspace_root: &Path,
-    comparison_root: &Path,
+    comparison_root: Option<&Path>,
     runs: &[RunConfig],
     iterations: usize,
     runners: usize,
+    target: BenchmarkTarget,
 ) -> Result<(), String> {
     let base_seed = current_seed();
     for (run_index, run) in runs.iter().enumerate() {
         let run_seed = base_seed.wrapping_add((run_index as u64).wrapping_mul(1_000_000));
-        let working_result = run_phase(
-            terminal,
-            app,
-            run_index,
-            CheckoutKind::Working,
-            "working",
-            workspace_root,
-            run,
-            iterations,
-            runners,
-            run_seed,
-        )?;
-        app.working_results[run_index] = Some(working_result);
+        if target.runs_working() {
+            let working_result = run_phase(
+                terminal,
+                app,
+                run_index,
+                CheckoutKind::Working,
+                "working",
+                workspace_root,
+                run,
+                iterations,
+                runners,
+                run_seed,
+            )?;
+            app.working_results[run_index] = Some(working_result);
+        }
 
-        let comparison_result = run_phase(
-            terminal,
-            app,
-            run_index,
-            CheckoutKind::Comparison,
-            &app.compare_short_commit.clone(),
-            comparison_root,
-            run,
-            iterations,
-            runners,
-            run_seed,
-        )?;
-        app.comparison_results[run_index] = Some(comparison_result);
+        if target.runs_commit() {
+            let comparison_root =
+                comparison_root.ok_or_else(|| "comparison worktree was not created".to_owned())?;
+            let comparison_result = run_phase(
+                terminal,
+                app,
+                run_index,
+                CheckoutKind::Comparison,
+                &app.compare_short_commit.clone(),
+                comparison_root,
+                run,
+                iterations,
+                runners,
+                run_seed,
+            )?;
+            app.comparison_results[run_index] = Some(comparison_result);
+        }
     }
 
     app.phase_status = "Benchmark complete | press q, Esc, or Ctrl+C to exit".to_owned();
@@ -282,41 +358,48 @@ fn run_dashboard(
 fn run_plain_dashboard(
     app: &mut AppState,
     workspace_root: &Path,
-    comparison_root: &Path,
+    comparison_root: Option<&Path>,
     runs: &[RunConfig],
     iterations: usize,
     runners: usize,
+    target: BenchmarkTarget,
 ) -> Result<(), String> {
     let base_seed = current_seed();
     for (run_index, run) in runs.iter().enumerate() {
         let run_seed = base_seed.wrapping_add((run_index as u64).wrapping_mul(1_000_000));
-        let working_result = run_plain_phase(
-            app,
-            run_index,
-            runs.len(),
-            CheckoutKind::Working,
-            "working",
-            workspace_root,
-            run,
-            iterations,
-            runners,
-            run_seed,
-        )?;
-        app.working_results[run_index] = Some(working_result);
+        if target.runs_working() {
+            let working_result = run_plain_phase(
+                app,
+                run_index,
+                runs.len(),
+                CheckoutKind::Working,
+                "working",
+                workspace_root,
+                run,
+                iterations,
+                runners,
+                run_seed,
+            )?;
+            app.working_results[run_index] = Some(working_result);
+        }
 
-        let comparison_result = run_plain_phase(
-            app,
-            run_index,
-            runs.len(),
-            CheckoutKind::Comparison,
-            &app.compare_short_commit.clone(),
-            comparison_root,
-            run,
-            iterations,
-            runners,
-            run_seed,
-        )?;
-        app.comparison_results[run_index] = Some(comparison_result);
+        if target.runs_commit() {
+            let comparison_root =
+                comparison_root.ok_or_else(|| "comparison worktree was not created".to_owned())?;
+            let comparison_result = run_plain_phase(
+                app,
+                run_index,
+                runs.len(),
+                CheckoutKind::Comparison,
+                &app.compare_short_commit.clone(),
+                comparison_root,
+                run,
+                iterations,
+                runners,
+                run_seed,
+            )?;
+            app.comparison_results[run_index] = Some(comparison_result);
+        }
     }
 
     app.phase_status = "Benchmark complete".to_owned();
@@ -848,11 +931,8 @@ fn assigned_iterations(iterations: usize, runners: usize, runner: usize) -> Vec<
     (runner..iterations).step_by(runners.max(1)).collect()
 }
 
-fn benchmark_config_path() -> PathBuf {
-    std::env::args_os()
-        .nth(1)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("benchmark.toml"))
+fn benchmark_config_path(config_path: Option<PathBuf>) -> PathBuf {
+    config_path.unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("benchmark.toml"))
 }
 
 fn read_config(path: &Path) -> Result<BenchmarkConfig, String> {

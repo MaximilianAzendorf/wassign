@@ -4,8 +4,8 @@ use crate::{Assignment, InputData, Options, Scheduling, Score, Solution};
 #[derive(Debug, Clone)]
 pub struct Scoring {
     greedy: bool,
-    preference_exponent: f64,
-    scaling: f32,
+    minor_preference_scores: Vec<f32>,
+    assignment_preference_costs: Vec<i64>,
 }
 
 impl Scoring {
@@ -17,11 +17,24 @@ impl Scoring {
         } else {
             (input_data.max_preference as f32).powf(options.preference_exponent as f32)
         };
+        let preference_count = usize::try_from(input_data.max_preference + 1)
+            .expect("preference range must fit in usize");
+        let minor_preference_scores = (0..preference_count)
+            .map(|pref| (pref as f32).powf(options.preference_exponent as f32) / scaling)
+            .collect();
+        let assignment_preference_costs = (0..preference_count)
+            .map(|pref| ((pref as f64 + 1.0).powf(options.preference_exponent)) as i64)
+            .collect();
         Self {
             greedy: options.greedy,
-            preference_exponent: options.preference_exponent,
-            scaling,
+            minor_preference_scores,
+            assignment_preference_costs,
         }
+    }
+
+    pub(crate) fn assignment_preference_cost(&self, preference: u32) -> i64 {
+        self.assignment_preference_costs
+            [usize::try_from(preference).expect("preference must fit in usize")]
     }
 
     pub(crate) fn is_feasible(input_data: &InputData, solution: &Solution) -> bool {
@@ -254,8 +267,7 @@ impl Scoring {
 
         let mut sum = 0.0_f32;
         for (pref, &count) in pref_count.iter().enumerate() {
-            sum +=
-                (count as f32) * (pref as f32).powf(self.preference_exponent as f32) / self.scaling;
+            sum += (count as f32) * self.minor_preference_scores[pref];
         }
         sum
     }

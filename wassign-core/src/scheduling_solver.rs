@@ -231,8 +231,7 @@ impl<'a> SchedulingSolver<'a> {
                         constraint.left
                     };
                     let other_slot = state.decisions[other].slot();
-                    if state.decisions[other] != SchedulingDecision::Undecided
-                        && other_slot != slot
+                    if state.decisions[other] != SchedulingDecision::Undecided && other_slot != slot
                     {
                         return false;
                     }
@@ -335,19 +334,15 @@ impl<'a> SchedulingSolver<'a> {
         }
     }
 
-    fn check_slot_size_constraints(
-        &self,
-        slot: Option<usize>,
-        slot_choice_count: &[u32],
-    ) -> bool {
+    fn check_slot_size_constraints(&self, slot: Option<usize>, slot_choice_count: &[u32]) -> bool {
         let input_data = &self.problem.input_data;
 
         for constraint in &input_data.scheduling_constraints {
             if constraint.kind != ConstraintType::SlotHasLimitedSize {
                 continue;
             }
-            let count = slot_choice_count[constraint.left]
-                + u32::from(slot == Some(constraint.left));
+            let count =
+                slot_choice_count[constraint.left] + u32::from(slot == Some(constraint.left));
             let valid = match constraint.slot_size_limit_op() {
                 crate::SlotSizeLimitOp::Eq => count == constraint.limit(),
                 crate::SlotSizeLimitOp::Neq => count != constraint.limit(),
@@ -364,11 +359,7 @@ impl<'a> SchedulingSolver<'a> {
         true
     }
 
-    fn has_impossibilities(
-        &self,
-        state: &SchedulingSearchState,
-        available_max_push: u32,
-    ) -> bool {
+    fn has_impossibilities(&self, state: &SchedulingSearchState, available_max_push: u32) -> bool {
         let input_data = &self.problem.input_data;
         for slot in 0..input_data.slots.len() {
             let sum = available_max_push + state.slot_max[slot];
@@ -516,7 +507,8 @@ impl<'a> SchedulingSolver<'a> {
         let input_data = &self.problem.input_data;
         let choice_scramble = self.get_choice_scramble();
         let low_priority_slots = self.get_low_priority_slots();
-        let mut state = SchedulingSearchState::new(input_data.choices.len(), input_data.slots.len());
+        let mut state =
+            SchedulingSearchState::new(input_data.choices.len(), input_data.slots.len());
         let mut backtracking = Vec::<Vec<Option<usize>>>::new();
         let mut depth = 0_usize;
         let mut available_max_suffix = vec![0_u32; choice_scramble.len() + 1];

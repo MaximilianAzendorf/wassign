@@ -57,7 +57,8 @@ impl MipFlowStaticData {
 
         for chooser in 0..input_data.choosers.len() {
             for slot in 0..input_data.slots.len() {
-                chooser_nodes[chooser][slot] = base_flow.add_keyed_node(Self::node_chooser(chooser, slot));
+                chooser_nodes[chooser][slot] =
+                    base_flow.add_keyed_node(Self::node_chooser(chooser, slot));
             }
         }
 

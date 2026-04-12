@@ -388,8 +388,7 @@ fn cli_lock() -> &'static Mutex<()> {
 }
 
 fn cli_binary_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../target/debug/wassign")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../target/debug/wassign")
 }
 
 fn run_cli_raw(args: &[&str], stdin: Option<&str>) -> Output {

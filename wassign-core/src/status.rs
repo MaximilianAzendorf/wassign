@@ -8,7 +8,9 @@ use env_logger::{Env, WriteStyle};
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressStyle};
 use log::{Level, LevelFilter};
 
-use crate::{Options, Solution, ThreadedSolverProgress, ThreadedSolverResult, ThreadedSolverRunning};
+use crate::{
+    Options, Solution, ThreadedSolverProgress, ThreadedSolverResult, ThreadedSolverRunning,
+};
 
 /// Global status output helper used by the CLI.
 ///

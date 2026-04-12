@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
+use std::hash::Hash;
 use std::time::Duration;
 
 use good_lp::{
@@ -9,11 +10,11 @@ use good_lp::{
 #[derive(Debug, Clone)]
 pub struct MipFlow<NodeKey, EdgeKey>
 where
-    NodeKey: Ord,
-    EdgeKey: Ord,
+    NodeKey: Eq + Hash,
+    EdgeKey: Eq + Hash,
 {
-    pub node_map: BTreeMap<NodeKey, usize>,
-    pub edge_map: BTreeMap<EdgeKey, usize>,
+    pub node_map: HashMap<NodeKey, usize>,
+    pub edge_map: HashMap<EdgeKey, usize>,
     pub supply: Vec<i32>,
     pub outgoing: Vec<Vec<usize>>,
     pub incoming: Vec<Vec<usize>>,
@@ -26,13 +27,13 @@ where
 
 impl<NodeKey, EdgeKey> Default for MipFlow<NodeKey, EdgeKey>
 where
-    NodeKey: Ord,
-    EdgeKey: Ord,
+    NodeKey: Eq + Hash,
+    EdgeKey: Eq + Hash,
 {
     fn default() -> Self {
         Self {
-            node_map: BTreeMap::new(),
-            edge_map: BTreeMap::new(),
+            node_map: HashMap::new(),
+            edge_map: HashMap::new(),
             supply: Vec::new(),
             outgoing: Vec::new(),
             incoming: Vec::new(),
@@ -47,8 +48,8 @@ where
 
 impl<NodeKey, EdgeKey> MipFlow<NodeKey, EdgeKey>
 where
-    NodeKey: Ord + Clone,
-    EdgeKey: Ord + Clone,
+    NodeKey: Eq + Hash + Clone,
+    EdgeKey: Eq + Hash + Clone,
 {
     pub fn add_node(&mut self) -> usize {
         self.solution.clear();
