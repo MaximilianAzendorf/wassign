@@ -4,6 +4,10 @@ version = "3.0.0"
 edition = "2024"
 authors = ["Maximilian Azendorf <wassign@azendorf.dev>"]
 
+[features]
+default = []
+wasm = ["dep:getrandom"]
+
 [dependencies]
 clap = { version = "4.5.38", features = ["derive", "cargo"] }
 console = "0.15.10"
@@ -15,6 +19,9 @@ log = "0.4.27"
 rand = "0.9.1"
 rhai = { version = "1.19.0", features = ["sync"] }
 thiserror = "2.0.12"
+
+[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dependencies]
+getrandom = { version = "0.3.4", features = ["wasm_js"], optional = true }
 
 [lints.rust]
 unused = { level = "warn", priority = -1 }
