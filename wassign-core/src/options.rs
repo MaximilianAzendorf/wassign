@@ -2,7 +2,7 @@ use clap::Parser;
 
 #[derive(Debug, Clone, Parser)]
 /// Command-line options for the `wassign` executable.
-#[command(author, version, about, long_about = None)]
+#[command(name = "wassign", author, version, about, long_about = None)]
 pub struct Options {
     /// Input files to read. When empty, input is read from standard input.
     #[arg(short = 'i', long = "input")]
