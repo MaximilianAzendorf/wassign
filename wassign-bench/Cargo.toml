@@ -7,6 +7,7 @@ authors.workspace = true
 [dependencies]
 clap = { version = "4.5.38", features = ["derive", "cargo"] }
 console = "0.15.10"
+ctrlc = "3.5.1"
 crossterm = "0.28.1"
 ratatui = "0.29.0"
 serde = { version = "1.0.228", features = ["derive"] }
