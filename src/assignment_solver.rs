@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::time::{Duration, SystemTime};
 
 use crate::shotgun_solver::ProgressReporter;
+use crate::status;
 use crate::{
     Assignment, ConstraintType, MipFlow, MipFlowStaticData, Options, PreparedProblem, Scheduling,
 };
-use crate::status;
 
 /// Computes an optimal assignment for a fixed scheduling.
 #[derive(Debug)]
@@ -95,7 +95,8 @@ impl<'a> AssignmentSolver<'a> {
 
         if self.options.greedy {
             status::debug("Greedy mode enabled; solving with maximum preference limit.");
-            let result = self.solve_with_limit(&schedule_state, input_data.max_preference, deadline);
+            let result =
+                self.solve_with_limit(&schedule_state, input_data.max_preference, deadline);
             let (assignment, is_optimal) = match result {
                 LimitSolveResult::Feasible(assignment) => (Some(assignment), true),
                 LimitSolveResult::Infeasible => (None, false),
