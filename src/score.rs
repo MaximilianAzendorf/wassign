@@ -5,20 +5,23 @@ pub struct Score {
 }
 
 impl Score {
-    pub fn to_str(self) -> String {
+    pub(crate) fn is_finite(self) -> bool {
+        self.minor.is_finite() && (self.major.is_finite() || self.major.is_nan())
+    }
+}
+
+impl std::fmt::Display for Score {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.major.is_nan() {
-            crate::util::str_float(f64::from(self.minor), 5)
+            f.write_str(&crate::util::str_float(f64::from(self.minor), 5))
         } else {
-            format!(
+            write!(
+                f,
                 "({}, {})",
                 crate::util::str_float(f64::from(self.major), 0),
                 crate::util::str_float(f64::from(self.minor), 5)
             )
         }
-    }
-
-    pub(crate) fn is_finite(self) -> bool {
-        self.minor.is_finite() && (self.major.is_finite() || self.major.is_nan())
     }
 }
 
@@ -54,6 +57,21 @@ impl Ord for Score {
 #[cfg(test)]
 mod tests {
     use super::Score;
+
+    #[test]
+    fn scores_format_for_display() {
+        let standard = Score {
+            major: 4.0,
+            minor: 2.125,
+        };
+        let greedy = Score {
+            major: f32::NAN,
+            minor: 2.125,
+        };
+
+        assert_eq!(standard.to_string(), "(4, 2.12500)");
+        assert_eq!(greedy.to_string(), "2.12500");
+    }
 
     #[test]
     fn invalid_scores_are_worse_than_greedy_scores() {

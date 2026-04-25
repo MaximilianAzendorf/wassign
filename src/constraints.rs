@@ -142,7 +142,7 @@ fn expand_dependent_constraints(
     result.extend(constraints.iter().copied());
     result.sort_by_key(|constraint| {
         (
-            constraint.kind as i32,
+            constraint.kind as usize,
             constraint.left,
             constraint.right,
             constraint.extra,

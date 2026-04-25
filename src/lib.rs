@@ -1,8 +1,4 @@
 //! `wassign`, a solver for constrained scheduling and assignment problems.
-//!
-//! The crate preserves the original program's two-stage architecture:
-//! choices are first scheduled into slots and are then assigned to choosers while
-//! respecting additional assignment constraints and optimizing preference quality.
 
 mod assignment;
 mod assignment_solver;

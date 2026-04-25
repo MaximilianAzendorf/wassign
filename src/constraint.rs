@@ -1,7 +1,7 @@
-pub const CONSTRAINT_TYPE_DISCRIMINATION_LIMIT: i32 = 1 << 16;
+pub const CONSTRAINT_TYPE_DISCRIMINATION_LIMIT: usize = 1 << 16;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[repr(i32)]
+#[repr(usize)]
 pub enum ConstraintType {
     Invalid = 0,
     ChoiceIsInSlot = 1,
@@ -123,12 +123,12 @@ impl Constraint {
     }
 
     pub fn is_scheduling_constraint(self) -> bool {
-        (self.kind as i32) < CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+        (self.kind as usize) < CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
             && self.kind != ConstraintType::Invalid
     }
 
     pub fn is_assignment_constraint(self) -> bool {
-        (self.kind as i32) >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+        (self.kind as usize) >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
             && self.kind != ConstraintType::Invalid
     }
 
@@ -178,5 +178,34 @@ impl Constraint {
             ConstraintExtra::SlotSizeLimitOp(op) => op,
             _ => panic!("constraint does not carry a slot size limit operator"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        CONSTRAINT_TYPE_DISCRIMINATION_LIMIT, Constraint, ConstraintExtra, ConstraintTarget,
+        ConstraintType,
+    };
+
+    fn constraint(kind: ConstraintType) -> Constraint {
+        Constraint::new(kind, 0, ConstraintTarget::None, ConstraintExtra::None)
+    }
+
+    #[test]
+    fn constraint_type_threshold_classifies_constraints() {
+        assert_eq!(CONSTRAINT_TYPE_DISCRIMINATION_LIMIT, 1 << 16);
+        assert!(
+            (ConstraintType::SlotHasLimitedSize as usize) < CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+        );
+        assert!(
+            (ConstraintType::ChoicesHaveSameChoosers as usize)
+                >= CONSTRAINT_TYPE_DISCRIMINATION_LIMIT
+        );
+
+        assert!(constraint(ConstraintType::ChoiceIsInSlot).is_scheduling_constraint());
+        assert!(!constraint(ConstraintType::Invalid).is_scheduling_constraint());
+        assert!(constraint(ConstraintType::ChooserIsInChoice).is_assignment_constraint());
+        assert!(!constraint(ConstraintType::Invalid).is_assignment_constraint());
     }
 }

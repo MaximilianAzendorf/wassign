@@ -110,6 +110,10 @@ struct IndicatifLogWriter {
     buffer: Vec<u8>,
 }
 
+/// Progress bar handle that restores the previous active bar when dropped.
+///
+/// If the global status state mutex is poisoned during drop, the restore is
+/// skipped to avoid panicking during drop.
 pub(crate) struct StatusProgress {
     bar: ProgressBar,
     previous_bar: Option<ProgressBar>,
@@ -140,8 +144,9 @@ impl Drop for StatusProgress {
             return;
         }
 
-        let mut state = state().lock().expect("status mutex poisoned");
-        state.active_bar.clone_from(&self.previous_bar);
+        if let Ok(mut state) = state().lock() {
+            state.active_bar.clone_from(&self.previous_bar);
+        }
     }
 }
 
@@ -248,7 +253,7 @@ fn format_solver_message(progress: &crate::threaded_solver::ThreadedSolverProgre
     .to_string();
 
     if progress.best_score.is_finite() {
-        let score = style(progress.best_score.to_str()).yellow().to_string();
+        let score = style(progress.best_score.to_string()).yellow().to_string();
         format!("{score} {counters}")
     } else if progress.lp == 0 && progress.iterations == 0 && progress.assignments == 0 {
         format!("{} {depth}", style("no solution yet").dim())
@@ -261,7 +266,7 @@ fn format_solver_summary(progress: &crate::threaded_solver::ThreadedSolverProgre
     if progress.best_score.is_finite() {
         format!(
             "{}; i/a/l {}/{}/{}; depth {:.1}/{:.1}",
-            progress.best_score.to_str(),
+            progress.best_score,
             progress.iterations,
             progress.assignments,
             progress.lp,

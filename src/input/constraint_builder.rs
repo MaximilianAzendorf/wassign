@@ -16,6 +16,7 @@ impl ConstraintBuilder {
         let mut expression = expression;
         let mut result = Vec::new();
 
+        // We do to passes so we can adequately handle the mirrored cases
         for pass in 0..2 {
             match (
                 expression.left.kind,
@@ -271,34 +272,38 @@ impl ConstraintBuilder {
         extra: ConstraintExtra,
     ) -> crate::Result<()> {
         let right = match expression.right.kind {
-            AccessorType::Slot => {
-                ConstraintTarget::Slot(Self::resolve_accessor(data, &expression.right)?)
-            }
-            AccessorType::Choice => {
-                ConstraintTarget::Choice(Self::resolve_accessor(data, &expression.right)?)
-            }
-            AccessorType::Chooser => {
-                ConstraintTarget::Chooser(Self::resolve_accessor(data, &expression.right)?)
-            }
+            AccessorType::Slot => match Self::resolve_accessor(data, &expression.right)? {
+                Some(slot) => ConstraintTarget::Slot(slot),
+                None => return Ok(()),
+            },
+            AccessorType::Choice => match Self::resolve_accessor(data, &expression.right)? {
+                Some(choice) => ConstraintTarget::Choice(choice),
+                None => return Ok(()),
+            },
+            AccessorType::Chooser => match Self::resolve_accessor(data, &expression.right)? {
+                Some(chooser) => ConstraintTarget::Chooser(chooser),
+                None => return Ok(()),
+            },
             AccessorType::Integer => ConstraintTarget::Limit(
-                u32::try_from(Self::resolve_accessor(data, &expression.right)?)
-                    .expect("constraint integer must fit in u32"),
+                u32::try_from(
+                    Self::resolve_accessor(data, &expression.right)?
+                        .expect("integer accessors always resolve"),
+                )
+                .expect("constraint integer must fit in u32"),
             ),
             _ => ConstraintTarget::None,
         };
-        result.push(Constraint::new(
-            kind,
-            Self::resolve_accessor(data, &expression.left)?,
-            right,
-            extra,
-        ));
+        let Some(left) = Self::resolve_accessor(data, &expression.left)? else {
+            return Ok(());
+        };
+        result.push(Constraint::new(kind, left, right, extra));
         Ok(())
     }
 
     fn resolve_accessor(
         data: &InputData,
         accessor: &ConstraintExpressionAccessor,
-    ) -> crate::Result<usize> {
+    ) -> crate::Result<Option<usize>> {
         match accessor.kind {
             AccessorType::Slot => Self::find_name(
                 &accessor.name,
@@ -317,14 +322,17 @@ impl ConstraintBuilder {
                     .collect::<Vec<_>>(),
             ),
             AccessorType::Choice => {
-                let mut choice = Self::find_name(
+                let Some(mut choice) = Self::find_name(
                     &accessor.name,
                     &data
                         .choices
                         .iter()
                         .map(|choice| choice.name.clone())
                         .collect::<Vec<_>>(),
-                )?;
+                )?
+                else {
+                    return Ok(None);
+                };
                 let mut part = accessor.part;
                 while part > 0 {
                     let Some(next_choice) = data.choices[choice].continuation else {
@@ -336,24 +344,93 @@ impl ConstraintBuilder {
                     choice = next_choice;
                     part -= 1;
                 }
-                Ok(choice)
+                Ok(Some(choice))
             }
             AccessorType::Integer => accessor
                 .name
                 .parse::<usize>()
+                .map(Some)
                 .map_err(|err| InputError::Message(err.to_string())),
             _ => Err(InputError::Message("Unexpected accessor type.".to_owned())),
         }
     }
 
-    fn find_name(name: &str, values: &[String]) -> crate::Result<usize> {
+    fn find_name(name: &str, values: &[String]) -> crate::Result<Option<usize>> {
         let matches = FuzzyMatch::find(name, values);
         match matches.as_slice() {
-            [index] => Ok(*index),
-            [] => Ok(usize::MAX),
+            [index] => Ok(Some(*index)),
+            [] => Ok(None),
             _ => Err(InputError::Message(format!(
                 "The name \"{name}\" is ambiguous."
             ))),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use crate::{ChoiceData, ChooserData, InputData, SlotData};
+
+    use super::super::constraint_expression::ConstraintExpressionRelation;
+    use super::{
+        AccessorType, ConstraintBuilder, ConstraintExpression, ConstraintExpressionAccessor,
+        RelationType,
+    };
+
+    fn accessor(
+        kind: AccessorType,
+        sub_type: AccessorType,
+        name: &str,
+    ) -> ConstraintExpressionAccessor {
+        ConstraintExpressionAccessor {
+            kind,
+            sub_type,
+            name: name.to_owned(),
+            part: 0,
+        }
+    }
+
+    fn input_data() -> InputData {
+        InputData {
+            choices: vec![ChoiceData {
+                name: "choice".to_owned(),
+                min: 1,
+                max: 1,
+                continuation: None,
+                is_optional: false,
+            }],
+            choosers: vec![ChooserData {
+                name: "chooser".to_owned(),
+                preferences: vec![0],
+            }],
+            slots: vec![SlotData {
+                name: "slot".to_owned(),
+            }],
+            scheduling_constraints: Vec::new(),
+            assignment_constraints: Vec::new(),
+            dependent_choice_groups: Vec::new(),
+            preference_levels: Vec::new(),
+            max_preference: 0,
+            choice_constraint_map: BTreeMap::new(),
+            chooser_constraint_map: BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn missing_accessor_name_emits_no_constraint() {
+        let expression = ConstraintExpression {
+            left: accessor(AccessorType::Choice, AccessorType::Slot, "missing"),
+            relation: ConstraintExpressionRelation {
+                kind: RelationType::Eq,
+            },
+            right: accessor(AccessorType::Slot, AccessorType::NotSet, "slot"),
+        };
+
+        let constraints =
+            ConstraintBuilder::build(&input_data(), expression).expect("build should succeed");
+
+        assert!(constraints.is_empty());
     }
 }

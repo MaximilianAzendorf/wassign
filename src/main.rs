@@ -115,7 +115,7 @@ fn try_run(input_string: &str, options: &Options) -> wassign::Result<()> {
     status::info_important("Solution found.");
     status::info(&format!(
         "Solution score: {}",
-        result.scoring.evaluate(input_data, solution).to_str()
+        result.scoring.evaluate(input_data, solution)
     ));
 
     if input_data.slots.len() > 1 {

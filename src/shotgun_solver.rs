@@ -191,10 +191,7 @@ impl<'a> ShotgunSolver<'a> {
                 .scoring
                 .evaluate(&self.problem.input_data, &solution);
             if score < self.progress.best_score {
-                status::debug(&format!(
-                    "Found improved solution with score {}.",
-                    score.to_str()
-                ));
+                status::debug(&format!("Found improved solution with score {score}."));
                 self.progress.best_solution = solution.clone();
                 self.progress.best_score = score;
                 self.progress_reporter
